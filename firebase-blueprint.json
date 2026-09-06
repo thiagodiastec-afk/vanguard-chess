@@ -1,0 +1,34 @@
+{
+  "collections": [
+    {
+      "collection": "users",
+      "rules": [
+        { "action": "read", "condition": "request.auth != null" },
+        { "action": "write", "condition": "request.auth != null && request.auth.uid == id" }
+      ],
+      "indexes": []
+    },
+    {
+      "collection": "queue",
+      "rules": [
+        { "action": "read", "condition": "request.auth != null" },
+        { "action": "write", "condition": "request.auth != null" }
+      ],
+      "indexes": [
+        { "fields": ["createdAt"], "order": "asc" }
+      ]
+    },
+    {
+      "collection": "games",
+      "rules": [
+        { "action": "read", "condition": "request.auth != null && (resource.data.whiteId == request.auth.uid || resource.data.blackId == request.auth.uid)" },
+        { "action": "create", "condition": "request.auth != null" },
+        { "action": "update", "condition": "request.auth != null && (resource.data.whiteId == request.auth.uid || resource.data.blackId == request.auth.uid)" }
+      ],
+      "indexes": [
+        { "fields": ["whiteId", "status"], "order": "asc" },
+        { "fields": ["blackId", "status"], "order": "asc" }
+      ]
+    }
+  ]
+}

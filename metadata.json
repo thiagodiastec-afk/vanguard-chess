@@ -1,0 +1,6 @@
+{
+  "name": "Vanguard Chess",
+  "description": "Plataforma de jogos de xadrez em tempo real com sistema de ranking Elo.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

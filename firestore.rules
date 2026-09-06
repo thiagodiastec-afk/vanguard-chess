@@ -1,0 +1,68 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Global catch-all deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helpers
+    function isSignedIn() { return request.auth != null; }
+    function isOwner(userId) { return isSignedIn() && request.auth.uid == userId; }
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+
+    // Users
+    match /users/{userId} {
+      allow read: if isSignedIn();
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId);
+    }
+
+    // Queue
+    match /queue/{queueId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && incoming().uid == request.auth.uid;
+      allow delete: if isSignedIn() && existing().uid == request.auth.uid;
+      allow update: if false;
+    }
+
+    // Games
+    match /games/{gameId} {
+      allow read: if isSignedIn();
+      
+      // Players can create a game (from queue or friend invites)
+      allow create: if isSignedIn()
+        && (incoming().whiteId == request.auth.uid || incoming().blackId == request.auth.uid);
+        
+      // Only players in the game can update it
+      allow update: if isSignedIn()
+        && (existing().whiteId == request.auth.uid || existing().blackId == request.auth.uid);
+           
+      allow delete: if false;
+    }
+
+    // Global Chat (read-only for clients, server writes)
+    match /globalChat/{messageId} {
+      allow read: if isSignedIn();
+      allow write: if false;
+    }
+
+    // Challenges (Direct Invites)
+    match /challenges/{challengeId} {
+      allow read, write, delete: if isSignedIn();
+    }
+
+    // Tournaments
+    match /tournaments/{tournamentId} {
+      allow read, write: if isSignedIn();
+    }
+    // Reports (Anti-Cheat)
+    match /reports/{reportId} {
+      allow create: if isSignedIn() && incoming().reporterId == request.auth.uid;
+      allow read: if false; // Only admins/backend can read
+    }
+  }
+}
