@@ -150,6 +150,19 @@ export default function ComputerGame({ difficulty, currentUser, onExit }: Comput
             case 'dificil': botElo = 1600; break;
             case 'profissional': botElo = 2000; break;
           }
+          
+          if (numericResult === 1) {
+            confetti({
+              particleCount: 100,
+              spread: 70,
+              origin: { y: 0.6 },
+              colors: ['#10b981', '#fbbf24', '#ffffff']
+            });
+          }
+
+          // If playing as guest, skip Firestore updates
+          if (currentUser.isGuest) return;
+
           const eloChange = calculateEloChange(currentUser.elo, botElo, numericResult);
           const updateData: any = {
             elo: increment(eloChange),
@@ -159,12 +172,6 @@ export default function ComputerGame({ difficulty, currentUser, onExit }: Comput
 
           let coinsReward = 0;
           if (numericResult === 1) {
-            confetti({
-              particleCount: 100,
-              spread: 70,
-              origin: { y: 0.6 },
-              colors: ['#10b981', '#fbbf24', '#ffffff']
-            });
             updateData['stats.wins'] = increment(1);
             if (difficulty === 'iniciante') coinsReward = 10;
             else if (difficulty === 'facil') coinsReward = 20;
@@ -202,6 +209,20 @@ export default function ComputerGame({ difficulty, currentUser, onExit }: Comput
         }
       };
       updateStats();
+    } else if (winner && !currentUser) {
+      // Show confetti for guests too
+      let numericResult: 1 | 0.5 | 0 = 0;
+      if (winner === 'draw') numericResult = 0.5;
+      else if (winner === playerColor) numericResult = 1;
+      
+      if (numericResult === 1) {
+        confetti({
+          particleCount: 100,
+          spread: 70,
+          origin: { y: 0.6 },
+          colors: ['#10b981', '#fbbf24', '#ffffff']
+        });
+      }
     }
   }, [winner, currentUser, difficulty, playerColor]);
 
