@@ -6,12 +6,13 @@ import { Loader2, Swords, Bot, ChevronDown, ChevronUp, Link as LinkIcon, Copy, T
 import { cn } from '../lib/utils';
 
 interface LobbyProps {
-  currentUser: UserData;
+  currentUser: UserData | null;
   onPlayComputer: (difficulty: string) => void;
   onSpectate?: (gameId: string) => void;
+  onLoginRequest?: () => void;
 }
 
-export default function Lobby({ currentUser, onPlayComputer, onSpectate }: LobbyProps) {
+export default function Lobby({ currentUser, onPlayComputer, onSpectate, onLoginRequest }: LobbyProps) {
   const [isSearching, setIsSearching] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showBotMenu, setShowBotMenu] = useState(false);
@@ -39,6 +40,7 @@ export default function Lobby({ currentUser, onPlayComputer, onSpectate }: Lobby
 
 
   useEffect(() => {
+    if (!currentUser) return;
     const db = getDb();
     const queueRef = doc(db, 'queue', currentUser.uid);
     
@@ -47,10 +49,14 @@ export default function Lobby({ currentUser, onPlayComputer, onSpectate }: Lobby
     });
     
     return unsubscribe;
-  }, [currentUser.uid]);
+  }, [currentUser?.uid]);
 
 
   const createInvite = async () => {
+    if (!currentUser) {
+      onLoginRequest?.();
+      return;
+    }
     setError(null);
     try {
       const db = getDb();
@@ -97,6 +103,10 @@ export default function Lobby({ currentUser, onPlayComputer, onSpectate }: Lobby
   };
 
   const findMatch = async () => {
+    if (!currentUser) {
+      onLoginRequest?.();
+      return;
+    }
     setError(null);
     const db = getDb();
     
@@ -165,6 +175,7 @@ export default function Lobby({ currentUser, onPlayComputer, onSpectate }: Lobby
   };
 
   const cancelSearch = async () => {
+    if (!currentUser) return;
     try {
       const db = getDb();
       await deleteDoc(doc(db, 'queue', currentUser.uid));
@@ -328,7 +339,7 @@ export default function Lobby({ currentUser, onPlayComputer, onSpectate }: Lobby
 
 
       {/* Banner Ad Placeholder (Only if not VIP) */}
-      {!currentUser.isPremium && (
+      {(!currentUser || !currentUser.isPremium) && (
         <div className="bg-neutral-800 rounded-2xl p-4 border border-neutral-700/50 shadow-xl mb-8 flex flex-col items-center justify-center min-h-[120px] relative overflow-hidden group">
           <div className="absolute inset-0 bg-neutral-900/50 flex flex-col items-center justify-center z-10 transition-opacity">
             <span className="text-xs font-bold text-neutral-500 tracking-widest uppercase mb-1">Publicidade</span>

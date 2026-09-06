@@ -265,30 +265,6 @@ export default function App() {
     );
   }
 
-  if (!user || !userData) {
-    return (
-      <div className="min-h-screen bg-neutral-900 text-neutral-100 flex flex-col items-center justify-center p-4">
-        <div className="max-w-md w-full bg-neutral-800 rounded-2xl p-8 text-center space-y-8 shadow-xl border border-neutral-700/50">
-          <div className="space-y-4">
-            <div className="w-20 h-20 bg-emerald-500/10 rounded-2xl flex items-center justify-center mx-auto mb-6">
-              <Trophy className="w-10 h-10 text-emerald-500" />
-            </div>
-            <h1 className="text-3xl font-bold text-white tracking-tight">Vanguard Chess</h1>
-            <p className="text-neutral-400">Jogue xadrez em tempo real e suba no ranking mundial.</p>
-          </div>
-          
-          <button
-            onClick={handleLogin}
-            className="w-full bg-white hover:bg-neutral-100 text-neutral-900 font-semibold py-3 px-6 rounded-xl transition-colors flex items-center justify-center gap-2"
-          >
-            <LogIn className="w-5 h-5" />
-            Entrar com Google
-          </button>
-        </div>
-      </div>
-    );
-  }
-
   const navItems = [
     { id: 'play', label: 'Jogar', icon: Swords },
     { id: 'ranking', label: 'Ranking', icon: Crown },
@@ -408,11 +384,11 @@ export default function App() {
                     key={item.id}
                     onClick={() => setActiveTab(item.id)}
                     className={cn(
-                      "flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors",
+                      "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs md:text-sm font-medium transition-colors whitespace-nowrap",
                       activeTab === item.id ? "bg-neutral-700 text-white" : "text-neutral-400 hover:text-white hover:bg-neutral-800"
                     )}
                   >
-                    <Icon className="w-4 h-4" />
+                    <Icon className="w-4 h-4 hidden lg:block" />
                     {item.label}
                   </button>
                 );
@@ -420,35 +396,51 @@ export default function App() {
             </nav>
           </div>
 
-          <div className="flex items-center gap-6">
-            <div className="flex items-center gap-4">
-              <div className="text-right">
-                <div className="font-medium text-sm text-neutral-200">{userData.displayName}</div>
-                <div className="text-xs text-emerald-400 font-semibold">{userData.elo} Elo</div>
+          <div className="flex items-center gap-2 md:gap-4 shrink-0">
+            {userData ? (
+              <div className="flex items-center gap-2 md:gap-4 bg-neutral-800/50 py-1.5 px-3 rounded-xl border border-neutral-700/50">
+                <div className="text-right hidden sm:block">
+                  <div className="font-medium text-xs md:text-sm text-neutral-200">{userData.displayName}</div>
+                  <div className="text-[10px] md:text-xs text-emerald-400 font-semibold">{userData.elo} Elo</div>
+                </div>
+                
+                <div className="w-px h-6 bg-neutral-700 mx-1"></div>
+                
+                <button
+                  onClick={() => setShowSettings(true)}
+                  className="text-neutral-400 hover:text-white transition-colors"
+                  title="Configurações"
+                >
+                  <Settings className="w-4 h-4 md:w-5 md:h-5" />
+                </button>
+                
+                <button
+                  onClick={handleLogout}
+                  className="text-red-400 hover:text-red-300 transition-colors"
+                  title="Sair"
+                >
+                  <LogOut className="w-4 h-4 md:w-5 md:h-5" />
+                </button>
               </div>
-            </div>
-            <button
-              onClick={() => setShowPix(true)}
-              className="flex items-center gap-2 bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 px-3 py-1.5 rounded-lg transition-colors font-medium text-sm border border-emerald-500/30"
-              title="Apoie o Desenvolvedor"
-            >
-              <Heart className="w-4 h-4 fill-emerald-500" />
-              <span className="hidden sm:inline">Apoiar</span>
-            </button>
-            <button
-              onClick={() => setShowSettings(true)}
-              className="text-neutral-400 hover:text-white transition-colors"
-              title="Configurações"
-            >
-              <Settings className="w-5 h-5" />
-            </button>
-            <button
-              onClick={handleLogout}
-              className="text-neutral-400 hover:text-white transition-colors"
-              title="Sair"
-            >
-              <LogOut className="w-5 h-5" />
-            </button>
+            ) : (
+              <button
+                onClick={handleLogin}
+                className="bg-emerald-500 hover:bg-emerald-400 text-neutral-950 px-4 py-2 rounded-lg font-bold transition-colors text-sm shrink-0"
+              >
+                Entrar
+              </button>
+            )}
+
+            {!userData && (
+              <button
+                onClick={() => setShowPix(true)}
+                className="flex items-center gap-2 bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 px-3 py-1.5 rounded-lg transition-colors font-medium text-sm border border-emerald-500/30 shrink-0"
+                title="Apoie o Desenvolvedor"
+              >
+                <Heart className="w-4 h-4 fill-emerald-500" />
+                <span className="hidden xl:inline">Apoiar</span>
+              </button>
+            )}
           </div>
         </div>
       </header>
@@ -473,7 +465,7 @@ export default function App() {
         })}
       </nav>
 
-      {!userData.isPremium && <AdBanner />}
+      {!userData?.isPremium && <AdBanner />}
 
       
       {/* Pix Modal */}
@@ -627,25 +619,50 @@ export default function App() {
         </div>
       )}
 
-      <main className="flex-1 flex flex-col">
+      <main className="flex-1 flex flex-col relative z-10">
         {activeTab === 'play' && (
           activeGame ? (
-            <Game game={activeGame} currentUser={userData} onExit={() => setActiveGame(null)} />
+            <Game game={activeGame} currentUser={userData!} onExit={() => setActiveGame(null)} />
           ) : computerGameDifficulty ? (
             <ComputerGame difficulty={computerGameDifficulty} currentUser={userData} onExit={() => setComputerGameDifficulty(null)} />
           ) : (
-            <Lobby currentUser={userData} onPlayComputer={(diff) => setComputerGameDifficulty(diff)} />
+            <Lobby currentUser={userData} onPlayComputer={(diff) => setComputerGameDifficulty(diff)} onLoginRequest={handleLogin} />
           )
         )}
-        {activeTab === 'tournaments' && <Tournaments currentUser={userData} />}
-        {activeTab === 'chat' && <Chat currentUser={userData} />}
-        {activeTab === 'training' && <Training onPlayComputer={(diff) => setComputerGameDifficulty(diff)} />}
-        {activeTab === 'friends' && <Friends currentUser={userData} />}
         {activeTab === 'rules' && <Rules />}
         {activeTab === 'ranking' && <Leaderboard />}
-        {activeTab === 'store' && <Store currentUser={userData} />}
-          {activeTab === 'profile' && <Profile currentUser={userData} />}
-          {activeTab === 'about' && <About />}
+        {activeTab === 'about' && <About />}
+        
+        {/* Protected Routes */}
+        {!userData && ['tournaments', 'chat', 'training', 'friends', 'store', 'profile'].includes(activeTab) && (
+          <div className="flex-1 flex items-center justify-center p-4">
+            <div className="max-w-md w-full bg-neutral-800 rounded-2xl p-8 text-center space-y-6 shadow-xl border border-neutral-700/50">
+              <div className="w-16 h-16 bg-emerald-500/10 rounded-2xl flex items-center justify-center mx-auto mb-2">
+                <LogIn className="w-8 h-8 text-emerald-500" />
+              </div>
+              <h2 className="text-2xl font-bold text-white">Faça Login</h2>
+              <p className="text-neutral-400">Você precisa estar conectado para acessar esta área do jogo.</p>
+              <button
+                onClick={handleLogin}
+                className="w-full bg-emerald-500 hover:bg-emerald-400 text-neutral-950 font-bold py-3 px-6 rounded-xl transition-colors flex items-center justify-center gap-2"
+              >
+                <LogIn className="w-5 h-5" />
+                Entrar com Google
+              </button>
+            </div>
+          </div>
+        )}
+
+        {userData && (
+          <>
+            {activeTab === 'tournaments' && <Tournaments currentUser={userData} />}
+            {activeTab === 'chat' && <Chat currentUser={userData} />}
+            {activeTab === 'training' && <Training onPlayComputer={(diff) => setComputerGameDifficulty(diff)} />}
+            {activeTab === 'friends' && <Friends currentUser={userData} />}
+            {activeTab === 'store' && <Store currentUser={userData} />}
+            {activeTab === 'profile' && <Profile currentUser={userData} />}
+          </>
+        )}
       </main>
     </div>
   );
