@@ -340,10 +340,10 @@ export default function Lobby({ currentUser, onPlayComputer, onSpectate, onLogin
 
       {/* Banner Ad Placeholder (Only if not VIP) */}
       {(!currentUser || !currentUser.isPremium) && (
-        <div className="bg-neutral-800 rounded-2xl p-4 border border-neutral-700/50 shadow-xl mb-8 flex flex-col items-center justify-center min-h-[120px] relative overflow-hidden group">
+        <div className="bg-neutral-800 rounded-2xl p-4 border border-neutral-700/50 shadow-xl mt-8 flex flex-col items-center justify-center min-h-[120px] w-full max-w-2xl mx-auto relative overflow-hidden group">
           <div className="absolute inset-0 bg-neutral-900/50 flex flex-col items-center justify-center z-10 transition-opacity">
             <span className="text-xs font-bold text-neutral-500 tracking-widest uppercase mb-1">Publicidade</span>
-            <span className="text-sm text-neutral-400 text-center px-4">
+            <span className="text-sm text-neutral-400 text-center px-4 leading-relaxed">
               [ Banner AdSense / AdinPlay será exibido aqui ]<br />
               Remova os anúncios assinando o plano VIP!
             </span>
