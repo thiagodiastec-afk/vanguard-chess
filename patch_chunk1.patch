@@ -1,0 +1,12 @@
+--- src/components/Lobby.tsx
++++ src/components/Lobby.tsx
+@@ -82,6 +82,9 @@
+         pgn: '',
+         turn: 'w',
+         lastMoveAt: Date.now(),
++        timeControl,
++        whiteTime: timeControl,
++        blackTime: timeControl,
+         
+         spectatorsAllowedWhite: true,
+         spectatorsAllowedBlack: true,

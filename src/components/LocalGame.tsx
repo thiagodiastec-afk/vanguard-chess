@@ -42,7 +42,7 @@ export default function LocalGame({ onExit }: LocalGameProps) {
         setIsGettingHint(false);
         worker.terminate();
       };
-      worker.postMessage({ fen: game.fen(), difficulty: 'dificil' });
+      worker.postMessage({ type: 'search', fen: game.fen(), difficulty: 'dificil' });
     });
   };
 
@@ -94,10 +94,10 @@ export default function LocalGame({ onExit }: LocalGameProps) {
         const winningColor = game.turn() === 'w' ? 'b' : 'w';
         setWinner(winningColor === 'w' ? 'Brancas venceram!' : 'Pretas venceram!');
         confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
-        sounds.play('gameEnd');
+        sounds.playMove(false, false);
       } else if (game.isDraw() || game.isStalemate() || game.isThreefoldRepetition()) {
         setWinner('Empate!');
-        sounds.play('gameEnd');
+        sounds.playMove(false, false);
       }
     }
   }, [game]);
@@ -116,7 +116,7 @@ export default function LocalGame({ onExit }: LocalGameProps) {
 
       if (move) {
         setGame(gameCopy);
-        sounds.play(move.captured ? 'capture' : 'move');
+        sounds.playMove(move.captured != null, game.inCheck());
         setMoveFrom(null);
         setHintArrow(null);
         setOptionSquares({});
@@ -176,7 +176,7 @@ export default function LocalGame({ onExit }: LocalGameProps) {
 
       if (move) {
         setGame(gameCopy);
-        sounds.play(move.captured ? 'capture' : 'move');
+        sounds.playMove(move.captured != null, game.inCheck());
         setMoveFrom(null);
         setHintArrow(null);
         setOptionSquares({});

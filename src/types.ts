@@ -20,14 +20,14 @@ export interface UserData {
   coins?: number;
   unlockedThemes?: string[];
   activeTheme?: string;
-  isPremium?: boolean;
+  isPremium?: boolean;  isGuest?: boolean;
 }
 
 export interface QueueEntry {
   uid: string;
   displayName: string;
   elo: number;
-  createdAt: number;
+  createdAt: number;  timeControl: number;
 }
 
 export interface GameData {
@@ -41,7 +41,7 @@ export interface GameData {
   status: 'playing' | 'draw' | 'white_won' | 'black_won' | 'abandoned' | 'waiting_friend';
   fen: string;
   pgn: string;
-  lastMoveAt: number;
+  lastMoveAt: number;  timeControl?: number;  whiteTime?: number;  blackTime?: number;
   turn: 'w' | 'b';
   spectatorsAllowedWhite?: boolean;
   spectatorsAllowedBlack?: boolean;
@@ -53,7 +53,7 @@ export interface Message {
   uid: string;
   displayName: string;
   text: string;
-  createdAt: number;
+  createdAt: number;  timeControl: number;
 }
 
 export interface Tournament {
@@ -83,6 +83,6 @@ export interface Challenge {
   challengerName: string;
   challengerElo: number;
   status: 'pending' | 'accepted' | 'declined';
-  createdAt: number;
+  createdAt: number;  timeControl: number;
   gameId?: string;
 }

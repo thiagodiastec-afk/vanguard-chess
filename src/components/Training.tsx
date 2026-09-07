@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Chess } from 'chess.js';
 import { useTheme } from '../lib/themes';
 import { sounds } from '../lib/sounds';

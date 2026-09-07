@@ -1,0 +1,121 @@
+--- src/components/Game.tsx
++++ src/components/Game.tsx
+@@ -32,6 +32,9 @@
+   const [showCheatAlert, setShowCheatAlert] = useState(false);
+   const [reported, setReported] = useState(false);
+   
++  const [whiteDisplayTime, setWhiteDisplayTime] = useState<number>(game.whiteTime ?? game.timeControl ?? 0);
++  const [blackDisplayTime, setBlackDisplayTime] = useState<number>(game.blackTime ?? game.timeControl ?? 0);
++
+   const isWhite = currentUser.uid === game.whiteId;
+   const isBlack = currentUser.uid === game.blackId;
+   const isSpectator = !isWhite && !isBlack;
+@@ -119,6 +122,34 @@
+     }
+     isInitialMount.current = false;
+   }, [game.fen, chess]);
++
++  useEffect(() => {
++    setWhiteDisplayTime(game.whiteTime ?? game.timeControl ?? 0);
++    setBlackDisplayTime(game.blackTime ?? game.timeControl ?? 0);
++  }, [game.whiteTime, game.blackTime, game.timeControl, game.lastMoveAt]);
++
++  useEffect(() => {
++    if (game.status !== 'playing' || !game.timeControl) return;
++
++    const intervalId = setInterval(() => {
++      const timeSpent = (Date.now() - game.lastMoveAt) / 1000;
++      if (game.turn === 'w') {
++        const remaining = Math.max(0, (game.whiteTime ?? game.timeControl) - timeSpent);
++        setWhiteDisplayTime(remaining);
++        if (remaining === 0 && !isSpectator) {
++           updateDoc(doc(getDb(), 'games', game.id), { status: 'black_won' });
++        }
++      } else {
++        const remaining = Math.max(0, (game.blackTime ?? game.timeControl) - timeSpent);
++        setBlackDisplayTime(remaining);
++        if (remaining === 0 && !isSpectator) {
++           updateDoc(doc(getDb(), 'games', game.id), { status: 'white_won' });
++        }
++      }
++    }, 100);
++
++    return () => clearInterval(intervalId);
++  }, [game.status, game.turn, game.lastMoveAt, game.whiteTime, game.blackTime, game.timeControl, isSpectator, game.id]);
+ 
+   useEffect(() => {
+     if (game.status === 'playing') {
+@@ -367,11 +398,22 @@
+         setOptionSquares({});
+         
+         const db = getDb();
+         const gameRef = doc(db, 'games', game.id);
+         
+         let newStatus: GameData['status'] = game.status;
+         if (chess.isCheckmate()) {
+@@ -382,12 +424,24 @@
+         }
+ 
++        const timeSpent = (Date.now() - game.lastMoveAt) / 1000;
++        let newWhiteTime = game.whiteTime ?? game.timeControl ?? 0;
++        let newBlackTime = game.blackTime ?? game.timeControl ?? 0;
++
++        if (game.timeControl) {
++          if (chess.turn() === 'b') { // white just moved
++            newWhiteTime = Math.max(0, newWhiteTime - timeSpent);
++          } else {
++            newBlackTime = Math.max(0, newBlackTime - timeSpent);
++          }
++        }
++
+         updateDoc(gameRef, {
+           fen: chess.fen(),
+           pgn: chess.pgn(),
+           lastMoveAt: Date.now(),
+           turn: chess.turn(),
+-          status: newStatus
++          status: newStatus,
++          whiteTime: newWhiteTime,
++          blackTime: newBlackTime
+         });
+       }
+@@ -477,6 +531,16 @@
+ 
++  const formatTime = (seconds: number) => {
++    const m = Math.floor(seconds / 60);
++    const s = Math.floor(seconds % 60);
++    return `${m}:${s.toString().padStart(2, '0')}`;
++  }
++
+   return (
+     <div className="flex-1 flex flex-col lg:flex-row items-center lg:items-start justify-center p-4 lg:p-8 gap-8 animate-in fade-in zoom-in-95 duration-500">
+       <div className="w-full max-w-[600px] flex flex-col gap-4">
+@@ -499,6 +563,11 @@
+             <div className="w-10 h-10 bg-neutral-800 rounded-lg flex items-center justify-center border border-neutral-700 shadow-inner">
+               {topLabel === '(Brancas)' || (!isSpectator && isBlack) ? <div className="w-5 h-5 bg-white rounded-full shadow-sm" /> : <div className="w-5 h-5 bg-black rounded-full shadow-sm border border-neutral-700" />}
+             </div>
+             <div>
+               <h3 className="font-bold text-lg text-white">{opponentName} {topLabel}</h3>
+               <p className="text-sm text-emerald-400 font-medium">{opponentElo} Elo</p>
+             </div>
+           </div>
++          {game.timeControl && (
++            <div className="bg-neutral-800 px-4 py-2 rounded-xl border border-neutral-700 font-mono text-xl font-bold text-white shadow-inner">
++              {formatTime(isSpectator ? blackDisplayTime : (isWhite ? blackDisplayTime : whiteDisplayTime))}
++            </div>
++          )}
+         </div>
+ 
+         <div className="relative group">
+@@ -525,6 +594,11 @@
+               <h3 className="font-bold text-lg text-white">{bottomName} {bottomLabel}</h3>
+               <p className="text-sm text-emerald-400 font-medium">{bottomElo} Elo</p>
+             </div>
+           </div>
++          {game.timeControl && (
++            <div className="bg-neutral-800 px-4 py-2 rounded-xl border border-neutral-700 font-mono text-xl font-bold text-emerald-400 shadow-inner">
++              {formatTime(isSpectator ? whiteDisplayTime : (isWhite ? whiteDisplayTime : blackDisplayTime))}
++            </div>
++          )}
+ 
+           <div className="flex gap-2 mt-2">

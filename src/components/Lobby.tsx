@@ -21,6 +21,7 @@ export default function Lobby({ currentUser, onPlayComputer, onPlayLocal, onSpec
   const [inviteGameId, setInviteGameId] = useState<string | null>(null);
   const [liveGames, setLiveGames] = useState<GameData[]>([]);
   const [hasSavedBotGame, setHasSavedBotGame] = useState(false);
+  const [timeControl, setTimeControl] = useState<number>(300); // 5 min default
 
   useEffect(() => {
     if (localStorage.getItem('vanguard_chess_bot_save')) {
@@ -82,6 +83,9 @@ export default function Lobby({ currentUser, onPlayComputer, onPlayLocal, onSpec
         pgn: '',
         turn: 'w',
         lastMoveAt: Date.now(),
+        timeControl,
+        whiteTime: timeControl,
+        blackTime: timeControl,
         
         spectatorsAllowedWhite: true,
         spectatorsAllowedBlack: true,
@@ -119,7 +123,7 @@ export default function Lobby({ currentUser, onPlayComputer, onPlayLocal, onSpec
     const db = getDb();
     
     try {
-      const queueQuery = query(collection(db, 'queue'), orderBy('createdAt', 'asc'), limit(5));
+      const queueQuery = query(collection(db, 'queue'), where('timeControl', '==', timeControl), orderBy('createdAt', 'asc'), limit(5));
       const queueSnapshot = await getDocs(queueQuery);
       
       let matchedOpponent: QueueEntry | null = null;
@@ -157,6 +161,9 @@ export default function Lobby({ currentUser, onPlayComputer, onPlayLocal, onSpec
               fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
               pgn: '',
               lastMoveAt: Date.now(),
+              timeControl,
+              whiteTime: timeControl,
+              blackTime: timeControl,
               turn: 'w'
             });
 
@@ -174,7 +181,8 @@ export default function Lobby({ currentUser, onPlayComputer, onPlayLocal, onSpec
         uid: currentUser.uid,
         displayName: currentUser.displayName,
         elo: currentUser.elo,
-        createdAt: Date.now()
+        createdAt: Date.now(),
+        timeControl
       });
     } catch (err: any) {
       console.error("Matchmaking error:", err);
@@ -248,11 +256,28 @@ export default function Lobby({ currentUser, onPlayComputer, onPlayLocal, onSpec
           <h2 className="text-2xl font-bold text-white mb-2">
             {isSearching ? 'Buscando Oponente...' : 'Pronto para jogar?'}
           </h2>
-          <p className="text-neutral-400">
+          <p className="text-neutral-400 mb-6">
             {isSearching 
               ? 'Aguardando outro jogador entrar na fila...'
-              : 'Jogue contra adversários online ou contra o computador.'}
+              : 'Selecione o tempo e jogue contra adversários online.'}
           </p>
+
+          <div className="flex justify-center gap-2 mb-2 relative z-10">
+            {[
+              { label: '3 min', value: 180 },
+              { label: '5 min', value: 300 },
+              { label: '10 min', value: 600 }
+            ].map((tc) => (
+              <button
+                key={tc.value}
+                onClick={() => setTimeControl(tc.value)}
+                disabled={isSearching || inviteLink !== null}
+                className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${timeControl === tc.value ? 'bg-emerald-500 text-neutral-950' : 'bg-neutral-900 text-neutral-400 hover:bg-neutral-800 border border-neutral-700/50'} ${isSearching ? 'opacity-50 cursor-not-allowed' : ''}`}
+              >
+                {tc.label}
+              </button>
+            ))}
+          </div>
         </div>
 
         {error && (

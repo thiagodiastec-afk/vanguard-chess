@@ -1,3 +1,4 @@
+import GameReview from './GameReview';
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Chess } from 'chess.js';
 import { useTheme } from '../lib/themes';
@@ -7,7 +8,7 @@ import confetti from 'canvas-confetti';
 import { doc, updateDoc, increment, arrayUnion, addDoc, collection } from 'firebase/firestore';
 import { getDb } from '../lib/firebase';
 import { GameData, UserData } from '../types';
-import { Flag, Handshake, ChevronLeft, MessageSquare, ShieldAlert } from 'lucide-react';
+import { Flag, Handshake, ChevronLeft, MessageSquare, ShieldAlert , BrainCircuit } from 'lucide-react';
 import EvalBar from "./EvalBar";
 import { cn } from '../lib/utils';
 import ChatBox from './ChatBox';
@@ -31,7 +32,11 @@ export default function Game({ game, currentUser, onExit }: GameProps) {
   const [cheatWarnings, setCheatWarnings] = useState(0);
   const [showCheatAlert, setShowCheatAlert] = useState(false);
   const [reported, setReported] = useState(false);
+  const [showReview, setShowReview] = useState(false);
   
+  const [whiteDisplayTime, setWhiteDisplayTime] = useState<number>(game.whiteTime ?? game.timeControl ?? 0);
+  const [blackDisplayTime, setBlackDisplayTime] = useState<number>(game.blackTime ?? game.timeControl ?? 0);
+
   const isWhite = currentUser.uid === game.whiteId;
   const isBlack = currentUser.uid === game.blackId;
   const isSpectator = !isWhite && !isBlack;
@@ -120,6 +125,34 @@ export default function Game({ game, currentUser, onExit }: GameProps) {
     }
     isInitialMount.current = false;
   }, [game.fen, chess]);
+
+  useEffect(() => {
+    setWhiteDisplayTime(game.whiteTime ?? game.timeControl ?? 0);
+    setBlackDisplayTime(game.blackTime ?? game.timeControl ?? 0);
+  }, [game.whiteTime, game.blackTime, game.timeControl, game.lastMoveAt]);
+
+  useEffect(() => {
+    if (game.status !== 'playing' || !game.timeControl) return;
+
+    const intervalId = setInterval(() => {
+      const timeSpent = (Date.now() - game.lastMoveAt) / 1000;
+      if (game.turn === 'w') {
+        const remaining = Math.max(0, (game.whiteTime ?? game.timeControl) - timeSpent);
+        setWhiteDisplayTime(remaining);
+        if (remaining === 0 && !isSpectator) {
+           updateDoc(doc(getDb(), 'games', game.id), { status: 'black_won' });
+        }
+      } else {
+        const remaining = Math.max(0, (game.blackTime ?? game.timeControl) - timeSpent);
+        setBlackDisplayTime(remaining);
+        if (remaining === 0 && !isSpectator) {
+           updateDoc(doc(getDb(), 'games', game.id), { status: 'white_won' });
+        }
+      }
+    }, 100);
+
+    return () => clearInterval(intervalId);
+  }, [game.status, game.turn, game.lastMoveAt, game.whiteTime, game.blackTime, game.timeControl, isSpectator, game.id]);
 
   useEffect(() => {
     if (game.status === 'playing') {
@@ -306,12 +339,26 @@ export default function Game({ game, currentUser, onExit }: GameProps) {
           newStatus = 'draw';
         }
 
+        const timeSpent = (Date.now() - game.lastMoveAt) / 1000;
+        let newWhiteTime = game.whiteTime ?? game.timeControl ?? 0;
+        let newBlackTime = game.blackTime ?? game.timeControl ?? 0;
+
+        if (game.timeControl) {
+          if (chess.turn() === 'b') {
+            newWhiteTime = Math.max(0, newWhiteTime - timeSpent);
+          } else {
+            newBlackTime = Math.max(0, newBlackTime - timeSpent);
+          }
+        }
+
         updateDoc(gameRef, {
           fen: chess.fen(),
           pgn: chess.pgn(),
           turn: chess.turn(),
           lastMoveAt: Date.now(),
-          status: newStatus
+          status: newStatus,
+          whiteTime: newWhiteTime,
+          blackTime: newBlackTime
         }).then(() => {
           if (newStatus !== 'playing') {
             handleGameEnd(newStatus as 'white_won' | 'black_won' | 'draw');
@@ -377,12 +424,26 @@ export default function Game({ game, currentUser, onExit }: GameProps) {
           newStatus = 'draw';
         }
 
+        const timeSpent = (Date.now() - game.lastMoveAt) / 1000;
+        let newWhiteTime = game.whiteTime ?? game.timeControl ?? 0;
+        let newBlackTime = game.blackTime ?? game.timeControl ?? 0;
+
+        if (game.timeControl) {
+          if (chess.turn() === 'b') {
+            newWhiteTime = Math.max(0, newWhiteTime - timeSpent);
+          } else {
+            newBlackTime = Math.max(0, newBlackTime - timeSpent);
+          }
+        }
+
         updateDoc(gameRef, {
           fen: chess.fen(),
           pgn: chess.pgn(),
           turn: chess.turn(),
           lastMoveAt: Date.now(),
-          status: newStatus
+          status: newStatus,
+          whiteTime: newWhiteTime,
+          blackTime: newBlackTime
         }).then(() => {
           if (newStatus !== 'playing') {
             handleGameEnd(newStatus as 'white_won' | 'black_won' | 'draw');
@@ -467,6 +528,13 @@ export default function Game({ game, currentUser, onExit }: GameProps) {
     );
   };
 
+  const formatTime = (seconds: number) => {
+    if (isNaN(seconds) || seconds < 0) seconds = 0;
+    const m = Math.floor(seconds / 60);
+    const s = Math.floor(seconds % 60);
+    return `${m}:${s.toString().padStart(2, '0')}`;
+  }
+
   return (
     <div className="flex-1 w-full max-w-[1600px] mx-auto p-4 lg:p-8 flex flex-col xl:flex-row gap-8 items-center xl:items-start">
       
@@ -484,6 +552,11 @@ export default function Game({ game, currentUser, onExit }: GameProps) {
               
             </div>
           </div>
+          {game.timeControl && (
+            <div className="bg-neutral-800 px-4 py-2 rounded-xl border border-neutral-700 font-mono text-xl font-bold text-white shadow-inner">
+              {formatTime(isSpectator ? blackDisplayTime : (isWhite ? blackDisplayTime : whiteDisplayTime))}
+            </div>
+          )}
         </div>
 
         <div className="bg-neutral-800 rounded-2xl p-6 border border-neutral-700/50 shadow-xl flex flex-col gap-4">
@@ -498,6 +571,11 @@ export default function Game({ game, currentUser, onExit }: GameProps) {
               
             </div>
           </div>
+          {game.timeControl && (
+            <div className="bg-neutral-800 px-4 py-2 rounded-xl border border-neutral-700 font-mono text-xl font-bold text-emerald-400 shadow-inner">
+              {formatTime(isSpectator ? whiteDisplayTime : (isWhite ? whiteDisplayTime : blackDisplayTime))}
+            </div>
+          )}
 
           <div className="flex gap-2 mt-2">
             {!isSpectator && (
@@ -577,12 +655,20 @@ export default function Game({ game, currentUser, onExit }: GameProps) {
             <p className="text-emerald-400 font-medium mb-6">
               A partida terminou. Retorne ao lobby.
             </p>
-            <button
-              onClick={onExit}
-              className="bg-emerald-500 hover:bg-emerald-400 text-neutral-950 font-bold py-3 px-6 rounded-xl transition-all active:scale-95"
-            >
-              Voltar ao Início
-            </button>
+            <div className="flex gap-4">
+              <button
+                onClick={() => setShowReview(true)}
+                className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 px-6 rounded-xl transition-all active:scale-95 flex items-center gap-2"
+              >
+                <BrainCircuit className="w-5 h-5" /> Game Review
+              </button>
+              <button
+                onClick={onExit}
+                className="bg-emerald-500 hover:bg-emerald-400 text-neutral-950 font-bold py-3 px-6 rounded-xl transition-all active:scale-95"
+              >
+                Voltar ao Início
+              </button>
+            </div>
           </div>
         )}
         {/* @ts-ignore react-chessboard types are broken in v5 */}
@@ -612,6 +698,15 @@ export default function Game({ game, currentUser, onExit }: GameProps) {
            {renderCapturedPieces(isWhite ? 'b' : 'w', 'vertical')}
         </div>
       </div>
+      
+      {showReview && (
+        <GameReview 
+          pgn={game.pgn} 
+          playerWhiteName={game.whiteName}
+          playerBlackName={game.blackName}
+          onClose={() => setShowReview(false)} 
+        />
+      )}
     </div>
   );
 }

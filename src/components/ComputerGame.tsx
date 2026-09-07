@@ -102,7 +102,7 @@ export default function ComputerGame({ difficulty, currentUser, onExit }: Comput
         worker.terminate();
       };
 
-      worker.postMessage({ fen: game.fen(), difficulty: activeDifficulty });
+      worker.postMessage({ type: 'search', fen: game.fen(), difficulty: activeDifficulty });
     });
   }, [game, activeDifficulty, playerColor, isThinking]);
 
@@ -125,7 +125,7 @@ export default function ComputerGame({ difficulty, currentUser, onExit }: Comput
         worker.terminate();
       };
       // Depth 3 is enough for a good hint
-      worker.postMessage({ fen: game.fen(), difficulty: 'dificil' });
+      worker.postMessage({ type: 'search', fen: game.fen(), difficulty: 'dificil' });
     });
   };
 

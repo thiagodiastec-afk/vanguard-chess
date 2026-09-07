@@ -1,0 +1,77 @@
+--- src/components/Lobby.tsx
++++ src/components/Lobby.tsx
+@@ -21,6 +21,7 @@
+   const [inviteGameId, setInviteGameId] = useState<string | null>(null);
+   const [liveGames, setLiveGames] = useState<GameData[]>([]);
+   const [hasSavedBotGame, setHasSavedBotGame] = useState(false);
++  const [timeControl, setTimeControl] = useState<number>(300); // 5 min default
+ 
+   useEffect(() => {
+     if (localStorage.getItem('vanguard_chess_bot_save')) {
+@@ -74,7 +75,10 @@
+         status: 'waiting_friend',
+         fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
+         pgn: '',
+-        lastMoveAt: Date.now(),
++        lastMoveAt: Date.now(),
++        timeControl,
++        whiteTime: timeControl,
++        blackTime: timeControl,
+         turn: 'w'
+       };
+       
+@@ -120,7 +124,7 @@
+     const db = getDb();
+     
+     try {
+-      const queueQuery = query(collection(db, 'queue'), orderBy('createdAt', 'asc'), limit(5));
++      const queueQuery = query(collection(db, 'queue'), where('timeControl', '==', timeControl), orderBy('createdAt', 'asc'), limit(5));
+       const queueSnapshot = await getDocs(queueQuery);
+       
+       let matchedOpponent: QueueEntry | null = null;
+@@ -155,7 +159,10 @@
+               status: 'playing',
+               fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
+               pgn: '',
+-              lastMoveAt: Date.now(),
++              lastMoveAt: Date.now(),
++              timeControl,
++              whiteTime: timeControl,
++              blackTime: timeControl,
+               turn: 'w'
+             });
+ 
+@@ -174,7 +181,8 @@
+         uid: currentUser.uid,
+         displayName: currentUser.displayName,
+         elo: currentUser.elo,
+-        createdAt: Date.now()
++        createdAt: Date.now(),
++        timeControl
+       });
+     } catch (err: any) {
+       console.error("Matchmaking error:", err);
+@@ -212,6 +220,23 @@
+           <h2 className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-indigo-400 mb-6 relative z-10">
+             Vanguard Chess
+           </h2>
++
++          <div className="flex justify-center gap-2 mb-4 relative z-10">
++            {[
++              { label: '3 min', value: 180 },
++              { label: '5 min', value: 300 },
++              { label: '10 min', value: 600 }
++            ].map((tc) => (
++              <button
++                key={tc.value}
++                onClick={() => setTimeControl(tc.value)}
++                disabled={isSearching || inviteLink !== null}
++                className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${timeControl === tc.value ? 'bg-emerald-500 text-white' : 'bg-neutral-900 text-neutral-400 hover:bg-neutral-800'}`}
++              >
++                {tc.label}
++              </button>
++            ))}
++          </div>
+           
+           <div className="flex flex-col gap-4 relative z-10">
+             <button
