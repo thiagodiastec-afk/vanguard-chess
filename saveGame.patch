@@ -1,0 +1,157 @@
+--- src/components/ComputerGame.tsx
++++ src/components/ComputerGame.tsx
+@@ -23,8 +23,9 @@
+ }
+ 
+ export default function ComputerGame({ difficulty, currentUser, onExit }: ComputerGameProps) {
+   const theme = useTheme();
++  const [activeDifficulty, setActiveDifficulty] = useState(difficulty === 'resume' ? 'facil' : difficulty);
+   const [game, setGame] = useState(new Chess());
+   const [playerColor, setPlayerColor] = useState<'w' | 'b'>('w');
+   const [isThinking, setIsThinking] = useState(false);
+   const [gameOver, setGameOver] = useState(false);
+@@ -32,6 +33,7 @@
+   const [analysis, setAnalysis] = useState<string | null>(null);
+   const [isAnalyzing, setIsAnalyzing] = useState(false);
+   const [hintArrow, setHintArrow] = useState<[string, string] | null>(null);
+   const [isGettingHint, setIsGettingHint] = useState(false);
++  const [hasUsedHelp, setHasUsedHelp] = useState(false);
+ 
+   const [moveFrom, setMoveFrom] = useState<string | null>(null);
+@@ -39,7 +41,7 @@
+ 
+   const getDifficultyName = () => {
+-    switch (difficulty) {
++    switch (activeDifficulty) {
+       case 'iniciante': return 'Iniciante';
+       case 'facil': return 'Fácil';
+       case 'medio': return 'Médio';
+@@ -48,6 +50,23 @@
+       default: return 'Desconhecido';
+     }
+   };
++
++  useEffect(() => {
++    if (difficulty === 'resume') {
++      const saved = localStorage.getItem('vanguard_chess_bot_save');
++      if (saved) {
++        try {
++          const parsed = JSON.parse(saved);
++          const newGame = new Chess();
++          newGame.loadPgn(parsed.pgn);
++          setGame(newGame);
++          setPlayerColor(parsed.playerColor);
++          setActiveDifficulty(parsed.difficulty);
++          setHasUsedHelp(parsed.hasUsedHelp || false);
++        } catch (e) {}
++      }
++    }
++  }, [difficulty]);
++
++  useEffect(() => {
++    if (game.moveNumber() > 1 && !gameOver) {
++      localStorage.setItem('vanguard_chess_bot_save', JSON.stringify({
++        pgn: game.pgn(),
++        playerColor,
++        difficulty: activeDifficulty,
++        hasUsedHelp
++      }));
++    } else if (gameOver) {
++      localStorage.removeItem('vanguard_chess_bot_save');
++    }
++  }, [game, playerColor, activeDifficulty, hasUsedHelp, gameOver]);
+ 
+   useEffect(() => {
+@@ -70,12 +89,13 @@
+         worker.terminate();
+       };
+ 
+-      worker.postMessage({ fen: game.fen(), difficulty });
++      worker.postMessage({ fen: game.fen(), difficulty: activeDifficulty });
+     });
+-  }, [game, difficulty, playerColor, isThinking]);
++  }, [game, activeDifficulty, playerColor, isThinking]);
+ 
+   const handleHint = () => {
+     if (game.isGameOver() || isGettingHint || isThinking) return;
+     setIsGettingHint(true);
++    setHasUsedHelp(true);
+     
+     import('../lib/engine.worker?worker').then((WorkerModule) => {
+@@ -178,7 +198,7 @@
+           let numericResult: 1 | 0.5 | 0 = 0;
+           if (winner === 'draw') numericResult = 0.5;
+           else if (winner === playerColor) numericResult = 1;
+           
+           let botElo = 1000;
+-          switch (difficulty) {
++          switch (activeDifficulty) {
+             case 'iniciante': botElo = 400; break;
+             case 'facil': botElo = 800; break;
+@@ -208,12 +228,15 @@
+           // Coins and Stats
+           if (numericResult === 1) {
+             let coinsReward = 0;
+-            if (difficulty === 'iniciante') coinsReward = 10;
+-            else if (difficulty === 'facil') coinsReward = 20;
+-            else if (difficulty === 'medio') coinsReward = 50;
+-            else if (difficulty === 'dificil') coinsReward = 100;
+-            else if (difficulty === 'profissional') coinsReward = 250;
++            if (activeDifficulty === 'iniciante') coinsReward = 10;
++            else if (activeDifficulty === 'facil') coinsReward = 20;
++            else if (activeDifficulty === 'medio') coinsReward = 50;
++            else if (activeDifficulty === 'dificil') coinsReward = 100;
++            else if (activeDifficulty === 'profissional') coinsReward = 250;
++            
++            if (!hasUsedHelp) {
++              coinsReward = Math.floor(coinsReward * 1.5); // 50% bônus por vitória limpa
++            }
+             
+             updateData['stats.wins'] = increment(1);
+             updateData['coins'] = increment(coinsReward);
+@@ -226,7 +249,7 @@
+             if (streak > 2) {
+               newAchievements = calculateAchievements(userData.achievements || [], 'streak', { streak });
+             }
+-            newAchievements = [...newAchievements, ...calculateAchievements(userData.achievements || [], 'bot_win', { difficulty })];
++            newAchievements = [...newAchievements, ...calculateAchievements(userData.achievements || [], 'bot_win', { difficulty: activeDifficulty })];
+             if (newAchievements.length > 0) {
+               updateData['achievements'] = arrayUnion(...newAchievements);
+             }
+@@ -259,7 +282,7 @@
+         }
+       };
+       updateStats();
+     }
+-  }, [winner, currentUser, difficulty, playerColor]);
++  }, [winner, currentUser, activeDifficulty, playerColor]);
+ 
+   const onDrop = (sourceSquare: string, targetSquare: string) => {
+@@ -430,6 +453,7 @@
+   const handleUndo = () => {
+     if (gameOver || game.history().length === 0) return;
++    setHasUsedHelp(true);
+     
+     const newGame = new Chess();
+     newGame.loadPgn(game.pgn());
+@@ -457,7 +481,7 @@
+       <div className="flex flex-col items-center justify-center max-w-[800px] mx-auto w-full">
+         <div className="w-full flex justify-between items-center mb-6">
+           <button
+-            onClick={onExit}
++            onClick={() => { if (!gameOver && game.moveNumber() > 1) { localStorage.setItem('vanguard_chess_bot_save', JSON.stringify({ pgn: game.pgn(), playerColor, difficulty: activeDifficulty, hasUsedHelp })); } onExit(); }}
+             className="flex items-center gap-2 text-neutral-400 hover:text-white transition-colors"
+           >
+             <ChevronLeft className="w-5 h-5" />
+@@ -512,6 +536,11 @@
+               )}
+             </div>
+           </div>
++          {winner === playerColor && !hasUsedHelp && (
++            <div className="mt-4 px-4 py-2 bg-amber-500/20 text-amber-400 rounded-lg font-bold text-center border border-amber-500/30 animate-pulse">
++              ✨ Bônus de Vitória Limpa! (+50% Moedas) ✨
++            </div>
++          )}
+         </div>
+         
+         <div className="flex items-center gap-3">

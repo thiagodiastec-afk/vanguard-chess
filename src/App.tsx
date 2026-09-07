@@ -5,7 +5,8 @@ import { initFirebase, getDb } from './lib/firebase';
 import { UserData, GameData } from './types';
 import Lobby from './components/Lobby';
 import Game from './components/Game';
-import ComputerGame from './components/ComputerGame';
+import ComputerGame from "./components/ComputerGame";
+import LocalGame from "./components/LocalGame";
 import Tournaments from './components/Tournaments';
 import Rules from './components/Rules';
 import Chat from './components/Chat';
@@ -32,6 +33,7 @@ export default function App() {
   const [spectatingGameId, setSpectatingGameId] = useState<string | null>(null);
   const [spectatingGame, setSpectatingGame] = useState<GameData | null>(null);
   const [computerGameDifficulty, setComputerGameDifficulty] = useState<string | null>(null);
+  const [isLocalGame, setIsLocalGame] = useState(false);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<Tab>('play');
   const [showSettings, setShowSettings] = useState(false);
@@ -625,8 +627,10 @@ export default function App() {
             <Game game={activeGame} currentUser={userData!} onExit={() => setActiveGame(null)} />
           ) : computerGameDifficulty ? (
             <ComputerGame difficulty={computerGameDifficulty} currentUser={userData} onExit={() => setComputerGameDifficulty(null)} />
+          ) : isLocalGame ? (
+            <LocalGame onExit={() => setIsLocalGame(false)} />
           ) : (
-            <Lobby currentUser={userData} onPlayComputer={(diff) => setComputerGameDifficulty(diff)} onLoginRequest={handleLogin} />
+            <Lobby currentUser={userData} onPlayComputer={(diff) => setComputerGameDifficulty(diff)} onPlayLocal={() => setIsLocalGame(true)} onLoginRequest={handleLogin} />
           )
         )}
         {activeTab === 'rules' && <Rules />}

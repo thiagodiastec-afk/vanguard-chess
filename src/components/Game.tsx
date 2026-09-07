@@ -8,6 +8,7 @@ import { doc, updateDoc, increment, arrayUnion, addDoc, collection } from 'fireb
 import { getDb } from '../lib/firebase';
 import { GameData, UserData } from '../types';
 import { Flag, Handshake, ChevronLeft, MessageSquare, ShieldAlert } from 'lucide-react';
+import EvalBar from "./EvalBar";
 import { cn } from '../lib/utils';
 import ChatBox from './ChatBox';
 import { customPieces } from '../lib/chessPieces';
@@ -553,17 +554,21 @@ export default function Game({ game, currentUser, onExit }: GameProps) {
         <div className="flex flex-col items-center justify-center shrink-0 min-h-[400px]">
            {renderCapturedPieces(isWhite ? 'w' : 'b', 'vertical')}
         </div>
-        <div className="w-full max-w-[700px] aspect-square mx-auto shadow-[0_30px_60px_-15px_rgba(0,0,0,0.7)] relative rounded-md bg-[#181512] p-[5%] pt-[4%] border-b-[45px] border-[#0a0908] border-x-[12px] border-x-[#14120f] border-t-[12px] border-t-[#1c1815]">
-        <div className="absolute inset-[3%] border border-[#b57a3e]/40 pointer-events-none z-10" />
-        <div className="absolute inset-[3.5%] border-2 border-[#b57a3e]/60 pointer-events-none z-10" />
-        
-        <div className="absolute bottom-[-45px] left-0 right-0 h-[45px] bg-gradient-to-b from-[#111] to-[#0a0a0a] pointer-events-none rounded-b-md flex items-center justify-center">
-          <div className="w-[80%] h-[2px] bg-black/80 absolute top-0" />
-          <div className="w-[16px] h-[16px] rounded-full bg-gradient-to-br from-[#e5c158] to-[#6a4f15] shadow-md border border-[#3a2a0d]" />
-        </div>
+        <div className="flex gap-4 w-full max-w-[750px] mx-auto">
+          <div className="py-2">
+             <EvalBar game={chess} isFlipped={!isWhite} />
+          </div>
+          <div className="flex-1 max-w-[700px] aspect-square shadow-[0_30px_60px_-15px_rgba(0,0,0,0.7)] relative rounded-md bg-[#181512] p-[5%] pt-[4%] border-b-[45px] border-[#0a0908] border-x-[12px] border-x-[#14120f] border-t-[12px] border-t-[#1c1815]">
+          <div className="absolute inset-[3%] border border-[#b57a3e]/40 pointer-events-none z-10" />
+          <div className="absolute inset-[3.5%] border-2 border-[#b57a3e]/60 pointer-events-none z-10" />
+          
+          <div className="absolute bottom-[-45px] left-0 right-0 h-[45px] bg-gradient-to-b from-[#111] to-[#0a0a0a] pointer-events-none rounded-b-md flex items-center justify-center">
+            <div className="w-[80%] h-[2px] bg-black/80 absolute top-0" />
+            <div className="w-[16px] h-[16px] rounded-full bg-gradient-to-br from-[#e5c158] to-[#6a4f15] shadow-md border border-[#3a2a0d]" />
+          </div>
 
-        <div className="relative w-full aspect-square overflow-hidden shadow-inner bg-black">
-        {game.status !== 'playing' && (
+          <div className="relative w-full aspect-square overflow-hidden shadow-inner bg-black">
+          {game.status !== 'playing' && (
           <div className="absolute inset-0 z-10 bg-black/60 flex flex-col items-center justify-center p-6 text-center backdrop-blur-sm">
             <h2 className="text-4xl font-bold text-white mb-2">
               {game.status === 'draw' ? 'Empate' : 
@@ -597,6 +602,7 @@ export default function Game({ game, currentUser, onExit }: GameProps) {
               dropSquareStyle: { boxShadow: 'inset 0 0 1px 6px rgba(255,255,255,0.75)' }
             }}
           />
+        </div>
         </div>
       </div>
       

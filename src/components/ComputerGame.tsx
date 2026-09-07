@@ -5,10 +5,11 @@ import { sounds } from '../lib/sounds';
 import { Chessboard } from 'react-chessboard';
 import confetti from 'canvas-confetti';
 import { UserData } from '../types';
-import { Flag, ChevronLeft, Bot, RefreshCcw, Undo, Sparkles } from 'lucide-react';
+import { Flag, ChevronLeft, Bot, RefreshCcw, Undo, Sparkles, Lightbulb } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { customPieces } from '../lib/chessPieces';
 import MoveHistory from './MoveHistory';
+import EvalBar from "./EvalBar";
 import { doc, updateDoc, increment, arrayUnion } from 'firebase/firestore';
 import { getDb } from '../lib/firebase';
 import { calculateAchievements } from '../lib/achievementManager';
@@ -23,6 +24,7 @@ interface ComputerGameProps {
 
 export default function ComputerGame({ difficulty, currentUser, onExit }: ComputerGameProps) {
   const theme = useTheme();
+  const [activeDifficulty, setActiveDifficulty] = useState(difficulty === 'resume' ? 'facil' : difficulty);
   const [game, setGame] = useState(new Chess());
   const [playerColor, setPlayerColor] = useState<'w' | 'b'>('w');
   const [isThinking, setIsThinking] = useState(false);
@@ -30,12 +32,15 @@ export default function ComputerGame({ difficulty, currentUser, onExit }: Comput
   const [winner, setWinner] = useState<string | null>(null);
   const [analysis, setAnalysis] = useState<string | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [hintArrow, setHintArrow] = useState<[string, string] | null>(null);
+  const [isGettingHint, setIsGettingHint] = useState(false);
+  const [hasUsedHelp, setHasUsedHelp] = useState(false);
 
   const [moveFrom, setMoveFrom] = useState<string | null>(null);
   const [optionSquares, setOptionSquares] = useState<Record<string, React.CSSProperties>>({});
 
   const getDifficultyName = () => {
-    switch (difficulty) {
+    switch (activeDifficulty) {
       case 'iniciante': return 'Iniciante';
       case 'facil': return 'Fácil';
       case 'medio': return 'Médio';
@@ -45,10 +50,41 @@ export default function ComputerGame({ difficulty, currentUser, onExit }: Comput
     }
   };
 
+  useEffect(() => {
+    if (difficulty === 'resume') {
+      const saved = localStorage.getItem('vanguard_chess_bot_save');
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          const newGame = new Chess();
+          newGame.loadPgn(parsed.pgn);
+          setGame(newGame);
+          setPlayerColor(parsed.playerColor);
+          setActiveDifficulty(parsed.difficulty);
+          setHasUsedHelp(parsed.hasUsedHelp || false);
+        } catch (e) {}
+      }
+    }
+  }, [difficulty]);
+
+  useEffect(() => {
+    if (game.moveNumber() > 1 && !gameOver) {
+      localStorage.setItem('vanguard_chess_bot_save', JSON.stringify({
+        pgn: game.pgn(),
+        playerColor,
+        difficulty: activeDifficulty,
+        hasUsedHelp
+      }));
+    } else if (gameOver) {
+      localStorage.removeItem('vanguard_chess_bot_save');
+    }
+  }, [game, playerColor, activeDifficulty, hasUsedHelp, gameOver]);
+
   const makeComputerMove = useCallback(() => {
     if (game.isGameOver() || game.turn() === playerColor || isThinking) return;
     
     setIsThinking(true);
+    setHintArrow(null);
     
     // Dynamically import the worker to ensure it compiles correctly with Vite
     import('../lib/engine.worker?worker').then((WorkerModule) => {
@@ -66,9 +102,32 @@ export default function ComputerGame({ difficulty, currentUser, onExit }: Comput
         worker.terminate();
       };
 
-      worker.postMessage({ fen: game.fen(), difficulty });
+      worker.postMessage({ fen: game.fen(), difficulty: activeDifficulty });
     });
-  }, [game, difficulty, playerColor, isThinking]);
+  }, [game, activeDifficulty, playerColor, isThinking]);
+
+  const handleHint = () => {
+    if (game.isGameOver() || isGettingHint || isThinking) return;
+    setIsGettingHint(true);
+    setHasUsedHelp(true);
+    
+    import('../lib/engine.worker?worker').then((WorkerModule) => {
+      const worker = new WorkerModule.default();
+      worker.onmessage = (e) => {
+        const { bestMove } = e.data;
+        if (bestMove) {
+          // bestMove might be 'e2e4' or 'g1f3'
+          const from = bestMove.substring(0, 2);
+          const to = bestMove.substring(2, 4);
+          setHintArrow([from, to]);
+        }
+        setIsGettingHint(false);
+        worker.terminate();
+      };
+      // Depth 3 is enough for a good hint
+      worker.postMessage({ fen: game.fen(), difficulty: 'dificil' });
+    });
+  };
 
   const statsUpdated = useRef(false);
 
@@ -152,7 +211,7 @@ export default function ComputerGame({ difficulty, currentUser, onExit }: Comput
           else if (winner === playerColor) numericResult = 1;
           
           let botElo = 1000;
-          switch (difficulty) {
+          switch (activeDifficulty) {
             case 'iniciante': botElo = 800; break;
             case 'facil': botElo = 1000; break;
             case 'medio': botElo = 1300; break;
@@ -182,11 +241,16 @@ export default function ComputerGame({ difficulty, currentUser, onExit }: Comput
           let coinsReward = 0;
           if (numericResult === 1) {
             updateData['stats.wins'] = increment(1);
-            if (difficulty === 'iniciante') coinsReward = 10;
-            else if (difficulty === 'facil') coinsReward = 20;
-            else if (difficulty === 'medio') coinsReward = 50;
-            else if (difficulty === 'dificil') coinsReward = 100;
-            else if (difficulty === 'profissional') coinsReward = 250;
+            if (activeDifficulty === 'iniciante') coinsReward = 10;
+            else if (activeDifficulty === 'facil') coinsReward = 20;
+            else if (activeDifficulty === 'medio') coinsReward = 50;
+            else if (activeDifficulty === 'dificil') coinsReward = 100;
+            else if (activeDifficulty === 'profissional') coinsReward = 250;
+            
+            if (!hasUsedHelp) {
+              coinsReward = Math.floor(coinsReward * 1.5);
+            }
+            
             updateData['coins'] = increment(coinsReward);
           }
           else if (numericResult === 0) updateData['stats.losses'] = increment(1);
@@ -200,7 +264,7 @@ export default function ComputerGame({ difficulty, currentUser, onExit }: Comput
             numericResult, 
             game.history().length, 
             true, 
-            difficulty
+            activeDifficulty
           );
           Object.assign(updateData, badgeUpdates);
 
@@ -233,7 +297,7 @@ export default function ComputerGame({ difficulty, currentUser, onExit }: Comput
         });
       }
     }
-  }, [winner, currentUser, difficulty, playerColor]);
+  }, [winner, currentUser, activeDifficulty, playerColor, hasUsedHelp]);
 
   const getMoveOptions = (square: string) => {
     const moves = game.moves({
@@ -302,6 +366,7 @@ export default function ComputerGame({ difficulty, currentUser, onExit }: Comput
         sounds.playMove(move.captured != null, gameCopy.inCheck());
         setGame(gameCopy);
         setMoveFrom(null);
+        setHintArrow(null);
         setOptionSquares({});
         return;
       }
@@ -315,6 +380,7 @@ export default function ComputerGame({ difficulty, currentUser, onExit }: Comput
       resetFirstMove(square);
     } else {
       setMoveFrom(null);
+        setHintArrow(null);
       setOptionSquares({});
     }
   };
@@ -348,17 +414,20 @@ export default function ComputerGame({ difficulty, currentUser, onExit }: Comput
         sounds.playMove(move.captured != null, gameCopy.inCheck());
         setGame(gameCopy);
         setMoveFrom(null);
+        setHintArrow(null);
         setOptionSquares({});
         return true;
       }
     } catch (e) {
       console.log('Exception in onDrop', e);
       setMoveFrom(null);
+        setHintArrow(null);
       setOptionSquares({});
       return false;
     }
     console.log('Returning false at end');
     setMoveFrom(null);
+        setHintArrow(null);
     setOptionSquares({});
     return false;
   };
@@ -392,11 +461,13 @@ export default function ComputerGame({ difficulty, currentUser, onExit }: Comput
     setWinner(null);
     setAnalysis(null);
     statsUpdated.current = false;
+    setHasUsedHelp(false);
   };
 
   
   const handleUndo = () => {
     if (gameOver || game.history().length === 0) return;
+    setHasUsedHelp(true);
     
     const newGame = new Chess();
     newGame.loadPgn(game.pgn());
@@ -473,7 +544,17 @@ export default function ComputerGame({ difficulty, currentUser, onExit }: Comput
       <div className="w-full bg-neutral-900 border-b border-neutral-800 p-3 lg:px-8 flex flex-wrap justify-between items-center z-10 gap-4">
         <div className="flex items-center gap-4">
           <button 
-            onClick={onExit}
+            onClick={() => {
+              if (!gameOver && game.moveNumber() > 1) {
+                localStorage.setItem('vanguard_chess_bot_save', JSON.stringify({
+                  pgn: game.pgn(),
+                  playerColor,
+                  difficulty: activeDifficulty,
+                  hasUsedHelp
+                }));
+              }
+              onExit();
+            }}
             className="flex items-center justify-center gap-2 px-3 py-2 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white rounded-lg font-bold transition-colors text-sm"
           >
             <ChevronLeft className="w-4 h-4" />
@@ -488,12 +569,21 @@ export default function ComputerGame({ difficulty, currentUser, onExit }: Comput
         
         <div className="flex items-center gap-3">
           <button 
+            onClick={handleHint}
+            disabled={gameOver || isThinking || isGettingHint}
+            className="flex items-center justify-center gap-2 px-4 py-2 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 rounded-lg font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+            title="Dica da IA"
+          >
+            <Lightbulb className={cn("w-4 h-4", isGettingHint && "animate-pulse")} />
+            <span className="hidden sm:inline">{isGettingHint ? 'Pensando...' : 'Dica'}</span>
+          </button>
+          <button 
             onClick={handleUndo}
             disabled={gameOver || game.history().length === 0}
             className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 rounded-lg font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
           >
             <Undo className="w-4 h-4" />
-            Desfazer Jogada
+            <span className="hidden sm:inline">Desfazer Jogada</span>
           </button>
           <button 
             onClick={resign}
@@ -501,7 +591,7 @@ export default function ComputerGame({ difficulty, currentUser, onExit }: Comput
             className="flex items-center justify-center gap-2 px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
           >
             <Flag className="w-4 h-4" />
-            Abandonar
+            <span className="hidden sm:inline">Abandonar</span>
           </button>
         </div>
       </div>
@@ -539,6 +629,12 @@ export default function ComputerGame({ difficulty, currentUser, onExit }: Comput
 
         </div>
 
+        {winner === playerColor && !hasUsedHelp && (
+          <div className="bg-amber-500/20 border border-amber-500/30 text-amber-400 p-4 rounded-xl text-center font-bold animate-pulse">
+            ✨ Bônus de Vitória Limpa! (+50% Moedas) ✨
+          </div>
+        )}
+
         <MoveHistory history={game.history()} />
       </div>
 
@@ -548,17 +644,21 @@ export default function ComputerGame({ difficulty, currentUser, onExit }: Comput
         <div className="flex flex-col items-center justify-center shrink-0 min-h-[400px]">
            {renderCapturedPieces(playerColor, 'vertical')}
         </div>
-        <div className="w-full max-w-[700px] aspect-square mx-auto shadow-[0_30px_60px_-15px_rgba(0,0,0,0.7)] relative rounded-md bg-[#181512] p-[5%] pt-[4%] border-b-[45px] border-[#0a0908] border-x-[12px] border-x-[#14120f] border-t-[12px] border-t-[#1c1815]">
-        <div className="absolute inset-[3%] border border-[#b57a3e]/40 pointer-events-none z-10" />
-        <div className="absolute inset-[3.5%] border-2 border-[#b57a3e]/60 pointer-events-none z-10" />
-        
-        <div className="absolute bottom-[-45px] left-0 right-0 h-[45px] bg-gradient-to-b from-[#111] to-[#0a0a0a] pointer-events-none rounded-b-md flex items-center justify-center">
-          <div className="w-[80%] h-[2px] bg-black/80 absolute top-0" />
-          <div className="w-[16px] h-[16px] rounded-full bg-gradient-to-br from-[#e5c158] to-[#6a4f15] shadow-md border border-[#3a2a0d]" />
-        </div>
+        <div className="flex gap-4 w-full max-w-[750px] mx-auto">
+          <div className="py-2">
+             <EvalBar game={game} isFlipped={playerColor === 'b'} />
+          </div>
+          <div className="flex-1 max-w-[700px] aspect-square shadow-[0_30px_60px_-15px_rgba(0,0,0,0.7)] relative rounded-md bg-[#181512] p-[5%] pt-[4%] border-b-[45px] border-[#0a0908] border-x-[12px] border-x-[#14120f] border-t-[12px] border-t-[#1c1815]">
+          <div className="absolute inset-[3%] border border-[#b57a3e]/40 pointer-events-none z-10" />
+          <div className="absolute inset-[3.5%] border-2 border-[#b57a3e]/60 pointer-events-none z-10" />
+          
+          <div className="absolute bottom-[-45px] left-0 right-0 h-[45px] bg-gradient-to-b from-[#111] to-[#0a0a0a] pointer-events-none rounded-b-md flex items-center justify-center">
+            <div className="w-[80%] h-[2px] bg-black/80 absolute top-0" />
+            <div className="w-[16px] h-[16px] rounded-full bg-gradient-to-br from-[#e5c158] to-[#6a4f15] shadow-md border border-[#3a2a0d]" />
+          </div>
 
-        <div className="relative w-full aspect-square overflow-hidden shadow-inner bg-black">
-        {gameOver && (
+          <div className="relative w-full aspect-square overflow-hidden shadow-inner bg-black">
+          {gameOver && (
           <div className="absolute inset-0 z-10 bg-black/70 flex flex-col items-center justify-center p-6 text-center backdrop-blur-md overflow-y-auto">
             {!analysis ? (
               <>
@@ -623,10 +723,12 @@ export default function ComputerGame({ difficulty, currentUser, onExit }: Comput
             lightSquareStyle: theme.lightSquareStyle,
             pieces: customPieces,
             squareStyles: { ...moveHighlights, ...optionSquares },
+            arrows: hintArrow ? [{ startSquare: hintArrow[0], endSquare: hintArrow[1], color: 'rgba(245, 158, 11, 0.8)' }] : [],
             dropSquareStyle: { boxShadow: 'inset 0 0 1px 6px rgba(255,255,255,0.75)' },
             animationDurationInMs: 400
           }}
         />
+        </div>
         </div>
       </div>
       
