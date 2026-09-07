@@ -44,6 +44,9 @@ export default function Training({ onPlayComputer }: TrainingProps) {
   const [step, setStep] = useState(0);
   const [solved, setSolved] = useState(false);
   const [errorLine, setErrorLine] = useState(false);
+  
+  const [moveFrom, setMoveFrom] = useState<string | null>(null);
+  const [optionSquares, setOptionSquares] = useState<Record<string, React.CSSProperties>>({});
 
   const puzzle = PUZZLES[currentPuzzleIdx];
 
@@ -53,6 +56,8 @@ export default function Training({ onPlayComputer }: TrainingProps) {
     setStep(0);
     setSolved(false);
     setErrorLine(false);
+    setMoveFrom(null);
+    setOptionSquares({});
   };
 
   const loadPuzzle = (idx: number) => {
@@ -62,6 +67,110 @@ export default function Training({ onPlayComputer }: TrainingProps) {
     setStep(0);
     setSolved(false);
     setErrorLine(false);
+    setMoveFrom(null);
+    setOptionSquares({});
+  };
+
+  const getMoveOptions = (square: string) => {
+    const moves = chess.moves({
+      square: square as any,
+      verbose: true
+    });
+    if (moves.length === 0) {
+      setOptionSquares({});
+      return;
+    }
+
+    const newSquares: Record<string, React.CSSProperties> = {};
+    moves.forEach((move) => {
+      newSquares[move.to] = {
+        background:
+          chess.get(move.to as any) && chess.get(move.to as any)?.color !== chess.get(square as any)?.color
+            ? 'radial-gradient(circle, rgba(239, 68, 68, 0.4) 85%, transparent 85%)'
+            : 'radial-gradient(circle, rgba(255, 255, 255, 0.3) 25%, transparent 25%)',
+        borderRadius: '50%'
+      };
+    });
+    
+    newSquares[square] = {
+      background: 'rgba(234, 179, 8, 0.4)'
+    };
+    setOptionSquares(newSquares);
+  };
+
+  const onPieceClick = (args: any) => {
+    const square = typeof args === 'string' ? args : args?.square;
+    if (square) {
+      onSquareClick(square);
+    }
+  };
+
+  const onSquareClick = (args: any) => {
+    const square = typeof args === 'string' ? args : args?.square;
+    if (!square) return;
+    if (solved || chess.turn() !== 'w') return;
+
+    function resetFirstMove(sq: string) {
+      setMoveFrom(sq);
+      getMoveOptions(sq);
+    }
+
+    if (!moveFrom) {
+      const hasPiece = chess.get(square as any);
+      if (hasPiece && hasPiece.color === 'w') {
+        resetFirstMove(square);
+      }
+      return;
+    }
+
+    try {
+      const tempChess = new Chess(chess.fen());
+      const move = tempChess.move({
+        from: moveFrom,
+        to: square,
+        promotion: 'q',
+      });
+
+      if (move) {
+        setMoveFrom(null);
+        setOptionSquares({});
+        
+        if (move.san === puzzle.solution[step]) {
+          chess.move(move);
+          setFen(chess.fen());
+          setErrorLine(false);
+          
+          const nextStep = step + 1;
+          setStep(nextStep);
+
+          if (nextStep >= puzzle.solution.length) {
+            setSolved(true);
+          } else {
+            setTimeout(() => {
+              const opponentMove = puzzle.solution[nextStep];
+              chess.move(opponentMove);
+              setFen(chess.fen());
+              setStep(nextStep + 1);
+            }, 500);
+          }
+          return;
+        } else {
+          setErrorLine(true);
+          setTimeout(() => setErrorLine(false), 1500);
+          return;
+        }
+      }
+    } catch (e) {
+      // ignore
+    }
+
+    const hasPiece = chess.get(square as any);
+    if (hasPiece && hasPiece.color === 'w') {
+      resetFirstMove(square);
+    } else {
+      setMoveFrom(null);
+      setOptionSquares({});
+    }
   };
 
   const onDrop = (argsOrSource: any, argTarget?: any, argPiece?: any) => {
@@ -97,6 +206,8 @@ export default function Training({ onPlayComputer }: TrainingProps) {
         chess.move(move);
         setFen(chess.fen());
         setErrorLine(false);
+        setMoveFrom(null);
+        setOptionSquares({});
         
         const nextStep = step + 1;
         setStep(nextStep);
@@ -116,9 +227,13 @@ export default function Training({ onPlayComputer }: TrainingProps) {
       } else {
         setErrorLine(true);
         setTimeout(() => setErrorLine(false), 1500);
+        setMoveFrom(null);
+        setOptionSquares({});
         return false;
       }
     } catch (e) {
+      setMoveFrom(null);
+      setOptionSquares({});
       return false;
     }
   };
@@ -205,11 +320,13 @@ export default function Training({ onPlayComputer }: TrainingProps) {
               id: "Training",
               position: fen,
               onPieceDrop: onDrop as any,
+              onSquareClick: onSquareClick as any,
+              onPieceClick: onPieceClick as any,
               boardOrientation: "white",
               darkSquareStyle: theme.darkSquareStyle,
               lightSquareStyle: theme.lightSquareStyle,
               pieces: customPieces,
-              
+              squareStyles: optionSquares,
               animationDurationInMs: 300
             }}
           />

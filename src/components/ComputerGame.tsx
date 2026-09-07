@@ -32,6 +32,9 @@ export default function ComputerGame({ difficulty, currentUser, onExit }: Comput
   const [analysis, setAnalysis] = useState<string | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
 
+  const [moveFrom, setMoveFrom] = useState<string | null>(null);
+  const [optionSquares, setOptionSquares] = useState<Record<string, React.CSSProperties>>({});
+
   const getDifficultyName = () => {
     switch (difficulty) {
       case 'iniciante': return 'Iniciante';
@@ -226,6 +229,90 @@ export default function ComputerGame({ difficulty, currentUser, onExit }: Comput
     }
   }, [winner, currentUser, difficulty, playerColor]);
 
+  const getMoveOptions = (square: string) => {
+    const moves = game.moves({
+      square: square as any,
+      verbose: true
+    });
+    if (moves.length === 0) {
+      setOptionSquares({});
+      return;
+    }
+
+    const newSquares: Record<string, React.CSSProperties> = {};
+    moves.forEach((move) => {
+      newSquares[move.to] = {
+        background:
+          game.get(move.to as any) && game.get(move.to as any)?.color !== game.get(square as any)?.color
+            ? 'radial-gradient(circle, rgba(239, 68, 68, 0.4) 85%, transparent 85%)' // Red highlight for captures
+            : 'radial-gradient(circle, rgba(255, 255, 255, 0.3) 25%, transparent 25%)', // White dot for moves
+        borderRadius: '50%'
+      };
+    });
+    
+    newSquares[square] = {
+      background: 'rgba(234, 179, 8, 0.4)' // Highlight selected piece
+    };
+    setOptionSquares(newSquares);
+  };
+
+  const onPieceClick = (args: any) => {
+    const square = typeof args === 'string' ? args : args?.square;
+    if (square) {
+      onSquareClick(square);
+    }
+  };
+
+  const onSquareClick = (args: any) => {
+    const square = typeof args === 'string' ? args : args?.square;
+    if (!square) return;
+    if (game.turn() !== playerColor || gameOver || isThinking) return;
+
+    function resetFirstMove(sq: string) {
+      setMoveFrom(sq);
+      getMoveOptions(sq);
+    }
+
+    // If no piece is selected yet
+    if (!moveFrom) {
+      const hasPiece = game.get(square as any);
+      if (hasPiece && hasPiece.color === playerColor) {
+        resetFirstMove(square);
+      }
+      return;
+    }
+
+    // Try to make a move
+    try {
+      const gameCopy = new Chess();
+      gameCopy.loadPgn(game.pgn());
+      const move = gameCopy.move({
+        from: moveFrom,
+        to: square,
+        promotion: 'q',
+      });
+
+      if (move) {
+        sounds.playMove(move.captured != null, gameCopy.inCheck());
+        setGame(gameCopy);
+        setMoveFrom(null);
+        setOptionSquares({});
+        return;
+      }
+    } catch (e) {
+      // Invalid move, ignore and fall through
+    }
+
+    // If invalid move, check if clicked another own piece
+    const hasPiece = game.get(square as any);
+    if (hasPiece && hasPiece.color === playerColor) {
+      resetFirstMove(square);
+    } else {
+      setMoveFrom(null);
+      setOptionSquares({});
+    }
+  };
+
   const onDrop = (argsOrSource: any, argTarget?: any, argPiece?: any) => {
     console.log('onDrop called', argsOrSource, argTarget);
     console.log('onDrop args:', argsOrSource, argTarget, argPiece);
@@ -254,13 +341,19 @@ export default function ComputerGame({ difficulty, currentUser, onExit }: Comput
       if (move) {
         sounds.playMove(move.captured != null, gameCopy.inCheck());
         setGame(gameCopy);
+        setMoveFrom(null);
+        setOptionSquares({});
         return true;
       }
     } catch (e) {
       console.log('Exception in onDrop', e);
+      setMoveFrom(null);
+      setOptionSquares({});
       return false;
     }
     console.log('Returning false at end');
+    setMoveFrom(null);
+    setOptionSquares({});
     return false;
   };
 
@@ -517,11 +610,13 @@ export default function ComputerGame({ difficulty, currentUser, onExit }: Comput
             id: "ComputerGame",
             position: game.fen(),
             onPieceDrop: onDrop as any,
+            onSquareClick: onSquareClick as any,
+            onPieceClick: onPieceClick as any,
             boardOrientation: playerColor === 'w' ? 'white' : 'black',
             darkSquareStyle: theme.darkSquareStyle,
             lightSquareStyle: theme.lightSquareStyle,
             pieces: customPieces,
-            squareStyles: moveHighlights,
+            squareStyles: { ...moveHighlights, ...optionSquares },
             dropSquareStyle: { boxShadow: 'inset 0 0 1px 6px rgba(255,255,255,0.75)' },
             animationDurationInMs: 400
           }}

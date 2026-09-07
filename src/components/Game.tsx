@@ -45,7 +45,10 @@ export default function Game({ game, currentUser, onExit }: GameProps) {
   const opponentElo = isSpectator ? game.blackElo : (isWhite ? game.blackElo : game.whiteElo);
   const topLabel = isSpectator ? '(Pretas)' : '';
 
-    const moveHighlights = useMemo(() => {
+    const [moveFrom, setMoveFrom] = useState<string | null>(null);
+  const [optionSquares, setOptionSquares] = useState<Record<string, React.CSSProperties>>({});
+
+  const moveHighlights = useMemo(() => {
     const history = chess.history({ verbose: true });
     const highlights: Record<string, React.CSSProperties> = {};
     
@@ -226,6 +229,109 @@ export default function Game({ game, currentUser, onExit }: GameProps) {
     });
   };
 
+  const getMoveOptions = (square: string) => {
+    const moves = chess.moves({
+      square: square as any,
+      verbose: true
+    });
+    if (moves.length === 0) {
+      setOptionSquares({});
+      return;
+    }
+
+    const newSquares: Record<string, React.CSSProperties> = {};
+    moves.forEach((move) => {
+      newSquares[move.to] = {
+        background:
+          chess.get(move.to as any) && chess.get(move.to as any)?.color !== chess.get(square as any)?.color
+            ? 'radial-gradient(circle, rgba(239, 68, 68, 0.4) 85%, transparent 85%)'
+            : 'radial-gradient(circle, rgba(255, 255, 255, 0.3) 25%, transparent 25%)',
+        borderRadius: '50%'
+      };
+    });
+    
+    newSquares[square] = {
+      background: 'rgba(234, 179, 8, 0.4)'
+    };
+    setOptionSquares(newSquares);
+  };
+
+  const onPieceClick = (args: any) => {
+    const square = typeof args === 'string' ? args : args?.square;
+    if (square) {
+      onSquareClick(square);
+    }
+  };
+
+  const onSquareClick = (args: any) => {
+    const square = typeof args === 'string' ? args : args?.square;
+    if (!square) return;
+    const isMyTurn = !isSpectator && ((chess.turn() === 'w' && isWhite) || (chess.turn() === 'b' && isBlack));
+    if (!isMyTurn || game.status !== 'playing') return;
+
+    function resetFirstMove(sq: string) {
+      setMoveFrom(sq);
+      getMoveOptions(sq);
+    }
+
+    if (!moveFrom) {
+      const hasPiece = chess.get(square as any);
+      if (hasPiece && hasPiece.color === (isWhite ? 'w' : 'b')) {
+        resetFirstMove(square);
+      }
+      return;
+    }
+
+    try {
+      const move = chess.move({
+        from: moveFrom,
+        to: square,
+        promotion: 'q',
+      });
+
+      if (move) {
+        sounds.playMove(move.captured != null, chess.inCheck());
+        setFen(chess.fen());
+        setMoveFrom(null);
+        setOptionSquares({});
+        
+        const db = getDb();
+        const gameRef = doc(db, 'games', game.id);
+        
+        let newStatus: GameData['status'] = game.status;
+        if (chess.isCheckmate()) {
+          newStatus = isWhite ? 'white_won' : 'black_won';
+        } else if (chess.isDraw() || chess.isStalemate() || chess.isThreefoldRepetition()) {
+          newStatus = 'draw';
+        }
+
+        updateDoc(gameRef, {
+          fen: chess.fen(),
+          pgn: chess.pgn(),
+          turn: chess.turn(),
+          lastMoveAt: Date.now(),
+          status: newStatus
+        }).then(() => {
+          if (newStatus !== 'playing') {
+            handleGameEnd(newStatus as 'white_won' | 'black_won' | 'draw');
+          }
+        });
+
+        return;
+      }
+    } catch (e) {
+      // invalid move
+    }
+
+    const hasPiece = chess.get(square as any);
+    if (hasPiece && hasPiece.color === (isWhite ? 'w' : 'b')) {
+      resetFirstMove(square);
+    } else {
+      setMoveFrom(null);
+      setOptionSquares({});
+    }
+  };
+
   const onDrop = (argsOrSource: any, argTarget?: any, argPiece?: any) => {
     let sourceSquare = '';
     let targetSquare = '';
@@ -257,6 +363,8 @@ export default function Game({ game, currentUser, onExit }: GameProps) {
       if (move) {
         sounds.playMove(move.captured != null, chess.inCheck());
         setFen(chess.fen());
+        setMoveFrom(null);
+        setOptionSquares({});
         
         const db = getDb();
         const gameRef = doc(db, 'games', game.id);
@@ -284,8 +392,12 @@ export default function Game({ game, currentUser, onExit }: GameProps) {
       }
     } catch (e) {
       // Invalid move
+      setMoveFrom(null);
+      setOptionSquares({});
       return false;
     }
+    setMoveFrom(null);
+    setOptionSquares({});
     return false;
   };
 
@@ -474,11 +586,13 @@ export default function Game({ game, currentUser, onExit }: GameProps) {
               id: "Game",
               position: game.fen,
               onPieceDrop: onDrop as any,
+              onSquareClick: onSquareClick as any,
+              onPieceClick: onPieceClick as any,
               boardOrientation: myColor,
               darkSquareStyle: theme.darkSquareStyle,
               lightSquareStyle: theme.lightSquareStyle,
               pieces: customPieces,
-              squareStyles: moveHighlights,
+              squareStyles: { ...moveHighlights, ...optionSquares },
               animationDurationInMs: 400,
               dropSquareStyle: { boxShadow: 'inset 0 0 1px 6px rgba(255,255,255,0.75)' }
             }}

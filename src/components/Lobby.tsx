@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { collection, doc, getDocs, setDoc, deleteDoc, runTransaction, onSnapshot, query, orderBy, limit, where } from 'firebase/firestore';
 import { getDb } from '../lib/firebase';
 import { UserData, QueueEntry, GameData } from '../types';
-import { Loader2, Swords, Bot, ChevronDown, ChevronUp, Link as LinkIcon, Copy, Target, CheckCircle2 } from 'lucide-react';
+import { Loader2, Swords, Bot, ChevronDown, ChevronUp, Link as LinkIcon, Copy, Target, CheckCircle2, X } from 'lucide-react';
 import { cn } from '../lib/utils';
 
 interface LobbyProps {
@@ -267,28 +267,60 @@ export default function Lobby({ currentUser, onPlayComputer, onSpectate, onLogin
             {isSearching ? 'Cancelar Busca' : 'Jogar Online'}
           </button>
           
-          <div className="relative">
+          <div>
             <button
-              onClick={() => setShowBotMenu(!showBotMenu)}
+              onClick={() => setShowBotMenu(true)}
               disabled={isSearching}
               className="w-full font-bold py-4 px-8 rounded-2xl transition-all active:scale-95 flex items-center justify-center gap-2 text-lg bg-neutral-700 hover:bg-neutral-600 text-white disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Bot className="w-5 h-5" />
               Jogar vs Computador
-              {showBotMenu ? <ChevronUp className="w-5 h-5 ml-2" /> : <ChevronDown className="w-5 h-5 ml-2" />}
             </button>
             
             {showBotMenu && !isSearching && (
-              <div className="absolute top-full left-0 w-full mt-2 bg-neutral-900 border border-neutral-700 rounded-xl overflow-hidden shadow-2xl z-20">
-                {difficulties.map(diff => (
-                  <button
-                    key={diff.id}
-                    onClick={() => onPlayComputer(diff.id)}
-                    className={cn("w-full text-left px-6 py-4 hover:bg-neutral-800 transition-colors border-b border-neutral-800/50 last:border-0 font-medium", diff.color)}
+              <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
+                <div className="bg-neutral-800 border border-neutral-700 rounded-3xl p-6 w-full max-w-md shadow-2xl animate-in zoom-in-95 relative">
+                  <button 
+                    onClick={() => setShowBotMenu(false)}
+                    className="absolute top-4 right-4 p-2 text-neutral-400 hover:text-white rounded-full hover:bg-neutral-700 transition-colors"
                   >
-                    {diff.name}
+                    <X className="w-5 h-5" />
                   </button>
-                ))}
+                  
+                  <div className="flex items-center gap-3 mb-6">
+                    <div className="p-3 bg-neutral-900 rounded-xl">
+                      <Bot className="w-6 h-6 text-emerald-500" />
+                    </div>
+                    <div className="text-left">
+                      <h3 className="text-xl font-bold text-white">Jogar vs Computador</h3>
+                      <p className="text-sm text-neutral-400">Escolha o nível de dificuldade</p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    {difficulties.map(diff => (
+                      <button
+                        key={diff.id}
+                        onClick={() => {
+                          setShowBotMenu(false);
+                          onPlayComputer(diff.id);
+                        }}
+                        className={cn(
+                          "flex flex-col items-start justify-center px-4 py-4 bg-neutral-900 hover:bg-neutral-700 transition-all rounded-2xl border border-neutral-700/50 hover:border-neutral-500 hover:scale-[1.02] active:scale-[0.98]",
+                          diff.color,
+                          diff.id === 'profissional' || diff.id === 'iniciante' ? "col-span-2 items-center text-center" : ""
+                        )}
+                      >
+                        <span className={cn("font-bold text-lg mb-1", diff.id === 'profissional' || diff.id === 'iniciante' ? "text-center w-full" : "")}>
+                          {diff.name.split(' (')[0]}
+                        </span>
+                        <span className={cn("text-xs text-neutral-500 font-medium", diff.id === 'profissional' || diff.id === 'iniciante' ? "text-center w-full" : "")}>
+                          {diff.name.includes('(') ? diff.name.split('(')[1].replace(')', '') : 'Nível Especial'}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
             )}
           </div>
