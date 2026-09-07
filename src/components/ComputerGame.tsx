@@ -9,7 +9,6 @@ import { Flag, ChevronLeft, Bot, RefreshCcw, Undo, Sparkles } from 'lucide-react
 import { cn } from '../lib/utils';
 import { customPieces } from '../lib/chessPieces';
 import MoveHistory from './MoveHistory';
-import { calculateBestMove } from '../lib/engine';
 import { doc, updateDoc, increment, arrayUnion } from 'firebase/firestore';
 import { getDb } from '../lib/firebase';
 import { calculateAchievements } from '../lib/achievementManager';
@@ -51,17 +50,24 @@ export default function ComputerGame({ difficulty, currentUser, onExit }: Comput
     
     setIsThinking(true);
     
-    // Use setTimeout to allow UI to render the "Thinking..." state
-    setTimeout(() => {
-      const bestMove = calculateBestMove(game, difficulty);
-      if (bestMove) {
-        const gameCopy = new Chess();
-        gameCopy.loadPgn(game.pgn());
-        gameCopy.move(bestMove);
-        setGame(gameCopy);
-      }
-      setIsThinking(false);
-    }, 100);
+    // Dynamically import the worker to ensure it compiles correctly with Vite
+    import('../lib/engine.worker?worker').then((WorkerModule) => {
+      const worker = new WorkerModule.default();
+      
+      worker.onmessage = (e) => {
+        const { bestMove } = e.data;
+        if (bestMove) {
+          const gameCopy = new Chess();
+          gameCopy.loadPgn(game.pgn());
+          gameCopy.move(bestMove);
+          setGame(gameCopy);
+        }
+        setIsThinking(false);
+        worker.terminate();
+      };
+
+      worker.postMessage({ fen: game.fen(), difficulty });
+    });
   }, [game, difficulty, playerColor, isThinking]);
 
   const statsUpdated = useRef(false);
