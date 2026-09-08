@@ -1,214 +1,11 @@
-import { useEffect, useState } from 'react';
-import { collection, doc, getDocs, setDoc, deleteDoc, runTransaction, onSnapshot, query, orderBy, limit, where } from 'firebase/firestore';
-import { getDb } from '../lib/firebase';
-import { UserData, QueueEntry, GameData } from '../types';
-import { Loader2, Swords, Bot, ChevronDown, ChevronUp, Link as LinkIcon, Copy, Target, CheckCircle2, X, Users } from 'lucide-react';
-import { cn } from '../lib/utils';
+import re
 
-interface LobbyProps {
-  currentUser: UserData | null;
-  onPlayComputer: (difficulty: string) => void;
-  onPlayLocal?: () => void;
-  onSpectate?: (gameId: string) => void;
-  onLoginRequest?: () => void;
-}
+with open("src/components/Lobby.tsx", "r") as f:
+    lobby_code = f.read()
 
-export default function Lobby({ currentUser, onPlayComputer, onPlayLocal, onSpectate, onLoginRequest }: LobbyProps) {
-  const [isSearching, setIsSearching] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [showBotMenu, setShowBotMenu] = useState(false);
-  const [inviteLink, setInviteLink] = useState<string | null>(null);
-  const [inviteGameId, setInviteGameId] = useState<string | null>(null);
-  const [liveGames, setLiveGames] = useState<GameData[]>([]);
-  const [hasSavedBotGame, setHasSavedBotGame] = useState(false);
-  const [timeControl, setTimeControl] = useState<number>(300); // 5 min default
+start_idx = lobby_code.find("return (")
 
-  useEffect(() => {
-    if (localStorage.getItem('vanguard_chess_bot_save')) {
-      setHasSavedBotGame(true);
-    }
-  }, []);
-
-  useEffect(() => {
-    const db = getDb();
-    const gamesQuery = query(
-      collection(db, 'games'),
-      where('status', '==', 'playing'),
-      where('spectatorsAllowedWhite', '==', true),
-      where('spectatorsAllowedBlack', '==', true),
-      limit(10)
-    );
-    
-    const unsubscribe = onSnapshot(gamesQuery, (snapshot) => {
-      const games = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as GameData));
-      setLiveGames(games);
-    });
-    
-    return unsubscribe;
-  }, []);
-
-
-  useEffect(() => {
-    if (!currentUser) return;
-    const db = getDb();
-    const queueRef = doc(db, 'queue', currentUser.uid);
-    
-    const unsubscribe = onSnapshot(queueRef, (doc) => {
-      setIsSearching(doc.exists());
-    });
-    
-    return unsubscribe;
-  }, [currentUser?.uid]);
-
-
-  const createInvite = async () => {
-    if (!currentUser) {
-      onLoginRequest?.();
-      return;
-    }
-    setError(null);
-    try {
-      const db = getDb();
-      const newGameRef = doc(collection(db, 'games'));
-      
-      const newGame: any = {
-        whiteId: currentUser.uid,
-        whiteName: currentUser.displayName || 'Jogador',
-        whiteElo: currentUser.elo || 1200,
-        blackId: '',
-        blackName: '',
-        blackElo: 1200,
-        status: 'waiting_friend',
-        fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
-        pgn: '',
-        turn: 'w',
-        lastMoveAt: Date.now(),
-        timeControl,
-        whiteTime: timeControl,
-        blackTime: timeControl,
-        
-        spectatorsAllowedWhite: true,
-        spectatorsAllowedBlack: true,
-      };
-
-      await setDoc(newGameRef, newGame);
-      setInviteGameId(newGameRef.id);
-      
-      const link = window.location.origin + '?invite=' + newGameRef.id;
-      setInviteLink(link);
-      navigator.clipboard.writeText(link);
-    } catch (e: any) {
-      setError(e.message || 'Erro ao criar convite');
-    }
-  };
-
-  const cancelInvite = async () => {
-    if (!inviteGameId) return;
-    try {
-      const db = getDb();
-      await deleteDoc(doc(db, 'games', inviteGameId));
-      setInviteLink(null);
-      setInviteGameId(null);
-    } catch (e: any) {
-      console.error(e);
-    }
-  };
-
-  const findMatch = async () => {
-    if (!currentUser) {
-      onLoginRequest?.();
-      return;
-    }
-    setError(null);
-    const db = getDb();
-    
-    try {
-      const queueQuery = query(collection(db, 'queue'), where('timeControl', '==', timeControl), orderBy('createdAt', 'asc'), limit(5));
-      const queueSnapshot = await getDocs(queueQuery);
-      
-      let matchedOpponent: QueueEntry | null = null;
-      for (const docSnap of queueSnapshot.docs) {
-        if (docSnap.id !== currentUser.uid) {
-          matchedOpponent = { ...docSnap.data(), uid: docSnap.id } as QueueEntry;
-          break;
-        }
-      }
-
-      if (matchedOpponent) {
-        const opponentRef = doc(db, 'queue', matchedOpponent.uid);
-        const newGameRef = doc(collection(db, 'games'));
-        
-        try {
-          await runTransaction(db, async (transaction) => {
-            const opponentDoc = await transaction.get(opponentRef);
-            if (!opponentDoc.exists()) {
-              throw new Error("Opponent already matched");
-            }
-            
-            const isWhite = Math.random() > 0.5;
-            const whitePlayer = isWhite ? currentUser : matchedOpponent;
-            const blackPlayer = isWhite ? matchedOpponent : currentUser;
-
-            transaction.set(newGameRef, {
-              id: newGameRef.id,
-              whiteId: whitePlayer!.uid,
-              blackId: blackPlayer!.uid,
-              whiteName: whitePlayer!.displayName,
-              blackName: blackPlayer!.displayName,
-              whiteElo: whitePlayer!.elo,
-              blackElo: blackPlayer!.elo,
-              status: 'playing',
-              fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
-              pgn: '',
-              lastMoveAt: Date.now(),
-              timeControl,
-              whiteTime: timeControl,
-              blackTime: timeControl,
-              turn: 'w'
-            });
-
-            transaction.delete(opponentRef);
-          });
-          
-          return;
-        } catch (e) {
-          console.log("Transaction failed, trying to enter queue instead...", e);
-        }
-      }
-
-      const myQueueRef = doc(db, 'queue', currentUser.uid);
-      await setDoc(myQueueRef, {
-        uid: currentUser.uid,
-        displayName: currentUser.displayName,
-        elo: currentUser.elo,
-        createdAt: Date.now(),
-        timeControl
-      });
-    } catch (err: any) {
-      console.error("Matchmaking error:", err);
-      setError("Erro ao buscar partida. Tente novamente.");
-    }
-  };
-
-  const cancelSearch = async () => {
-    if (!currentUser) return;
-    try {
-      const db = getDb();
-      await deleteDoc(doc(db, 'queue', currentUser.uid));
-    } catch (err) {
-      console.error("Error canceling search:", err);
-    }
-  };
-
-  const difficulties = [
-    { id: 'iniciante', name: 'Iniciante (Aleatório)', color: 'text-neutral-400' },
-    { id: 'facil', name: 'Fácil (Profundidade 1)', color: 'text-emerald-400' },
-    { id: 'medio', name: 'Médio (Profundidade 2)', color: 'text-yellow-400' },
-    { id: 'dificil', name: 'Difícil (Profundidade 3)', color: 'text-orange-400' },
-    { id: 'profissional', name: 'Profissional (Profundidade 4)', color: 'text-red-400' }
-  ];
-
-  return (
+new_render = """return (
     <div className="w-full flex flex-col md:flex-row gap-6 lg:gap-8 max-w-[1400px] mx-auto">
       
       {/* Left Column - Main Actions (Bento Grid) */}
@@ -409,43 +206,40 @@ export default function Lobby({ currentUser, onPlayComputer, onPlayLocal, onSpec
 
       {/* Bot Menu Modal */}
       {showBotMenu && (
-        <div className="fixed inset-0 z-50 bg-black/80 flex flex-col items-center justify-center p-4 backdrop-blur-sm animate-in fade-in" onClick={() => setShowBotMenu(false)}>
-          <div className="bg-zinc-900 rounded-[2rem] p-6 w-full max-w-sm border border-zinc-800 shadow-2xl relative" onClick={e => e.stopPropagation()}>
-            <button onClick={() => setShowBotMenu(false)} className="absolute top-5 right-5 text-zinc-500 hover:text-white transition-colors">
-              <X className="w-5 h-5" />
+        <div className="fixed inset-0 z-50 bg-black/80 flex flex-col items-center justify-center p-4 backdrop-blur-md animate-in fade-in" onClick={() => setShowBotMenu(false)}>
+          <div className="bg-zinc-900 rounded-[2rem] p-8 w-full max-w-md border border-zinc-800 shadow-2xl relative" onClick={e => e.stopPropagation()}>
+            <button onClick={() => setShowBotMenu(false)} className="absolute top-6 right-6 text-zinc-500 hover:text-white">
+              <X className="w-6 h-6" />
             </button>
-            
-            <div className="flex items-center gap-4 mb-6">
-              <div className="w-12 h-12 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl flex items-center justify-center flex-shrink-0">
-                <Bot className="w-6 h-6 text-emerald-500" />
-              </div>
-              <div>
-                <h2 className="text-xl font-black text-white leading-tight">Treinar com IA</h2>
-                <p className="text-zinc-400 text-xs">Escolha o nível do motor</p>
-              </div>
+            <div className="w-16 h-16 bg-emerald-500/10 rounded-3xl flex items-center justify-center mb-6">
+              <Bot className="w-8 h-8 text-emerald-500" />
             </div>
+            <h2 className="text-2xl font-black text-white mb-2">Treinar com IA</h2>
+            <p className="text-zinc-400 text-sm mb-8">Escolha a dificuldade do motor Stockfish.</p>
             
-            <div className="flex flex-col gap-2">
+            <div className="grid grid-cols-2 gap-3">
               {hasSavedBotGame && (
                 <button
                   onClick={() => { setShowBotMenu(false); onPlayComputer('resume'); }}
-                  className="flex items-center justify-between px-4 py-3.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 transition-all rounded-xl border border-amber-500/30 active:scale-95 mb-2 group"
+                  className="col-span-2 flex flex-col items-center justify-center px-4 py-4 bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 transition-all rounded-2xl border border-amber-500/30 active:scale-95"
                 >
-                  <span className="font-bold text-sm">Retomar Partida</span>
-                  <span className="text-[10px] uppercase tracking-wider font-black opacity-80 group-hover:opacity-100 transition-opacity">Continuar</span>
+                  <span className="font-bold text-lg mb-1">Retomar Partida</span>
+                  <span className="text-xs opacity-80 font-medium">Continuar de onde parou</span>
                 </button>
               )}
-              
               {difficulties.map(diff => (
                 <button
                   key={diff.id}
                   onClick={() => { setShowBotMenu(false); onPlayComputer(diff.id); }}
-                  className="flex items-center justify-between px-4 py-3.5 bg-zinc-950 hover:bg-zinc-800 transition-all rounded-xl border border-zinc-800 active:scale-95 group"
+                  className={cn(
+                    "flex flex-col px-4 py-5 bg-zinc-950 hover:bg-zinc-800 transition-all rounded-2xl border border-zinc-800 active:scale-95 text-left",
+                    diff.id === 'profissional' || diff.id === 'iniciante' ? "col-span-2 items-center text-center" : "items-start"
+                  )}
                 >
-                  <span className="font-bold text-sm text-zinc-300 group-hover:text-white transition-colors">
+                  <span className={cn("font-bold text-lg mb-1 text-zinc-200", diff.id === 'profissional' || diff.id === 'iniciante' ? "w-full" : "", diff.color)}>
                     {diff.name.split(' (')[0]}
                   </span>
-                  <span className={cn("text-[10px] font-black uppercase tracking-wider", diff.color)}>
+                  <span className={cn("text-xs text-zinc-500 font-medium", diff.id === 'profissional' || diff.id === 'iniciante' ? "w-full" : "")}>
                     {diff.name.includes('(') ? diff.name.split('(')[1].replace(')', '') : 'Nível Especial'}
                   </span>
                 </button>
@@ -456,4 +250,10 @@ export default function Lobby({ currentUser, onPlayComputer, onPlayLocal, onSpec
       )}
     </div>
   );
-}
+}"""
+
+lobby_code = lobby_code[:start_idx] + new_render
+
+with open("src/components/Lobby.tsx", "w") as f:
+    f.write(lobby_code)
+

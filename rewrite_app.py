@@ -1,286 +1,22 @@
-import { useEffect, useState } from 'react';
-import { getAuth as getFirebaseAuth, signInWithPopup, GoogleAuthProvider, signOut, User } from 'firebase/auth';
-import { doc, setDoc, getDoc, collection, onSnapshot, query, where, or, updateDoc, addDoc } from 'firebase/firestore';
-import { initFirebase, getDb } from './lib/firebase';
-import { UserData, GameData } from './types';
-import Lobby from './components/Lobby';
-import Game from './components/Game';
-import ComputerGame from "./components/ComputerGame";
-import LocalGame from "./components/LocalGame";
-import Tournaments from './components/Tournaments';
-import Rules from './components/Rules';
-import Chat from './components/Chat';
-import Training from './components/Training';
-import Profile from './components/Profile';
-import Store from './components/Store';
-import Friends from './components/Friends';
-import Leaderboard from './components/Leaderboard';
-import AdBanner from './components/AdBanner';
-import About from './components/About';
-import { LogIn, Loader2, LogOut, Trophy, Swords, MessageSquare, Target, Settings, Volume2, VolumeX, Palette, User as UserIcon, Bell, BellOff, Users, BookOpen, Crown, Heart, Store as StoreIcon, Copy, CheckCircle2, Info } from 'lucide-react';
-import { sounds } from './lib/sounds';
-import { themeManager, CHESS_THEMES, useTheme } from './lib/themes';
-import { cn } from './lib/utils';
-import { requestNotificationPermission } from './lib/notifications';
+import re
 
-type Tab = 'play' | 'tournaments' | 'chat' | 'training' | 'rules' | 'ranking' | 'profile' | 'friends' | 'store' | 'about';
+with open("src/App.tsx", "r") as f:
+    app_code = f.read()
 
-export default function App() {
-  const [firebaseReady, setFirebaseReady] = useState(false);
-  const [user, setUser] = useState<User | null>(null);
-  const [userData, setUserData] = useState<UserData | null>(null);
-  const [activeGame, setActiveGame] = useState<GameData | null>(null);
-  const [spectatingGameId, setSpectatingGameId] = useState<string | null>(null);
-  const [spectatingGame, setSpectatingGame] = useState<GameData | null>(null);
-  const [computerGameDifficulty, setComputerGameDifficulty] = useState<string | null>(null);
-  const [isLocalGame, setIsLocalGame] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<Tab>('play');
-  const [showSettings, setShowSettings] = useState(false);
-  const [showPix, setShowPix] = useState(false);
-  const [copiedPix, setCopiedPix] = useState(false);
-  const [soundEnabled, setSoundEnabled] = useState(sounds.getSoundEnabled());
-  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
-  const [incomingChallenge, setIncomingChallenge] = useState<any>(null);
+# I will replace the main layout structure in App.tsx
+# Find the start of the return statement
+start_idx = app_code.find("return (")
 
-  useEffect(() => {
-    if ('Notification' in window) {
-      setNotificationsEnabled(Notification.permission === 'granted');
-    }
-  }, []);
-  
-  useEffect(() => {
-    if (!spectatingGameId || !firebaseReady) {
-      setSpectatingGame(null);
-      return;
-    }
-    const db = getDb();
-    const unsubscribe = onSnapshot(doc(db, 'games', spectatingGameId), (doc) => {
-      if (doc.exists()) {
-        setSpectatingGame({ id: doc.id, ...doc.data() } as GameData);
-      } else {
-        setSpectatingGameId(null);
-      }
-    });
-    return unsubscribe;
-  }, [spectatingGameId, firebaseReady]);
-
-  const currentTheme = useTheme();
-
-  useEffect(() => {
-    initFirebase().then(({ auth, db }) => {
-      setFirebaseReady(true);
-      
-      const unsubscribeAuth = auth.onAuthStateChanged(async (firebaseUser) => {
-        setUser(firebaseUser);
-        if (firebaseUser) {
-          // Online Status Management
-          const setOnlineStatus = async (online: boolean) => {
-            try {
-              await updateDoc(doc(db, 'users', firebaseUser.uid), {
-                isOnline: online,
-                lastSeen: Date.now()
-              });
-            } catch (e) {
-              console.error(e);
-            }
-          };
-          
-          setOnlineStatus(true);
-          
-          const handleVisibility = () => {
-            if (document.visibilityState === 'visible') {
-              setOnlineStatus(true);
-            } else {
-              setOnlineStatus(false);
-            }
-          };
-          
-          const handleUnload = () => {
-            setOnlineStatus(false);
-          };
-          
-          window.addEventListener('visibilitychange', handleVisibility);
-          window.addEventListener('beforeunload', handleUnload);
-
-          // Listen for incoming challenges
-          const challengesQuery = query(
-            collection(db, 'challenges'),
-            where('challengedId', '==', firebaseUser.uid),
-            where('status', '==', 'pending')
-          );
-          
-          const unsubscribeChallenges = onSnapshot(challengesQuery, (snapshot) => {
-            const challenges = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-            if (challenges.length > 0) {
-              // Get the oldest pending challenge
-              setIncomingChallenge(challenges[0]);
-            } else {
-              setIncomingChallenge(null);
-            }
-          });
-
-          // Listen for outgoing challenge acceptance
-          const myChallengesQuery = query(
-            collection(db, 'challenges'),
-            where('challengerId', '==', firebaseUser.uid),
-            where('status', '==', 'accepted')
-          );
-          
-          const unsubscribeMyChallenges = onSnapshot(myChallengesQuery, (snapshot) => {
-            snapshot.docChanges().forEach(change => {
-              if (change.type === 'added') {
-                const data = change.doc.data();
-                if (data.gameId) {
-                  // The other person accepted and created the game!
-                  // Active game logic will automatically pick it up via unsubscribeGames.
-                  // Just clean up the challenge.
-                  updateDoc(doc(db, 'challenges', change.doc.id), { status: 'completed' });
-                }
-              }
-            });
-          });
-
-          const userRef = doc(db, 'users', firebaseUser.uid);
-          const userSnap = await getDoc(userRef);
-          
-          if (!userSnap.exists()) {
-            const newUserData: UserData = {
-              uid: firebaseUser.uid,
-              displayName: firebaseUser.displayName || 'Jogador Misterioso',
-              elo: 1200,
-              gamesPlayed: 0,
-              coins: 500,
-              unlockedThemes: ['luxury', 'classic']
-            };
-            await setDoc(userRef, newUserData);
-            setUserData(newUserData);
-          } else {
-            setUserData(userSnap.data() as UserData);
-          }
-
-          // Handle Invite Link
-          const urlParams = new URLSearchParams(window.location.search);
-          const inviteId = urlParams.get('invite');
-          if (inviteId) {
-             const gameRef = doc(db, 'games', inviteId);
-             const gameSnap = await getDoc(gameRef);
-             if (gameSnap.exists()) {
-               const gameData = gameSnap.data();
-               if (gameData.status === 'waiting_friend' && gameData.whiteId !== firebaseUser.uid) {
-                 await updateDoc(gameRef, {
-                   blackId: firebaseUser.uid,
-                   blackName: firebaseUser.displayName || 'Amigo',
-                   status: 'playing',
-                   lastMoveTime: Date.now()
-                 });
-               }
-             }
-             window.history.replaceState({}, document.title, window.location.pathname);
-          }
-
-          const unsubscribeUser = onSnapshot(userRef, (doc) => {
-            if (doc.exists()) {
-              const data = doc.data() as UserData;
-              setUserData(data);
-              
-              if (data.activeTheme && data.activeTheme !== themeManager.getTheme().id) {
-                themeManager.setTheme(data.activeTheme);
-              }
-            }
-          });
-
-          const gamesRef = collection(db, 'games');
-          const q = query(
-            gamesRef, 
-            or(
-              where('whiteId', '==', firebaseUser.uid), 
-              where('blackId', '==', firebaseUser.uid)
-            )
-          );
-          
-          const unsubscribeGames = onSnapshot(q, (snapshot) => {
-            const games = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as GameData));
-            const active = games.find(g => g.status === 'playing');
-            
-            setActiveGame(prev => {
-              if (active) {
-                if (!prev) setActiveTab('play');
-                setComputerGameDifficulty(null); // Leave computer game if online match found
-                return active;
-              }
-              if (prev) {
-                const finishedGame = games.find(g => g.id === prev.id);
-                if (finishedGame && finishedGame.status !== 'playing') {
-                  return finishedGame;
-                }
-              }
-              return null;
-            });
-            setLoading(false);
-          });
-
-        } else {
-          setUserData(null);
-          setLoading(false);
-        }
-      });
-      return () => unsubscribeAuth();
-    });
-  }, []);
-  
-
-  const handleLogin = async () => {
-    try {
-      const { auth } = await initFirebase();
-      const provider = new GoogleAuthProvider();
-      await signInWithPopup(auth, provider);
-    } catch (error) {
-      console.error("Login error", error);
-    }
-  };
-
-  const handleLogout = async () => {
-    try {
-      const { auth } = await initFirebase();
-      await signOut(auth);
-    } catch (error) {
-      console.error("Logout error", error);
-    }
-  };
-
-  const navItems = [
-    { id: 'play', label: 'Jogar', icon: Swords },
-    { id: 'ranking', label: 'Ranking', icon: Crown },
-    { id: 'tournaments', label: 'Torneios', icon: Trophy },
-    { id: 'training', label: 'Treino', icon: Target },
-    { id: 'profile', label: 'Perfil', icon: UserIcon },
-    { id: 'friends', label: 'Social', icon: Users },
-    { id: 'store', label: 'Loja', icon: StoreIcon },
-    { id: 'chat', label: 'Chat Global', icon: MessageSquare },
-    { id: 'rules', label: 'Regras', icon: BookOpen },
-    { id: 'about', label: 'Sobre', icon: Info }
-  ];
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center gap-4">
-        <Loader2 className="w-12 h-12 text-emerald-500 animate-spin" />
-        <p className="text-emerald-400 font-bold animate-pulse">Carregando Vanguard Chess...</p>
-      </div>
-    );
-  }
-
-  return (
+new_render = """return (
     <div className="min-h-screen bg-zinc-950 text-zinc-50 flex flex-col md:flex-row font-sans selection:bg-emerald-500/30">
       
       {/* Desktop Sidebar */}
-      <aside className="hidden md:flex flex-col w-20 hover:w-64 transition-all duration-300 border-r border-zinc-800 bg-zinc-950/90 backdrop-blur-xl h-screen sticky top-0 z-50 group overflow-hidden">
-        <div className="p-5 group-hover:p-6 flex items-center gap-3 transition-all">
+      <aside className="hidden md:flex flex-col w-64 border-r border-zinc-800 bg-zinc-950/80 backdrop-blur-xl h-screen sticky top-0 z-40">
+        <div className="p-6 flex items-center gap-3">
           <div className="w-10 h-10 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-500/20">
             <Trophy className="w-5 h-5 text-zinc-950" />
           </div>
-          <h1 className="text-xl font-black tracking-tight text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap">Vanguard<span className="text-emerald-400">Chess</span></h1>
+          <h1 className="text-xl font-black tracking-tight text-white">Vanguard<span className="text-emerald-400">Chess</span></h1>
         </div>
 
         <nav className="flex-1 px-4 py-2 space-y-1 overflow-y-auto custom-scrollbar">
@@ -292,17 +28,14 @@ export default function App() {
                 key={item.id}
                 onClick={() => setActiveTab(item.id)}
                 className={cn(
-                  "w-full flex items-center gap-4 px-3 py-3 rounded-xl text-sm font-semibold transition-all duration-200 overflow-hidden",
+                  "w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200",
                   isActive 
                     ? "bg-zinc-800/80 text-emerald-400 shadow-sm" 
                     : "text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-100"
                 )}
-                title={item.label}
               >
-                <div className="flex-shrink-0 w-6 flex justify-center">
-                  <Icon className={cn("w-5 h-5 transition-transform", isActive ? "scale-110" : "")} />
-                </div>
-                <span className="whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-300">{item.label}</span>
+                <Icon className={cn("w-5 h-5 transition-transform", isActive ? "scale-110" : "")} />
+                {item.label}
               </button>
             );
           })}
@@ -310,17 +43,15 @@ export default function App() {
 
         <div className="p-4 border-t border-zinc-800/50">
           {userData ? (
-            <div className="flex items-center gap-3 bg-transparent group-hover:bg-zinc-900/50 p-1 group-hover:p-3 rounded-2xl border border-transparent group-hover:border-zinc-800 transition-all overflow-hidden justify-center group-hover:justify-start relative">
+            <div className="flex items-center gap-3 bg-zinc-900/50 p-3 rounded-2xl border border-zinc-800">
               <div className="w-10 h-10 bg-zinc-800 rounded-full flex items-center justify-center flex-shrink-0 font-bold text-emerald-400">
                 {userData.displayName.charAt(0).toUpperCase()}
               </div>
-              
-              <div className="flex-1 min-w-0 text-left opacity-0 group-hover:opacity-100 transition-opacity duration-300 absolute left-[60px] group-hover:static group-hover:left-auto">
+              <div className="flex-1 min-w-0 text-left">
                 <div className="font-bold text-sm text-zinc-100 truncate">{userData.displayName}</div>
                 <div className="text-xs text-emerald-500 font-semibold">{userData.elo} Elo</div>
               </div>
-              
-              <div className="flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300 hidden group-hover:flex absolute right-3 group-hover:static group-hover:right-auto">
+              <div className="flex flex-col gap-1">
                 <button onClick={() => setShowSettings(true)} className="p-1.5 text-zinc-500 hover:text-zinc-300 transition-colors" title="Configurações">
                   <Settings className="w-4 h-4" />
                 </button>
@@ -330,14 +61,12 @@ export default function App() {
               </div>
             </div>
           ) : (
-            <div className="space-y-2 flex flex-col items-center group-hover:items-stretch transition-all overflow-hidden">
-              <button onClick={handleLogin} className="w-10 h-10 group-hover:w-full group-hover:h-auto bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-bold group-hover:py-3 group-hover:px-4 rounded-xl transition-all active:scale-95 text-sm flex items-center justify-center gap-2" title="Entrar">
-                <LogIn className="w-5 h-5 group-hover:w-4 group-hover:h-4 flex-shrink-0" />
-                <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 hidden group-hover:inline whitespace-nowrap">Entrar</span>
+            <div className="space-y-2">
+              <button onClick={handleLogin} className="w-full bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-bold py-3 px-4 rounded-xl transition-all active:scale-95 text-sm flex items-center justify-center gap-2">
+                <LogIn className="w-4 h-4" /> Entrar
               </button>
-              <button onClick={() => setShowPix(true)} className="w-10 h-10 group-hover:w-full group-hover:h-auto bg-zinc-800 hover:bg-zinc-700 text-emerald-400 font-bold group-hover:py-3 group-hover:px-4 rounded-xl transition-all active:scale-95 text-sm flex items-center justify-center gap-2 border border-emerald-500/20" title="Apoiar">
-                <Heart className="w-5 h-5 group-hover:w-4 group-hover:h-4 fill-emerald-500 flex-shrink-0" /> 
-                <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 hidden group-hover:inline whitespace-nowrap">Apoiar</span>
+              <button onClick={() => setShowPix(true)} className="w-full bg-zinc-800 hover:bg-zinc-700 text-emerald-400 font-bold py-3 px-4 rounded-xl transition-all active:scale-95 text-sm flex items-center justify-center gap-2 border border-emerald-500/20">
+                <Heart className="w-4 h-4 fill-emerald-500" /> Apoiar
               </button>
             </div>
           )}
@@ -588,4 +317,10 @@ export default function App() {
       )}
     </div>
   );
-}
+}"""
+
+app_code = app_code[:start_idx] + new_render
+
+with open("src/App.tsx", "w") as f:
+    f.write(app_code)
+
