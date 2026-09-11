@@ -14,6 +14,7 @@ import { cn } from '../lib/utils';
 import ChatBox from './ChatBox';
 import { customPieces } from '../lib/chessPieces';
 import MoveHistory from './MoveHistory';
+import CapturedPieces from './CapturedPieces';
 import { sendNotification } from '../lib/notifications';
 import { calculateAchievements } from '../lib/achievementManager';
 import { ACHIEVEMENTS } from '../lib/achievements';
@@ -539,18 +540,20 @@ export default function Game({ game, currentUser, onExit }: GameProps) {
     <div className="flex-1 w-full max-w-[1600px] mx-auto p-4 lg:p-8 flex flex-col xl:flex-row gap-8 items-center xl:items-start">
       
       {/* Player info & controls (Desktop Left / Mobile Top) */}
-      <div className="flex flex-col gap-6 w-full xl:w-[350px] flex-shrink-0 order-2 xl:order-1">
+      <div className="flex flex-col gap-6 w-full xl:w-[260px] flex-shrink-0 order-2 xl:order-1">
         <div className="bg-neutral-800 rounded-2xl p-6 border border-neutral-700/50 shadow-xl">
-          <div className="flex items-center gap-4">
-            <div className={cn(
-              "w-4 h-4 rounded-full border-2",
-              isWhite ? "bg-black border-neutral-600" : "bg-white border-neutral-300"
-            )} />
-            <div>
-              <h3 className="font-bold text-lg text-white">{opponentName} {topLabel}</h3>
-              <p className="text-sm text-emerald-400 font-medium">{opponentElo} Elo</p>
-              
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center gap-4">
+              <div className={cn(
+                "w-4 h-4 rounded-full border-2",
+                isWhite ? "bg-black border-neutral-600" : "bg-white border-neutral-300"
+              )} />
+              <div>
+                <h3 className="font-bold text-base text-white">{opponentName} {topLabel}</h3>
+                <p className="text-xs text-emerald-400 font-medium">{opponentElo} Elo</p>
+              </div>
             </div>
+            <CapturedPieces fen={chess.fen()} color={isWhite ? 'b' : 'w'} />
           </div>
           {game.timeControl && (
             <div className="bg-neutral-800 px-4 py-2 rounded-xl border border-neutral-700 font-mono text-xl font-bold text-white shadow-inner">
@@ -560,16 +563,18 @@ export default function Game({ game, currentUser, onExit }: GameProps) {
         </div>
 
         <div className="bg-neutral-800 rounded-2xl p-6 border border-neutral-700/50 shadow-xl flex flex-col gap-4">
-          <div className="flex items-center gap-4 mb-2">
-            <div className={cn(
-              "w-4 h-4 rounded-full border-2",
-              isWhite ? "bg-white border-neutral-300" : "bg-black border-neutral-600"
-            )} />
-            <div>
-              <h3 className="font-bold text-lg text-white">{bottomName} {bottomLabel}</h3>
-              <p className="text-sm text-emerald-400 font-medium">{bottomElo} Elo</p>
-              
+          <div className="flex flex-col gap-2 mb-2">
+            <div className="flex items-center gap-4">
+              <div className={cn(
+                "w-4 h-4 rounded-full border-2",
+                isWhite ? "bg-white border-neutral-300" : "bg-black border-neutral-600"
+              )} />
+              <div>
+                <h3 className="font-bold text-base text-white">{bottomName} {bottomLabel}</h3>
+                <p className="text-xs text-emerald-400 font-medium">{bottomElo} Elo</p>
+              </div>
             </div>
+            <CapturedPieces fen={chess.fen()} color={isWhite ? 'w' : 'b'} />
           </div>
           {game.timeControl && (
             <div className="bg-neutral-800 px-4 py-2 rounded-xl border border-neutral-700 font-mono text-xl font-bold text-emerald-400 shadow-inner">
@@ -630,7 +635,7 @@ export default function Game({ game, currentUser, onExit }: GameProps) {
       <div className="flex-1 flex items-center justify-center gap-2 sm:gap-6 lg:gap-12 order-1 xl:order-2 w-full px-2">
         {/* Left Side (Player's captures - pieces captured by bottom player) */}
         <div className="flex flex-col items-center justify-center shrink-0 min-h-[400px]">
-           {renderCapturedPieces(isWhite ? 'w' : 'b', 'vertical')}
+           
         </div>
         <div className="flex gap-4 w-full max-w-[750px] mx-auto">
           <div className="py-2">
@@ -695,7 +700,7 @@ export default function Game({ game, currentUser, onExit }: GameProps) {
         
         {/* Right Side (Opponent's captures - pieces captured by top player) */}
         <div className="flex flex-col items-center justify-center shrink-0 min-h-[400px]">
-           {renderCapturedPieces(isWhite ? 'b' : 'w', 'vertical')}
+           
         </div>
       </div>
       

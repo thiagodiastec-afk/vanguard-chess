@@ -20,6 +20,7 @@ import About from './components/About';
 import { LogIn, Loader2, LogOut, Trophy, Swords, MessageSquare, Target, Settings, Volume2, VolumeX, Palette, User as UserIcon, Bell, BellOff, Users, BookOpen, Crown, Heart, Store as StoreIcon, Copy, CheckCircle2, Info } from 'lucide-react';
 import { sounds } from './lib/sounds';
 import { themeManager, CHESS_THEMES, useTheme } from './lib/themes';
+import { backgroundManager, useBackground } from './lib/backgrounds';
 import { cn } from './lib/utils';
 import { requestNotificationPermission } from './lib/notifications';
 
@@ -66,6 +67,7 @@ export default function App() {
   }, [spectatingGameId, firebaseReady]);
 
   const currentTheme = useTheme();
+  const currentBackground = useBackground();
 
   useEffect(() => {
     initFirebase().then(({ auth, db }) => {
@@ -151,7 +153,9 @@ export default function App() {
               elo: 1200,
               gamesPlayed: 0,
               coins: 500,
-              unlockedThemes: ['luxury', 'classic']
+              unlockedThemes: ['luxury', 'classic'],
+              unlockedBackgrounds: ['default'],
+              activeBackground: 'default'
             };
             await setDoc(userRef, newUserData);
             setUserData(newUserData);
@@ -186,6 +190,9 @@ export default function App() {
               
               if (data.activeTheme && data.activeTheme !== themeManager.getTheme().id) {
                 themeManager.setTheme(data.activeTheme);
+              }
+              if (data.activeBackground && data.activeBackground !== backgroundManager.getBackground().id) {
+                backgroundManager.setBackground(data.activeBackground);
               }
             }
           });
@@ -272,7 +279,7 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-50 flex flex-col md:flex-row font-sans selection:bg-emerald-500/30">
+    <div className={cn("min-h-screen text-zinc-50 flex flex-col md:flex-row font-sans selection:bg-emerald-500/30", currentBackground.className || "")} style={currentBackground.style}>
       
       {/* Desktop Sidebar */}
       <aside className="hidden md:flex flex-col w-20 hover:w-64 transition-all duration-300 border-r border-zinc-800 bg-zinc-950/90 backdrop-blur-xl h-screen sticky top-0 z-50 group overflow-hidden">

@@ -9,6 +9,7 @@ import { Flag, ChevronLeft, Bot, RefreshCcw, Undo, Sparkles, Lightbulb } from 'l
 import { cn } from '../lib/utils';
 import { customPieces } from '../lib/chessPieces';
 import MoveHistory from './MoveHistory';
+import CapturedPieces from './CapturedPieces';
 import EvalBar from "./EvalBar";
 import { doc, updateDoc, increment, arrayUnion } from 'firebase/firestore';
 import { getDb } from '../lib/firebase';
@@ -599,32 +600,36 @@ export default function ComputerGame({ difficulty, currentUser, onExit }: Comput
       <div className="flex-1 w-full max-w-[1600px] mx-auto p-4 lg:p-8 flex flex-col xl:flex-row gap-8 items-center xl:items-start">
       
       {/* Player info & controls */}
-      <div className="flex flex-col gap-6 w-full xl:w-[350px] flex-shrink-0 order-2 xl:order-1">
+      <div className="flex flex-col gap-6 w-full xl:w-[260px] flex-shrink-0 order-2 xl:order-1">
         <div className="bg-neutral-800 rounded-2xl p-6 border border-neutral-700/50 shadow-xl">
-          <div className="flex items-center gap-4">
-            <div className="w-4 h-4 rounded-full border-2 bg-black border-neutral-600" />
-            <div>
-              <div className="flex items-center gap-2">
-                <Bot className="w-5 h-5 text-emerald-500" />
-                <h3 className="font-bold text-white text-lg">Computador</h3>
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center gap-4">
+              <div className="w-4 h-4 rounded-full border-2 bg-black border-neutral-600" />
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <Bot className="w-4 h-4 text-emerald-500 flex-shrink-0" />
+                  <h3 className="font-bold text-white text-base truncate">Computador</h3>
+                </div>
+                <p className="text-xs text-neutral-400 truncate">Dificuldade: {getDifficultyName()}</p>
               </div>
-              <p className="text-sm text-neutral-400">Dificuldade: {getDifficultyName()}</p>
-              
+              {isThinking && (
+                <div className="ml-auto text-xs text-emerald-500 animate-pulse flex-shrink-0">...</div>
+              )}
             </div>
-            {isThinking && (
-              <div className="ml-auto text-xs text-emerald-500 animate-pulse">Pensando...</div>
-            )}
+            <CapturedPieces fen={game.fen()} color="b" />
           </div>
           
           <div className="my-6 border-t border-neutral-700" />
           
-          <div className="flex items-center gap-4">
-            <div className="w-4 h-4 rounded-full border-2 bg-white border-neutral-300" />
-            <div>
-              <h3 className="font-bold text-white text-lg">{currentUser?.displayName || 'Você'}</h3>
-              {currentUser && <p className="text-sm text-neutral-400">{currentUser.elo} Rating</p>}
-              
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center gap-4">
+              <div className="w-4 h-4 rounded-full border-2 bg-white border-neutral-300" />
+              <div>
+                <h3 className="font-bold text-white text-base">{currentUser?.displayName || 'Você'}</h3>
+                {currentUser && <p className="text-xs text-neutral-400">{currentUser.elo} Rating</p>}
+              </div>
             </div>
+            <CapturedPieces fen={game.fen()} color="w" />
           </div>
 
         </div>
@@ -642,7 +647,7 @@ export default function ComputerGame({ difficulty, currentUser, onExit }: Comput
       <div className="flex-1 flex items-center justify-center gap-2 sm:gap-6 lg:gap-12 order-1 xl:order-2 w-full px-2">
         {/* Left Side (Player's captures) */}
         <div className="flex flex-col items-center justify-center shrink-0 min-h-[400px]">
-           {renderCapturedPieces(playerColor, 'vertical')}
+           
         </div>
         <div className="flex gap-4 w-full max-w-[750px] mx-auto">
           <div className="py-2">
@@ -735,7 +740,7 @@ export default function ComputerGame({ difficulty, currentUser, onExit }: Comput
         
         {/* Right Side (Opponent's captures) */}
         <div className="flex flex-col items-center justify-center shrink-0 min-h-[400px]">
-           {renderCapturedPieces(playerColor === 'w' ? 'b' : 'w', 'vertical')}
+           
         </div>
       </div>
     </div>

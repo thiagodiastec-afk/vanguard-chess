@@ -8,6 +8,7 @@ import { Flag, ChevronLeft, RefreshCcw, Undo, MonitorPlay, FlipVertical, Lightbu
 import { cn } from '../lib/utils';
 import { customPieces } from '../lib/chessPieces';
 import MoveHistory from './MoveHistory';
+import CapturedPieces from './CapturedPieces';
 import EvalBar from "./EvalBar";
 
 interface LocalGameProps {

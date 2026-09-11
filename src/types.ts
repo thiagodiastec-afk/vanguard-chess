@@ -19,6 +19,8 @@ export interface UserData {
   }[];
   coins?: number;
   unlockedThemes?: string[];
+  unlockedBackgrounds?: string[];
+  activeBackground?: string;
   activeTheme?: string;
   isPremium?: boolean;  isGuest?: boolean;
 }

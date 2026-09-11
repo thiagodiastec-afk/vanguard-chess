@@ -1,4 +1,6 @@
-import { X, ExternalLink, Cpu, Monitor, Zap, ShieldCheck } from 'lucide-react';
+import os
+
+code = """import { X, ExternalLink, Cpu, Monitor, Zap, ShieldCheck } from 'lucide-react';
 import { useState } from 'react';
 
 export default function AdBanner() {
@@ -82,3 +84,8 @@ export default function AdBanner() {
     </div>
   );
 }
+"""
+
+with open("src/components/AdBanner.tsx", "w") as f:
+    f.write(code)
+
