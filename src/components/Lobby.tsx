@@ -273,7 +273,7 @@ export default function Lobby({ currentUser, onPlayComputer, onPlayLocal, onSpec
                     ].map(tc => (
                       <button
                         key={tc.val}
-                        onClick={() => { setTimeControl(tc.val); findMatch(); }}
+                        onClick={() => { if(currentUser) { setTimeControl(tc.val); findMatch(); } else { onLoginRequest?.(); } }}
                         className="bg-zinc-950/50 hover:bg-zinc-800 border border-zinc-800/80 hover:border-emerald-500/50 rounded-2xl p-4 flex flex-col items-center justify-center transition-all hover:scale-105 active:scale-95 group"
                       >
                         <span className="text-2xl mb-1 group-hover:scale-110 transition-transform">{tc.icon}</span>
@@ -286,14 +286,14 @@ export default function Lobby({ currentUser, onPlayComputer, onPlayLocal, onSpec
                 
                 <div className="flex flex-col justify-end gap-3 mt-4 sm:mt-0">
                   <button
-                    onClick={createInvite}
+                    onClick={currentUser ? createInvite : onLoginRequest}
                     className="w-full bg-indigo-600/10 hover:bg-indigo-600/20 border border-indigo-500/20 text-indigo-400 font-bold py-4 px-4 rounded-2xl transition-all active:scale-95 flex items-center justify-center gap-2 group"
                   >
                     <Users className="w-5 h-5 group-hover:scale-110 transition-transform" />
                     Jogar com Amigo
                   </button>
                   <button
-                    onClick={() => setShowBotMenu(true)}
+                    onClick={() => currentUser ? setShowBotMenu(true) : onLoginRequest?.()}
                     className="w-full bg-zinc-800 hover:bg-zinc-700 text-white font-bold py-4 px-4 rounded-2xl transition-all active:scale-95 flex items-center justify-center gap-2 group"
                   >
                     <Bot className="w-5 h-5 text-zinc-400 group-hover:text-emerald-400 transition-colors" />
@@ -394,7 +394,7 @@ export default function Lobby({ currentUser, onPlayComputer, onPlayLocal, onSpec
 
         {/* Local Play Widget */}
         <button
-          onClick={() => onPlayLocal?.()}
+          onClick={() => currentUser ? onPlayLocal?.() : onLoginRequest?.()}
           disabled={isSearching}
           className="bg-zinc-900 hover:bg-zinc-800 rounded-[2rem] p-6 border border-zinc-800/50 transition-all active:scale-[0.98] text-left group"
         >
