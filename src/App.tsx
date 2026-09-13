@@ -69,12 +69,17 @@ export default function App() {
 
   const currentTheme = useTheme();
   const currentBackground = useBackground();
-
   useEffect(() => {
+    let unsubs: any[] = [];
+    
     initFirebase().then(({ auth, db }) => {
       setFirebaseReady(true);
       
       const unsubscribeAuth = auth.onAuthStateChanged(async (firebaseUser) => {
+        // Clear previous listeners
+        unsubs.forEach(u => u());
+        unsubs = [];
+
         setUser(firebaseUser);
         if (firebaseUser) {
           // Online Status Management
@@ -113,7 +118,7 @@ export default function App() {
             where('status', '==', 'pending')
           );
           
-          const unsubscribeChallenges = onSnapshot(challengesQuery, (snapshot) => {
+          unsubs.push(onSnapshot(challengesQuery, (snapshot) => {
             const challenges = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
             if (challenges.length > 0) {
               // Get the oldest pending challenge
@@ -121,7 +126,7 @@ export default function App() {
             } else {
               setIncomingChallenge(null);
             }
-          });
+          }));
 
           // Listen for outgoing challenge acceptance
           const myChallengesQuery = query(
@@ -130,7 +135,7 @@ export default function App() {
             where('status', '==', 'accepted')
           );
           
-          const unsubscribeMyChallenges = onSnapshot(myChallengesQuery, (snapshot) => {
+          unsubs.push(onSnapshot(myChallengesQuery, (snapshot) => {
             snapshot.docChanges().forEach(change => {
               if (change.type === 'added') {
                 const data = change.doc.data();
@@ -142,7 +147,7 @@ export default function App() {
                 }
               }
             });
-          });
+          }));
 
           const userRef = doc(db, 'users', firebaseUser.uid);
           const userSnap = await getDoc(userRef);
@@ -184,7 +189,7 @@ export default function App() {
              window.history.replaceState({}, document.title, window.location.pathname);
           }
 
-          const unsubscribeUser = onSnapshot(userRef, async (docSnap) => {
+          unsubs.push(onSnapshot(userRef, async (docSnap) => {
             if (docSnap.exists()) {
               const data = docSnap.data() as UserData;
               setUserData(data);
@@ -211,7 +216,7 @@ export default function App() {
                 console.error("Error creating user document", e);
               }
             }
-          });
+          }));
 
           const gamesRef = collection(db, 'games');
           const q = query(
@@ -222,7 +227,7 @@ export default function App() {
             )
           );
           
-          const unsubscribeGames = onSnapshot(q, (snapshot) => {
+          unsubs.push(onSnapshot(q, (snapshot) => {
             const games = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as GameData));
             const active = games.find(g => g.status === 'playing');
             
@@ -241,14 +246,14 @@ export default function App() {
               return null;
             });
             setLoading(false);
-          });
+          }));
 
         } else {
           setUserData(null);
           setLoading(false);
         }
       });
-      return () => unsubscribeAuth();
+      return () => { unsubscribeAuth(); unsubs.forEach(u => u()); };
     });
   }, []);
   
@@ -286,7 +291,7 @@ export default function App() {
       } else if (error.code === 'auth/unauthorized-domain') {
         alert("Atenção! Você está usando um domínio personalizado. Você precisa adicionar '" + window.location.hostname + "' na lista de Domínios Autorizados lá no painel do Firebase (Authentication > Settings > Authorized domains).");
       } else {
-        alert("Falha ao abrir a janela de login. Se você estiver usando Safari ou bloqueadores de pop-up, tente permitir pop-ups para esta página ou clique no botão de 'Device' ou 'Remix' no canto superior direito para abrir o app em uma nova guia.");
+        alert("Erro detalhado: " + error.code + " - " + error.message + "\n\nSe estiver usando Safari ou bloqueador de pop-ups, desative-o.");
       }
     }
   };
