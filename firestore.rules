@@ -37,9 +37,13 @@ service cloud.firestore {
       allow create: if isSignedIn()
         && (incoming().whiteId == request.auth.uid || incoming().blackId == request.auth.uid);
         
-      // Only players in the game can update it
+      // Only players in the game can update it, OR a user joining an invite
       allow update: if isSignedIn()
-        && (existing().whiteId == request.auth.uid || existing().blackId == request.auth.uid);
+        && (
+          existing().whiteId == request.auth.uid || 
+          existing().blackId == request.auth.uid ||
+          (existing().status == 'waiting_friend' && existing().blackId == '' && incoming().blackId == request.auth.uid)
+        );
            
       allow delete: if false;
     }

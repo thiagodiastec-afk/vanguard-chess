@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { collection, doc, getDocs, setDoc, deleteDoc, runTransaction, onSnapshot, query, orderBy, limit, where } from 'firebase/firestore';
+import { collection, doc, getDocs, setDoc, deleteDoc, runTransaction, onSnapshot, query, orderBy, limit, where, addDoc } from 'firebase/firestore';
 import { getDb } from '../lib/firebase';
 import { UserData, QueueEntry, GameData } from '../types';
 import { Loader2, Swords, UserCircle, Bot, ChevronDown, ChevronUp, Link as LinkIcon, Copy, Target, CheckCircle2, X, Users, MessageCircle } from 'lucide-react';
@@ -23,6 +23,31 @@ export default function Lobby({ currentUser, onPlayComputer, onPlayLocal, onSpec
   const [onlineUsers, setOnlineUsers] = useState<UserData[]>([]);
   const [hasSavedBotGame, setHasSavedBotGame] = useState(false);
   const [timeControl, setTimeControl] = useState<number>(300); // 5 min default
+  const [challengingUserId, setChallengingUserId] = useState<string | null>(null);
+
+  const handleDirectInvite = async (user: UserData) => {
+    if (!currentUser) {
+      onLoginRequest?.();
+      return;
+    }
+    try {
+      setChallengingUserId(user.uid);
+      const db = getDb();
+      await addDoc(collection(db, 'challenges'), {
+        challengerId: currentUser.uid,
+        challengedId: user.uid,
+        challengerName: currentUser.displayName || 'Jogador',
+        challengerElo: currentUser.elo || 1200,
+        status: 'pending',
+        createdAt: Date.now()
+      });
+      setTimeout(() => setChallengingUserId(null), 2000);
+    } catch(e) {
+      console.error("Error challenging user:", e);
+      setChallengingUserId(null);
+      alert("Falha ao enviar convite.");
+    }
+  };
 
   useEffect(() => {
     if (localStorage.getItem('vanguard_chess_bot_save')) {
@@ -423,12 +448,22 @@ export default function Lobby({ currentUser, onPlayComputer, onPlayLocal, onSpec
                       </div>
                       <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 border-2 border-zinc-950 rounded-full" />
                     </div>
-                    <div className="flex flex-col">
+                    <div className="flex flex-col flex-1">
                       <span className="text-sm font-bold text-zinc-200">
                         {(user.displayName || 'Jogador').split(' ')[0]} {user.uid === currentUser?.uid && <span className="text-emerald-500/80 text-[10px] font-bold uppercase ml-1">(Você)</span>}
                       </span>
                       <span className="text-xs text-indigo-400 font-medium">{user.elo} ELO</span>
                     </div>
+                    {user.uid !== currentUser?.uid && (
+                      <button
+                        onClick={() => handleDirectInvite(user)}
+                        disabled={challengingUserId === user.uid}
+                        className="ml-auto bg-zinc-800 hover:bg-emerald-600 text-white p-2 rounded-lg transition-colors flex items-center justify-center disabled:opacity-50"
+                        title="Convidar para Jogar"
+                      >
+                        {challengingUserId === user.uid ? <Loader2 className="w-4 h-4 animate-spin" /> : <Swords className="w-4 h-4" />}
+                      </button>
+                    )}
                   </div>
                 ))
               )}
