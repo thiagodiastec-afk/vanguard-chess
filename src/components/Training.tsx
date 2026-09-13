@@ -6,7 +6,7 @@ import { Chessboard } from 'react-chessboard';
 import { Puzzle } from '../types';
 import { Target, BookOpen, CheckCircle2, ChevronRight, RefreshCcw, Bot } from 'lucide-react';
 import { cn } from '../lib/utils';
-import { customPieces } from '../lib/chessPieces';
+import { getCustomPieces } from '../lib/chessPieces';
 
 const PUZZLES: Puzzle[] = [
   {
@@ -325,7 +325,7 @@ export default function Training({ onPlayComputer }: TrainingProps) {
               boardOrientation: "white",
               darkSquareStyle: theme.darkSquareStyle,
               lightSquareStyle: theme.lightSquareStyle,
-              pieces: customPieces,
+              pieces: getCustomPieces(theme.pieceSet || '3d_staunton'),
               squareStyles: optionSquares,
               animationDurationInMs: 300
             }}

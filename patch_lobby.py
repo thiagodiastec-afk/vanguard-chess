@@ -1,12 +1,15 @@
 import re
-
 with open("src/components/Lobby.tsx", "r") as f:
-    code = f.read()
+    content = f.read()
 
-code = code.replace("onPlayComputer('medium')", "currentUser ? onPlayComputer('medium') : onLoginRequest()")
-code = code.replace("onPlayLocal()", "currentUser ? onPlayLocal() : onLoginRequest()")
-code = code.replace("handleCreateGame()", "currentUser ? handleCreateGame() : onLoginRequest()")
+# For invite match
+content = content.replace("turn: 'w',", "turn: 'w',\n        whiteThemeId: currentUser.activeTheme || 'luxury',")
+
+# For matchmaking queue
+content = content.replace("timeControl\n      });", "timeControl,\n        activeTheme: currentUser.activeTheme || 'luxury'\n      });")
+
+# For matchmaking transaction game creation
+content = content.replace("turn: 'w'\n            });", "turn: 'w',\n              whiteThemeId: whitePlayer!.activeTheme || 'luxury'\n            });")
 
 with open("src/components/Lobby.tsx", "w") as f:
-    f.write(code)
-
+    f.write(content)

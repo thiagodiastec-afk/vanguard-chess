@@ -31,7 +31,8 @@ export interface QueueEntry {
   displayName: string;
   hasSetNickname?: boolean;
   elo: number;
-  createdAt: number;  timeControl: number;
+  createdAt: number;
+  activeTheme?: string;  timeControl: number;
 }
 
 export interface GameData {
@@ -49,6 +50,7 @@ export interface GameData {
   turn: 'w' | 'b';
   spectatorsAllowedWhite?: boolean;
   spectatorsAllowedBlack?: boolean;
+  whiteThemeId?: string;
 }
 
 export interface Message {
@@ -58,7 +60,8 @@ export interface Message {
   displayName: string;
   hasSetNickname?: boolean;
   text: string;
-  createdAt: number;  timeControl: number;
+  createdAt: number;
+  activeTheme?: string;  timeControl: number;
 }
 
 export interface Tournament {
@@ -88,6 +91,7 @@ export interface Challenge {
   challengerName: string;
   challengerElo: number;
   status: 'pending' | 'accepted' | 'declined';
-  createdAt: number;  timeControl: number;
+  createdAt: number;
+  activeTheme?: string;  timeControl: number;
   gameId?: string;
 }

@@ -129,7 +129,7 @@ export default function LocalGame({ onExit }: LocalGameProps) {
     return false;
   };
 
-  const getMoveOptions = (square: string) => {
+  const getMoveOptions = (square: any) => {
     const moves = game.moves({ square, verbose: true }) as any[];
     if (moves.length === 0) return false;
 
@@ -257,7 +257,7 @@ export default function LocalGame({ onExit }: LocalGameProps) {
                 boardOrientation: isFlipped ? 'black' : 'white',
                 darkSquareStyle: theme.darkSquareStyle,
                 lightSquareStyle: theme.lightSquareStyle,
-                customPieces: getCustomPieces(theme.pieceSet || 'neo'),
+                pieces: getCustomPieces(theme.pieceSet || '3d_staunton'),
                 squareStyles: { ...moveHighlights, ...optionSquares },
                 arrows: hintArrow ? [{ startSquare: hintArrow[0], endSquare: hintArrow[1], color: 'rgba(245, 158, 11, 0.8)' }] : [],
                 animationDurationInMs: 200

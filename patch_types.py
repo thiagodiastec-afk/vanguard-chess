@@ -1,7 +1,8 @@
 with open("src/types.ts", "r") as f:
-    code = f.read()
+    content = f.read()
 
-code = code.replace("displayName: string;", "displayName: string;\n  hasSetNickname?: boolean;")
+content = content.replace("spectatorsAllowedBlack?: boolean;", "spectatorsAllowedBlack?: boolean;\n  whiteThemeId?: string;")
+content = content.replace("createdAt: number;", "createdAt: number;\n  activeTheme?: string;")
 
 with open("src/types.ts", "w") as f:
-    f.write(code)
+    f.write(content)

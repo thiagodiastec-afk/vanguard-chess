@@ -157,7 +157,7 @@ export function useBackground() {
 
   useEffect(() => {
     const unsubscribe = backgroundManager.subscribe(setBg);
-    return unsubscribe;
+    return () => { unsubscribe(); };
   }, []);
 
   return bg;

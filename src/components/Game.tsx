@@ -1,7 +1,7 @@
 import GameReview from './GameReview';
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Chess } from 'chess.js';
-import { useTheme } from '../lib/themes';
+import { useTheme, CHESS_THEMES } from '../lib/themes';
 import { sounds } from '../lib/sounds';
 import { Chessboard } from 'react-chessboard';
 import confetti from 'canvas-confetti';
@@ -26,7 +26,8 @@ interface GameProps {
 }
 
 export default function Game({ game, currentUser, onExit }: GameProps) {
-  const theme = useTheme();
+  const localTheme = useTheme();
+  const theme = React.useMemo(() => CHESS_THEMES.find(t => t.id === game.whiteThemeId) || localTheme, [game.whiteThemeId, localTheme]);
   const [chess] = useState(new Chess());
   const isInitialMount = useRef(true);
   const [fen, setFen] = useState(game.fen);
@@ -687,7 +688,7 @@ export default function Game({ game, currentUser, onExit }: GameProps) {
               boardOrientation: myColor,
               darkSquareStyle: theme.darkSquareStyle,
               lightSquareStyle: theme.lightSquareStyle,
-              customPieces: getCustomPieces(theme.pieceSet || 'neo'),
+              pieces: getCustomPieces(theme.pieceSet || '3d_staunton'),
               squareStyles: { ...moveHighlights, ...optionSquares },
               animationDurationInMs: 400,
               dropSquareStyle: { boxShadow: 'inset 0 0 1px 6px rgba(255,255,255,0.75)' }

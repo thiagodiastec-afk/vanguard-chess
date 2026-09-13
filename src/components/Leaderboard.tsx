@@ -67,7 +67,7 @@ export default function Leaderboard() {
               <div className="w-16 h-16 bg-slate-400/10 rounded-full flex items-center justify-center mt-4 mb-2">
                 <User className="w-8 h-8 text-slate-300" />
               </div>
-              <p className="font-bold text-white text-lg truncate w-full text-center flex items-center justify-center gap-1">{top3[1].displayName} {top3[1].isPremium && <Star className="w-4 h-4 text-fuchsia-500 fill-fuchsia-500" title="VIP" />}</p>
+              <p className="font-bold text-white text-lg truncate w-full text-center flex items-center justify-center gap-1">{top3[1].displayName} {top3[1].isPremium && <Star className="w-4 h-4 text-fuchsia-500 fill-fuchsia-500" />}</p>
               <div className="text-2xl font-black text-slate-300 mt-2">{top3[1].elo}</div>
               <div className="text-xs text-neutral-400 font-bold uppercase mt-1">Rating</div>
             </div>
@@ -82,7 +82,7 @@ export default function Leaderboard() {
               <div className="w-20 h-20 bg-amber-400/20 rounded-full flex items-center justify-center mt-6 mb-3 ring-4 ring-amber-500/20">
                 <User className="w-10 h-10 text-amber-400" />
               </div>
-              <p className="font-black text-white text-xl truncate w-full text-center flex items-center justify-center gap-1">{top3[0].displayName} {top3[0].isPremium && <Star className="w-5 h-5 text-fuchsia-500 fill-fuchsia-500" title="VIP" />}</p>
+              <p className="font-black text-white text-xl truncate w-full text-center flex items-center justify-center gap-1">{top3[0].displayName} {top3[0].isPremium && <Star className="w-5 h-5 text-fuchsia-500 fill-fuchsia-500" />}</p>
               <div className="text-4xl font-black text-amber-400 mt-2">{top3[0].elo}</div>
               <div className="text-xs text-amber-400/70 font-bold uppercase mt-1">Rating</div>
             </div>
@@ -97,7 +97,7 @@ export default function Leaderboard() {
               <div className="w-16 h-16 bg-orange-700/10 rounded-full flex items-center justify-center mt-4 mb-2">
                 <User className="w-8 h-8 text-orange-500" />
               </div>
-              <p className="font-bold text-white text-lg truncate w-full text-center flex items-center justify-center gap-1">{top3[2].displayName} {top3[2].isPremium && <Star className="w-4 h-4 text-fuchsia-500 fill-fuchsia-500" title="VIP" />}</p>
+              <p className="font-bold text-white text-lg truncate w-full text-center flex items-center justify-center gap-1">{top3[2].displayName} {top3[2].isPremium && <Star className="w-4 h-4 text-fuchsia-500 fill-fuchsia-500" />}</p>
               <div className="text-2xl font-black text-orange-500 mt-2">{top3[2].elo}</div>
               <div className="text-xs text-neutral-400 font-bold uppercase mt-1">Rating</div>
             </div>
@@ -134,7 +134,7 @@ export default function Leaderboard() {
                       <User className="w-5 h-5 text-neutral-500" />
                     </div>
                     <div>
-                      <div className="font-bold text-white flex items-center gap-1">{user.displayName} {user.isPremium && <Star className="w-3.5 h-3.5 text-fuchsia-500 fill-fuchsia-500" title="VIP" />}</div>
+                      <div className="font-bold text-white flex items-center gap-1">{user.displayName} {user.isPremium && <Star className="w-3.5 h-3.5 text-fuchsia-500 fill-fuchsia-500" />}</div>
                       <div className="flex items-center gap-2 mt-0.5">
                         <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${league.bg} ${league.color} flex items-center gap-1`}>
                           <Shield className="w-3 h-3" /> {league.name}

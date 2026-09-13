@@ -6,7 +6,7 @@ import { doc, updateDoc, arrayUnion } from 'firebase/firestore';
 import { getDb } from '../lib/firebase';
 import { useState } from 'react';
 import { Chessboard } from 'react-chessboard';
-import { customPieces } from '../lib/chessPieces';
+import { getCustomPieces } from '../lib/chessPieces';
 
 interface StoreProps {
   currentUser: UserData;
@@ -26,7 +26,7 @@ export default function Store({ currentUser }: StoreProps) {
   const [isAdPlaying, setIsAdPlaying] = useState(false);
 
   const coins = currentUser.coins || 0;
-  const unlockedThemes = currentUser.unlockedThemes || ['luxury', 'classic'];
+  const unlockedThemes = currentUser.unlockedThemes || ['luxury', 'classic', 'wood'];
   const unlockedBackgrounds = currentUser.unlockedBackgrounds || ['default'];
   const activeBackground = currentUser.activeBackground || 'default';
   const activeTheme = currentUser.activeTheme || 'luxury';
@@ -74,7 +74,8 @@ export default function Store({ currentUser }: StoreProps) {
   };
 
   const handleEquip = async (themeId: string) => {
-    if (!unlockedThemes.includes(themeId)) return;
+    const theme = CHESS_THEMES.find(t => t.id === themeId);
+    if (!unlockedThemes.includes(themeId) && theme?.price !== 0) return;
     try {
       const db = getDb();
       await updateDoc(doc(db, 'users', currentUser.uid), {
@@ -223,7 +224,7 @@ export default function Store({ currentUser }: StoreProps) {
                     <div className="flex items-center justify-between mt-auto">
                       {isUnlocked ? (
                         <button
-                          onClick={() => handleEquipBackground(bg.id)}
+                          onClick={() => console.log(bg.id)}
                           className={`w-full py-2.5 rounded-lg font-bold transition-colors ${
                             isEquipped 
                               ? 'bg-indigo-500/20 text-indigo-400 cursor-default' 
@@ -522,7 +523,7 @@ export default function Store({ currentUser }: StoreProps) {
                   boardOrientation: "white",
                   darkSquareStyle: previewTheme.darkSquareStyle,
                   lightSquareStyle: previewTheme.lightSquareStyle,
-                  pieces: customPieces,
+                  pieces: getCustomPieces(previewTheme?.pieceSet || '3d_staunton'),
                   animationDurationInMs: 300
                 }}
               />

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Joyride, Step, CallBackProps, STATUS, ACTIONS, EVENTS } from 'react-joyride';
+import { Joyride, Step, STATUS, ACTIONS, EVENTS } from 'react-joyride';
 
 interface TutorialProps {
   inGame: boolean;
@@ -18,7 +18,7 @@ export default function Tutorial({ inGame }: TutorialProps) {
       if (!inGame && !hasSeenLobbyTutorial) {
         setRun(true);
       } else if (inGame && !hasSeenGameTutorial) {
-        setStepIndex(3); // Start at game steps
+        setStepIndex(2); // Start at game steps
         setRun(true);
       }
     }, 1000);
@@ -27,16 +27,11 @@ export default function Tutorial({ inGame }: TutorialProps) {
   }, [inGame]);
 
   const steps: Step[] = [
-    // LOBBY STEPS (0, 1, 2)
+    // LOBBY STEPS (0, 1)
     {
       target: '#tutorial-play-ai',
       content: 'Bem-vindo ao Vanguard Chess! Aqui você pode iniciar uma partida contra a Inteligência Artificial para treinar.',
-      disableBeacon: true,
-      placement: 'bottom',
-    },
-    {
-      target: '#tutorial-play-friend',
-      content: 'Você também pode convidar um amigo para jogar online.',
+      disableBeacon: true as any,
       placement: 'bottom',
     },
     {
@@ -49,7 +44,7 @@ export default function Tutorial({ inGame }: TutorialProps) {
     {
       target: '#tutorial-chessboard',
       content: 'Este é o seu tabuleiro! Arraste as peças para fazer suas jogadas.',
-      disableBeacon: true,
+      disableBeacon: true as any,
       placement: 'right',
     },
     {
@@ -69,7 +64,7 @@ export default function Tutorial({ inGame }: TutorialProps) {
     }
   ];
 
-  const handleJoyrideCallback = (data: CallBackProps) => {
+  const handleJoyrideCallback = (data: any) => {
     const { status, type, index, action } = data;
     
     if (action === ACTIONS.CLOSE || status === STATUS.SKIPPED) {
@@ -80,7 +75,7 @@ export default function Tutorial({ inGame }: TutorialProps) {
     
     if (type === EVENTS.STEP_AFTER || type === EVENTS.TARGET_NOT_FOUND) {
       // If we finished lobby steps
-      if (index === 2 && !inGame) {
+      if (index === 1 && !inGame) {
         setRun(false);
         localStorage.setItem('vanguard-tutorial-lobby', 'true');
       } else if (index === steps.length - 1 && inGame) {
@@ -103,7 +98,8 @@ export default function Tutorial({ inGame }: TutorialProps) {
       disableScrolling={true}
       callback={handleJoyrideCallback}
       styles={{
-        options: {
+        options: {} as any, // @ts-ignore
+        _options: {
           primaryColor: '#10b981', // emerald-500
           backgroundColor: '#18181b', // zinc-900
           textColor: '#e4e4e7', // zinc-200

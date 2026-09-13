@@ -4,7 +4,7 @@ import { Chessboard } from 'react-chessboard';
 import { useTheme } from '../lib/themes';
 import { cn } from '../lib/utils';
 import { Activity, Target, BrainCircuit, X, ChevronLeft, ChevronRight, CheckCircle2, AlertTriangle, XCircle, ArrowUpCircle } from 'lucide-react';
-import { customPieces } from '../lib/chessPieces';
+import { getCustomPieces } from '../lib/chessPieces';
 
 interface GameReviewProps {
   pgn: string;
@@ -119,7 +119,7 @@ export default function GameReview({ pgn, onClose, playerWhiteName, playerBlackN
                 boardOrientation: "white",
                 darkSquareStyle: theme.darkSquareStyle,
                 lightSquareStyle: theme.lightSquareStyle,
-                pieces: customPieces
+                pieces: getCustomPieces(theme.pieceSet || '3d_staunton')
               }}
             />
           </div>

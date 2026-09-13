@@ -1,8 +1,7 @@
-import React from 'react';
+with open("src/lib/chessPieces.tsx", "r") as f:
+    code = f.read()
 
-const pieceNames = ['wP', 'wN', 'wB', 'wR', 'wQ', 'wK', 'bP', 'bN', 'bB', 'bR', 'bQ', 'bK'];
-
-export const getCustomPieces = (pieceSet: string = 'wood') => {
+new_func = """export const getCustomPieces = (pieceSet: string = 'neo') => {
   if (pieceSet === 'default' || pieceSet === 'classic') return undefined;
   
   return pieceNames.reduce((acc, piece) => {
@@ -13,11 +12,11 @@ export const getCustomPieces = (pieceSet: string = 'wood') => {
     );
     return acc;
   }, {} as Record<string, any>);
-}
+}"""
 
-export const customPieces = getCustomPieces('neo');
+import re
+code = re.sub(r"export const getCustomPieces =.*?}, {} as Record<string, any>\);", new_func, code, flags=re.DOTALL)
 
-export const boardStyles = {
-  darkSquareStyle: { backgroundColor: '#703816' },
-  lightSquareStyle: { backgroundColor: '#dcb588' },
-};
+with open("src/lib/chessPieces.tsx", "w") as f:
+    f.write(code)
+

@@ -45,6 +45,7 @@ export default function Lobby({ currentUser, onPlayComputer, onPlayLocal, onSpec
       const users: UserData[] = [];
       snapshot.forEach(doc => {
         const data = doc.data() as UserData;
+        if (!data.uid) data.uid = doc.id;
         if (data.uid !== currentUser?.uid) { // Optional: exclude self, or keep it. Let's keep it but mark it.
            users.push(data);
         }
@@ -79,11 +80,9 @@ export default function Lobby({ currentUser, onPlayComputer, onPlayLocal, onSpec
     const db = getDb();
     const queueRef = doc(db, 'queue', currentUser.uid);
     
-    const unsubscribe = onSnapshot(queueRef, (doc) => {
-      setIsSearching(doc.exists());
-    });
+    // Clear any stale queue document when lobby mounts to avoid auto-searching
+    deleteDoc(queueRef).catch(console.error);
     
-    return unsubscribe;
   }, [currentUser?.uid]);
 
 
@@ -108,6 +107,7 @@ export default function Lobby({ currentUser, onPlayComputer, onPlayLocal, onSpec
         fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
         pgn: '',
         turn: 'w',
+        whiteThemeId: currentUser.activeTheme || 'luxury',
         lastMoveAt: Date.now(),
         timeControl,
         whiteTime: timeControl,
@@ -146,6 +146,7 @@ export default function Lobby({ currentUser, onPlayComputer, onPlayLocal, onSpec
       return;
     }
     setError(null);
+    setIsSearching(true);
     const db = getDb();
     
     try {
@@ -190,7 +191,8 @@ export default function Lobby({ currentUser, onPlayComputer, onPlayLocal, onSpec
               timeControl,
               whiteTime: timeControl,
               blackTime: timeControl,
-              turn: 'w'
+              turn: 'w',
+              whiteThemeId: whitePlayer!.activeTheme || 'luxury'
             });
 
             transaction.delete(opponentRef);
@@ -208,19 +210,24 @@ export default function Lobby({ currentUser, onPlayComputer, onPlayLocal, onSpec
         displayName: currentUser.displayName,
         elo: currentUser.elo,
         createdAt: Date.now(),
-        timeControl
+        timeControl,
+        activeTheme: currentUser.activeTheme || 'luxury'
       });
     } catch (err: any) {
       console.error("Matchmaking error:", err);
       setError("Erro ao buscar partida. Tente novamente.");
+      setIsSearching(false);
     }
   };
 
   const cancelSearch = async () => {
+    console.log("Cancel search clicked!");
     if (!currentUser) return;
     try {
+      setIsSearching(false); // Force local state update
       const db = getDb();
       await deleteDoc(doc(db, 'queue', currentUser.uid));
+      console.log("Queue doc deleted!");
     } catch (err) {
       console.error("Error canceling search:", err);
     }

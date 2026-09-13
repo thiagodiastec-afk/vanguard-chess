@@ -18,7 +18,6 @@ import Leaderboard from './components/Leaderboard';
 import AdBanner from './components/AdBanner';
 import About from './components/About';
 import NicknameModal from './components/NicknameModal';
-import Tutorial from './components/Tutorial';
 import { LogIn, Loader2, LogOut, Trophy, Swords, MessageSquare, Target, Settings, Volume2, VolumeX, Palette, User as UserIcon, Bell, BellOff, Users, BookOpen, Crown, Heart, Store as StoreIcon, Copy, CheckCircle2, Info , ShieldCheck } from 'lucide-react';
 import { sounds } from './lib/sounds';
 import { themeManager, CHESS_THEMES, useTheme } from './lib/themes';
@@ -323,7 +322,6 @@ export default function App() {
 
   return (
     <div className={cn("min-h-screen text-zinc-50 flex flex-col md:flex-row font-sans selection:bg-emerald-500/30", currentBackground.className || "")} style={currentBackground.style}>
-      <Tutorial inGame={!!activeGame || !!spectatingGame || isLocalGame || computerGameDifficulty !== null} />
       
       {/* Desktop Sidebar */}
       <aside className="hidden md:flex flex-col w-20 hover:w-64 transition-all duration-300 border-r border-zinc-800 bg-zinc-950/90 backdrop-blur-xl h-screen sticky top-0 z-50 group overflow-hidden">

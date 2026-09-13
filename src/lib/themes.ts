@@ -1,6 +1,7 @@
 export type Theme = {
   id: string;
   pieceSet?: string;
+  boardWrapperClass?: string;
 
   name: string;
   darkSquareStyle: { backgroundColor: string };
@@ -10,15 +11,17 @@ export type Theme = {
 };
 
 export const CHESS_THEMES: Theme[] = [
-  {
+    {
     id: 'luxury',
-    name: 'Premium Luxo',
-    pieceSet: 'neo',
-    darkSquareStyle: { backgroundColor: '#1a1817' },
-    lightSquareStyle: { backgroundColor: '#e2c596' },
+    name: 'Madeira Clássica',
+    pieceSet: '3d_staunton',
+    darkSquareStyle: { backgroundColor: '#422410' },
+    lightSquareStyle: { backgroundColor: '#dca46c' },
+    boardWrapperClass: 'border-[12px] border-[#5e3219] ring-2 ring-[#3b1d0d] shadow-[0_15px_30px_rgba(0,0,0,0.5)]',
     price: 0,
-    description: 'O tema padrão premium, clássico e elegante.',
+    description: 'Tabuleiro clássico de madeira e peças realistas.',
   },
+
   {
     id: 'classic',
     name: 'Clássico (Verde)',
@@ -29,14 +32,17 @@ export const CHESS_THEMES: Theme[] = [
     description: 'O visual tradicional esverdeado.',
   },
   {
-    id: 'wood',
-    name: 'Madeira',
-    pieceSet: 'wood',
-    darkSquareStyle: { backgroundColor: '#703816' },
-    lightSquareStyle: { backgroundColor: '#dcb588' },
-    price: 100,
-    description: 'Texturas quentes de madeira para um jogo relaxante.',
+    id: 'vidro',
+    name: 'Metálico Premium',
+    pieceSet: 'glass',
+    darkSquareStyle: { backgroundColor: '#422410' },
+    lightSquareStyle: { backgroundColor: '#dca46c' },
+    boardWrapperClass: 'border-[12px] border-[#5e3219] ring-2 ring-[#3b1d0d] shadow-[0_15px_30px_rgba(0,0,0,0.5)]',
+    price: 0,
+    description: 'Tabuleiro de madeira escuro com peças metálicas/vidro realistas.',
   },
+
+
   {
     id: 'blue',
     name: 'Azul Oceano',
@@ -184,7 +190,7 @@ export function useTheme() {
 
   useEffect(() => {
     const unsubscribe = themeManager.subscribe(setThemeState);
-    return unsubscribe;
+    return () => { unsubscribe(); };
   }, []);
 
   return theme;
