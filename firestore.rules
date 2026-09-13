@@ -16,14 +16,14 @@ service cloud.firestore {
 
     // Users
     match /users/{userId} {
-      allow read: if isSignedIn();
+      allow read: if true;
       allow create: if isOwner(userId);
       allow update: if isOwner(userId);
     }
 
     // Queue
     match /queue/{queueId} {
-      allow read: if isSignedIn();
+      allow read: if true;
       allow create: if isSignedIn() && incoming().uid == request.auth.uid;
       allow delete: if isSignedIn() && existing().uid == request.auth.uid;
       allow update: if false;
@@ -31,7 +31,7 @@ service cloud.firestore {
 
     // Games
     match /games/{gameId} {
-      allow read: if isSignedIn();
+      allow read: if true;
       
       // Players can create a game (from queue or friend invites)
       allow create: if isSignedIn()
@@ -46,7 +46,7 @@ service cloud.firestore {
 
     // Global Chat (read-only for clients, server writes)
     match /globalChat/{messageId} {
-      allow read: if isSignedIn();
+      allow read: if true;
       allow write: if false;
     }
 
@@ -63,6 +63,13 @@ service cloud.firestore {
     match /reports/{reportId} {
       allow create: if isSignedIn() && incoming().reporterId == request.auth.uid;
       allow read: if false; // Only admins/backend can read
+    }
+
+    // Room Chats (Game Chat)
+    match /messages/{messageId} {
+      allow read: if true;
+      allow create: if isSignedIn() && incoming().uid == request.auth.uid;
+      allow update, delete: if false;
     }
   }
 }
