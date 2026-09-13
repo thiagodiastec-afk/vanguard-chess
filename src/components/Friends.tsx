@@ -157,7 +157,7 @@ export default function Friends({ currentUser }: FriendsProps) {
                 <div key={user.uid} className="flex items-center justify-between p-4 bg-neutral-900/50 rounded-xl border border-neutral-700/30">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 bg-neutral-700 rounded-full flex items-center justify-center font-bold text-lg text-white">
-                      {user.displayName.charAt(0).toUpperCase()}
+                      {(user.displayName?.charAt(0)?.toUpperCase() || "?")}
                     </div>
                     <div>
                       <h4 className="font-bold text-white">{user.displayName}</h4>
@@ -202,7 +202,7 @@ export default function Friends({ currentUser }: FriendsProps) {
                 <div className="flex items-center gap-4">
                   <div className="relative">
                     <div className="w-12 h-12 bg-neutral-700 rounded-full flex items-center justify-center font-bold text-xl text-white">
-                      {friend.displayName.charAt(0).toUpperCase()}
+                      {(friend.displayName?.charAt(0)?.toUpperCase() || "?")}
                     </div>
                     <Circle className={cn(
                       "w-4 h-4 absolute bottom-0 right-0 rounded-full border-2 border-neutral-900 fill-current",

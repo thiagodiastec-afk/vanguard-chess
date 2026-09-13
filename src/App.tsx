@@ -331,7 +331,7 @@ export default function App() {
           {userData ? (
             <div className="flex items-center gap-3 bg-transparent group-hover:bg-zinc-900/50 p-1 group-hover:p-3 rounded-2xl border border-transparent group-hover:border-zinc-800 transition-all overflow-hidden justify-center group-hover:justify-start relative">
               <div className="w-10 h-10 bg-zinc-800 rounded-full flex items-center justify-center flex-shrink-0 font-bold text-emerald-400">
-                {userData.displayName.charAt(0).toUpperCase()}
+                {(userData.displayName?.charAt(0)?.toUpperCase() || "?")}
               </div>
               
               <div className="flex-1 min-w-0 text-left opacity-0 group-hover:opacity-100 transition-opacity duration-300 absolute left-[60px] group-hover:static group-hover:left-auto">
