@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { collection, doc, getDocs, setDoc, deleteDoc, runTransaction, onSnapshot, query, orderBy, limit, where } from 'firebase/firestore';
 import { getDb } from '../lib/firebase';
 import { UserData, QueueEntry, GameData } from '../types';
-import { Loader2, Swords, Bot, ChevronDown, ChevronUp, Link as LinkIcon, Copy, Target, CheckCircle2, X, Users } from 'lucide-react';
+import { Loader2, Swords, UserCircle, Bot, ChevronDown, ChevronUp, Link as LinkIcon, Copy, Target, CheckCircle2, X, Users, MessageCircle } from 'lucide-react';
 import { cn } from '../lib/utils';
 
 interface LobbyProps {
@@ -20,6 +20,7 @@ export default function Lobby({ currentUser, onPlayComputer, onPlayLocal, onSpec
   const [inviteLink, setInviteLink] = useState<string | null>(null);
   const [inviteGameId, setInviteGameId] = useState<string | null>(null);
   const [liveGames, setLiveGames] = useState<GameData[]>([]);
+  const [onlineUsers, setOnlineUsers] = useState<UserData[]>([]);
   const [hasSavedBotGame, setHasSavedBotGame] = useState(false);
   const [timeControl, setTimeControl] = useState<number>(300); // 5 min default
 
@@ -28,6 +29,31 @@ export default function Lobby({ currentUser, onPlayComputer, onPlayLocal, onSpec
       setHasSavedBotGame(true);
     }
   }, []);
+
+  useEffect(() => {
+    const db = getDb();
+    
+    // Listen to online users
+    const usersQuery = query(
+      collection(db, 'users'),
+      where('isOnline', '==', true),
+      orderBy('lastSeen', 'desc'),
+      limit(20)
+    );
+    
+    const unsubscribeUsers = onSnapshot(usersQuery, (snapshot) => {
+      const users: UserData[] = [];
+      snapshot.forEach(doc => {
+        const data = doc.data() as UserData;
+        if (data.uid !== currentUser?.uid) { // Optional: exclude self, or keep it. Let's keep it but mark it.
+           users.push(data);
+        }
+      });
+      setOnlineUsers(users);
+    });
+    
+    return unsubscribeUsers;
+  }, [currentUser]);
 
   useEffect(() => {
     const db = getDb();
@@ -248,9 +274,19 @@ export default function Lobby({ currentUser, onPlayComputer, onPlayLocal, onSpec
                     <button 
                       onClick={() => navigator.clipboard.writeText(inviteLink)}
                       className="p-3 bg-indigo-600 hover:bg-indigo-500 rounded-lg transition-colors text-white"
+                      title="Copiar link"
                     >
                       <Copy className="w-4 h-4" />
                     </button>
+                    <a
+                      href={`https://api.whatsapp.com/send?text=${encodeURIComponent(`Vem jogar xadrez comigo no Vanguard Chess! Clique no link para entrar na partida: ${inviteLink}`)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="p-3 bg-[#25D366] hover:bg-[#20bd5a] rounded-lg transition-colors text-white flex items-center justify-center"
+                      title="Enviar pelo WhatsApp"
+                    >
+                      <MessageCircle className="w-4 h-4" />
+                    </a>
                   </div>
                 </div>
                 <button
@@ -311,92 +347,93 @@ export default function Lobby({ currentUser, onPlayComputer, onPlayLocal, onSpec
           </div>
         </div>
 
-        {/* Live Games Widget */}
-        {liveGames.length > 0 && (
-          <div className="bg-zinc-900/50 rounded-[2rem] p-6 sm:p-8 border border-zinc-800/50">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Live Games Widget */}
+          <div className="lg:col-span-2 bg-zinc-900/50 rounded-[2rem] p-6 sm:p-8 border border-zinc-800/50 flex flex-col min-h-[300px]">
             <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
               <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse shadow-[0_0_10px_rgba(239,68,68,0.6)]" />
               TV Xadrez Ao Vivo
             </h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {liveGames.map(game => (
-                <div key={game.id} className="bg-zinc-950 rounded-2xl p-4 border border-zinc-800/80 flex flex-col gap-4 hover:border-emerald-500/30 transition-colors group">
-                  <div className="flex justify-between items-center text-sm font-medium">
-                    <div className="flex items-center gap-2 truncate">
-                      <div className="w-3 h-3 bg-zinc-200 border border-zinc-400 rounded-sm shadow-sm flex-shrink-0" />
-                      <span className="text-zinc-100 truncate">{game.whiteName}</span>
-                      <span className="text-emerald-500/80 text-xs">({game.whiteElo})</span>
-                    </div>
-                  </div>
-                  <div className="flex justify-between items-center text-sm font-medium">
-                    <div className="flex items-center gap-2 truncate">
-                      <div className="w-3 h-3 bg-zinc-900 border border-zinc-700 rounded-sm shadow-sm flex-shrink-0" />
-                      <span className="text-zinc-100 truncate">{game.blackName}</span>
-                      <span className="text-emerald-500/80 text-xs">({game.blackElo})</span>
-                    </div>
-                  </div>
-                  {onSpectate && (
-                    <button 
-                      onClick={() => onSpectate(game.id)}
-                      className="mt-2 w-full bg-zinc-800 group-hover:bg-emerald-500 group-hover:text-zinc-950 text-zinc-300 font-bold py-2.5 rounded-xl transition-all"
-                    >
-                      Assistir Partida
-                    </button>
-                  )}
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 flex-1">
+              {liveGames.length === 0 ? (
+                <div className="col-span-1 sm:col-span-2 text-center py-12 border border-zinc-800/50 border-dashed rounded-2xl bg-zinc-900/50 flex items-center justify-center">
+                  <p className="text-zinc-500 text-sm font-medium">Nenhuma partida ao vivo no momento</p>
                 </div>
-              ))}
+              ) : (
+                liveGames.map(game => (
+                  <div key={game.id} className="bg-zinc-950 rounded-2xl p-4 border border-zinc-800/80 flex flex-col gap-4 hover:border-emerald-500/30 transition-colors group">
+                    <div className="flex justify-between items-center text-sm font-medium">
+                      <div className="flex items-center gap-2 truncate">
+                        <div className="w-3 h-3 bg-zinc-200 border border-zinc-400 rounded-sm shadow-sm flex-shrink-0" />
+                        <span className="text-zinc-100 truncate">{game.whiteName}</span>
+                        <span className="text-emerald-500/80 text-xs">({game.whiteElo})</span>
+                      </div>
+                    </div>
+                    <div className="flex justify-between items-center text-sm font-medium">
+                      <div className="flex items-center gap-2 truncate">
+                        <div className="w-3 h-3 bg-zinc-900 border border-zinc-700 rounded-sm shadow-sm flex-shrink-0" />
+                        <span className="text-zinc-100 truncate">{game.blackName}</span>
+                        <span className="text-emerald-500/80 text-xs">({game.blackElo})</span>
+                      </div>
+                    </div>
+                    {onSpectate && (
+                      <button 
+                        onClick={() => onSpectate(game.id)}
+                        className="mt-2 w-full bg-zinc-800 group-hover:bg-emerald-500 group-hover:text-zinc-950 text-zinc-300 font-bold py-2.5 rounded-xl transition-all"
+                      >
+                        Assistir
+                      </button>
+                    )}
+                  </div>
+                ))
+              )}
             </div>
           </div>
-        )}
-      </div>
-      
-      {/* Right Column - Secondary Widgets */}
-      <div className="w-full md:w-[320px] lg:w-[380px] flex flex-col gap-6 shrink-0">
-        
-        {/* Daily Missions */}
-        <div className="bg-zinc-900/50 rounded-[2rem] p-6 border border-zinc-800/50 relative overflow-hidden">
-          <div className="absolute -top-10 -right-10 w-32 h-32 bg-amber-500/5 rounded-full blur-2xl" />
-          <h3 className="text-lg font-bold text-white mb-5 flex items-center gap-2">
-            <Target className="w-5 h-5 text-amber-500" />
-            Missões Diárias
-          </h3>
-          
-          <div className="space-y-4">
-            <div className="bg-zinc-950 p-4 rounded-2xl border border-zinc-800/80">
-              <div className="flex justify-between items-start mb-2">
-                <span className="font-bold text-zinc-100 text-sm">Defesa de Ferro</span>
-                <span className="text-[10px] font-black text-amber-500 bg-amber-500/10 px-2 py-1 rounded-lg">+50 XP</span>
-              </div>
-              <p className="text-xs text-zinc-500 mb-4 font-medium">Vença 1 partida jogando com as peças Pretas.</p>
-              <div>
-                <div className="w-full bg-zinc-900 rounded-full h-1.5 mb-1.5 overflow-hidden">
-                  <div className="bg-amber-500 h-full rounded-full w-0 transition-all duration-1000" />
+
+          {/* Online Users Widget */}
+          <div className="lg:col-span-1 bg-zinc-900/50 rounded-[2rem] p-6 sm:p-8 border border-zinc-800/50 flex flex-col min-h-[300px] max-h-[600px]">
+            <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
+              <span className="flex h-2.5 w-2.5 relative">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+              </span>
+              Online Agora
+              <span className="ml-auto text-xs font-bold text-zinc-400 bg-zinc-800 px-2.5 py-1 rounded-full">{onlineUsers.length}</span>
+            </h3>
+
+            <div className="space-y-3 overflow-y-auto pr-2 custom-scrollbar flex-1">
+              {onlineUsers.length === 0 ? (
+                <div className="text-center py-12 border border-zinc-800/50 border-dashed rounded-2xl bg-zinc-900/50">
+                  <p className="text-zinc-500 text-sm">Apenas você no momento</p>
                 </div>
-                <p className="text-right text-[10px] font-bold text-zinc-500">0 / 1</p>
-              </div>
-            </div>
-            
-            <div className="bg-emerald-500/5 p-4 rounded-2xl border border-emerald-500/20">
-              <div className="flex justify-between items-start mb-2">
-                <span className="font-bold text-emerald-400 text-sm line-through opacity-70">Mestre Tático</span>
-                <CheckCircle2 className="w-5 h-5 text-emerald-500" />
-              </div>
-              <p className="text-xs text-emerald-500/50 mb-4 font-medium line-through">Faça um Roque em 3 jogos.</p>
-              <div>
-                <div className="w-full bg-emerald-950 rounded-full h-1.5 mb-1.5 overflow-hidden">
-                  <div className="bg-emerald-500 h-full rounded-full w-full" />
-                </div>
-                <p className="text-right text-[10px] font-bold text-emerald-500">3 / 3</p>
-              </div>
+              ) : (
+                onlineUsers.map(user => (
+                  <div key={user.uid} className="flex items-center gap-3 p-3 bg-zinc-950/50 border border-zinc-800/50 rounded-xl">
+                    <div className="relative">
+                      <div className="w-10 h-10 bg-zinc-800 rounded-full flex items-center justify-center text-zinc-400 font-bold text-sm">
+                        {user.displayName.charAt(0).toUpperCase()}
+                      </div>
+                      <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 border-2 border-zinc-950 rounded-full" />
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-sm font-bold text-zinc-200">
+                        {user.displayName.split(' ')[0]} {user.uid === currentUser?.uid && <span className="text-emerald-500/80 text-[10px] font-bold uppercase ml-1">(Você)</span>}
+                      </span>
+                      <span className="text-xs text-indigo-400 font-medium">{user.elo} ELO</span>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         </div>
 
-        {/* Local Play Widget */}
-        <button
-          onClick={() => currentUser ? onPlayLocal?.() : onLoginRequest?.()}
-          disabled={isSearching}
-          className="bg-zinc-900 hover:bg-zinc-800 rounded-[2rem] p-6 border border-zinc-800/50 transition-all active:scale-[0.98] text-left group"
+
+      <div className="mt-8 mb-4">
+        <button 
+          onClick={onPlayLocal}
+          className="w-full bg-zinc-900 border border-zinc-800 hover:border-indigo-500/30 rounded-3xl p-6 sm:p-8 flex flex-col items-center justify-center text-center transition-all group"
         >
           <div className="w-12 h-12 bg-zinc-800 group-hover:bg-indigo-500/20 rounded-2xl flex items-center justify-center mb-4 transition-colors">
             <Users className="w-6 h-6 text-zinc-400 group-hover:text-indigo-400 transition-colors" />
@@ -404,7 +441,6 @@ export default function Lobby({ currentUser, onPlayComputer, onPlayLocal, onSpec
           <h3 className="text-lg font-bold text-white mb-1">Pass & Play</h3>
           <p className="text-xs text-zinc-500 font-medium">Jogue localmente no mesmo dispositivo com um amigo lado a lado.</p>
         </button>
-
       </div>
 
       {/* Bot Menu Modal */}
@@ -454,6 +490,7 @@ export default function Lobby({ currentUser, onPlayComputer, onPlayLocal, onSpec
           </div>
         </div>
       )}
+    </div>
     </div>
   );
 }

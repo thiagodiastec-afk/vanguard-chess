@@ -4,7 +4,7 @@ import { useTheme } from '../lib/themes';
 import { sounds } from '../lib/sounds';
 import { Chessboard } from 'react-chessboard';
 import confetti from 'canvas-confetti';
-import { Flag, ChevronLeft, RefreshCcw, Undo, MonitorPlay, FlipVertical, Lightbulb } from 'lucide-react';
+import { Flag, ChevronLeft, RefreshCcw, MonitorPlay, FlipVertical, Lightbulb } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { customPieces } from '../lib/chessPieces';
 import MoveHistory from './MoveHistory';
@@ -189,15 +189,6 @@ export default function LocalGame({ onExit }: LocalGameProps) {
     }
   };
 
-  const handleUndo = () => {
-    if (game.history().length === 0) return;
-    const newGame = new Chess();
-    newGame.loadPgn(game.pgn());
-    newGame.undo();
-    setGame(newGame);
-    setGameOver(false);
-    setWinner(null);
-  };
 
   const resetGame = () => {
     setGame(new Chess());
@@ -296,14 +287,7 @@ export default function LocalGame({ onExit }: LocalGameProps) {
               >
                 <FlipVertical className="w-4 h-4" />
               </button>
-              <button
-                onClick={handleUndo}
-                disabled={game.history().length === 0}
-                className="p-2 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors flex items-center gap-2"
-                title="Desfazer Lance"
-              >
-                <Undo className="w-4 h-4" />
-              </button>
+
             </div>
           </div>
           

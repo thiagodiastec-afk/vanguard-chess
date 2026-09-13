@@ -94,10 +94,16 @@ export default function ComputerGame({ difficulty, currentUser, onExit }: Comput
       worker.onmessage = (e) => {
         const { bestMove } = e.data;
         if (bestMove) {
-          const gameCopy = new Chess();
-          gameCopy.loadPgn(game.pgn());
-          gameCopy.move(bestMove);
-          setGame(gameCopy);
+          setGame((currentGame) => {
+             // If the current game fen doesn't match the fen we sent to the worker, it means the user undid a move while the computer was thinking!
+             if (currentGame.fen() !== game.fen()) {
+               return currentGame;
+             }
+             const gameCopy = new Chess();
+             gameCopy.loadPgn(currentGame.pgn());
+             gameCopy.move(bestMove);
+             return gameCopy;
+          });
         }
         setIsThinking(false);
         worker.terminate();
@@ -194,6 +200,19 @@ export default function ComputerGame({ difficulty, currentUser, onExit }: Comput
       makeComputerMove();
     }
   }, [game, playerColor, isThinking, makeComputerMove, gameOver]);
+
+
+  // Fallback in case worker gets stuck
+  useEffect(() => {
+    let timeout: any;
+    if (isThinking) {
+      timeout = setTimeout(() => {
+        console.warn("Worker timed out after 15s. Resetting isThinking.");
+        setIsThinking(false);
+      }, 15000);
+    }
+    return () => clearTimeout(timeout);
+  }, [isThinking]);
 
   const calculateEloChange = (myElo: number, opponentElo: number, result: 1 | 0.5 | 0) => {
     const K = 32;

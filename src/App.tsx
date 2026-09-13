@@ -17,7 +17,7 @@ import Friends from './components/Friends';
 import Leaderboard from './components/Leaderboard';
 import AdBanner from './components/AdBanner';
 import About from './components/About';
-import { LogIn, Loader2, LogOut, Trophy, Swords, MessageSquare, Target, Settings, Volume2, VolumeX, Palette, User as UserIcon, Bell, BellOff, Users, BookOpen, Crown, Heart, Store as StoreIcon, Copy, CheckCircle2, Info } from 'lucide-react';
+import { LogIn, Loader2, LogOut, Trophy, Swords, MessageSquare, Target, Settings, Volume2, VolumeX, Palette, User as UserIcon, Bell, BellOff, Users, BookOpen, Crown, Heart, Store as StoreIcon, Copy, CheckCircle2, Info , ShieldCheck } from 'lucide-react';
 import { sounds } from './lib/sounds';
 import { themeManager, CHESS_THEMES, useTheme } from './lib/themes';
 import { backgroundManager, useBackground } from './lib/backgrounds';
@@ -422,9 +422,13 @@ export default function App() {
                     onClick={handleLogin}
                     className="w-full bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-bold py-4 px-6 rounded-2xl transition-colors flex items-center justify-center gap-2"
                   >
-                    <LogIn className="w-5 h-5" />
+                                        <LogIn className="w-5 h-5" />
                     Entrar com Google
                   </button>
+                  <p className="text-xs text-zinc-500 font-medium flex items-center justify-center gap-1.5 mt-4">
+                    <ShieldCheck className="w-4 h-4 text-emerald-500/80" />
+                    Conexão segura (Criptografia AES-256)
+                  </p>
                 </div>
               </div>
             )}

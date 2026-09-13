@@ -127,7 +127,7 @@ export function minimax(
     return evaluateBoard(game);
   }
 
-  const moves = game.moves();
+  let moves = game.moves();
 
   if (isMaximizingPlayer) {
     let bestVal = -Infinity;
@@ -156,8 +156,26 @@ export function minimax(
   }
 }
 
+
+export function orderMoves(moves: string[], game: Chess): string[] {
+  return moves.sort((a, b) => {
+    let scoreA = 0;
+    let scoreB = 0;
+    
+    if (a.includes('x')) scoreA += 10;
+    if (a.includes('+')) scoreA += 5;
+    if (a.includes('=')) scoreA += 8;
+    
+    if (b.includes('x')) scoreB += 10;
+    if (b.includes('+')) scoreB += 5;
+    if (b.includes('=')) scoreB += 8;
+    
+    return scoreB - scoreA;
+  });
+}
+
 export function calculateBestMove(game: Chess, difficulty: string): string | null {
-  const moves = game.moves();
+  let moves = game.moves();
   if (moves.length === 0) return null;
 
   if (difficulty === 'iniciante') {
@@ -168,13 +186,13 @@ export function calculateBestMove(game: Chess, difficulty: string): string | nul
   if (difficulty === 'facil') depth = 1;
   else if (difficulty === 'medio') depth = 2;
   else if (difficulty === 'dificil') depth = 3;
-  else if (difficulty === 'profissional') depth = 4;
+  else if (difficulty === 'profissional') depth = 3;
 
   let bestMove = null;
   let bestValue = game.turn() === 'w' ? -Infinity : Infinity;
 
   // Randomize move order to add variety when values are equal
-  moves.sort(() => Math.random() - 0.5);
+  moves = orderMoves(moves, game); // Ordered for speed, random isn't good for engine
 
   for (let i = 0; i < moves.length; i++) {
     const move = moves[i];

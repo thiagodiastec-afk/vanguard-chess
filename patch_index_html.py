@@ -1,15 +1,9 @@
-<!doctype html>
-<html lang="pt-BR">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Vanguard Chess</title>
-    <meta name="description" content="Plataforma de jogos de xadrez em tempo real com sistema de ranking Elo." />
-    <meta property="og:title" content="Vanguard Chess" />
-    <meta property="og:description" content="Plataforma de jogos de xadrez em tempo real com sistema de ranking Elo." />
-    <meta property="og:type" content="website" />
-    <meta name="twitter:card" content="summary_large_image" />
-  
+import re
+
+with open("index.html", "r") as f:
+    html = f.read()
+
+protection_script = """
     <style>
       body {
         -webkit-touch-callout: none;
@@ -56,10 +50,10 @@
       });
     </script>
   </head>
+"""
 
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
-</html>
+if "Desativar clique direito" not in html:
+    html = html.replace("</head>", protection_script)
 
+with open("index.html", "w") as f:
+    f.write(html)

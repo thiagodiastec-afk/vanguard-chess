@@ -1,4 +1,5 @@
-import { Mail, Shield, FileText, Code, Server, HeartHandshake } from 'lucide-react';
+import jsPDF from 'jspdf';
+import { Mail, Shield, FileText, Code, Server, HeartHandshake, Download } from 'lucide-react';
 import { cn } from '../lib/utils';
 
 export default function About() {
@@ -71,6 +72,58 @@ export default function About() {
               </div>
             </a>
           </div>
+        </div>
+
+        <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-6 space-y-4">
+          <div className="flex items-center gap-2 mb-4">
+            <Shield className="w-5 h-5 text-emerald-400" />
+            <h2 className="text-xl font-semibold">Segurança & Privacidade</h2>
+          </div>
+          <p className="text-zinc-300 text-sm leading-relaxed mb-4">
+            A transparência e a segurança dos seus dados são fundamentais para nós. Disponibilizamos um documento completo detalhando nossa infraestrutura de segurança criptografada e as regras de conduta para os usuários.
+          </p>
+          <button 
+            onClick={() => {
+              const doc = new jsPDF();
+              
+              doc.setFontSize(16);
+              doc.setTextColor(20, 184, 166); // Emerald color
+              doc.text("VANGUARD CHESS", 20, 20);
+              
+              doc.setFontSize(12);
+              doc.setTextColor(0, 0, 0);
+              doc.text("POLÍTICA DE SEGURANÇA E REGRAS DE USUÁRIO", 20, 30);
+              
+              doc.setFontSize(10);
+              const text = `
+1. CRIPTOGRAFIA E PROTEÇÃO DE DADOS
+Todas as conexões são protegidas com criptografia SSL/TLS em trânsito.
+Seus dados repousam nos servidores Google Cloud Platform com criptografia padrão AES-256.
+Senhas nunca são salvas em texto limpo. Utilizamos Google Firebase Authentication.
+
+2. FAIR PLAY (JOGO JUSTO)
+- É terminantemente proibido o uso de motores de xadrez externos (Stockfish, etc) 
+  durante as partidas ranqueadas.
+- Qualquer detecção de assistência robótica resultará no banimento imediato e 
+  permanente da conta.
+- Não é permitido desconectar intencionalmente para evitar derrotas ou abusar 
+  do tempo do oponente.
+
+3. CONDIÇÕES GERAIS
+O Vanguard Chess reserva-se no direito de revisar partidas para auditoria de fair play.
+Este ambiente é monitorado para garantir um local seguro e saudável para toda a 
+comunidade enxadrística.
+
+Última atualização: Setembro de 2026`;
+
+              doc.text(text, 20, 40);
+              doc.save("VanguardChess_Seguranca_Regras.pdf");
+            }}
+            className="flex items-center gap-2 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-500 border border-emerald-500/30 px-4 py-3 rounded-lg font-medium transition-colors w-full sm:w-auto justify-center"
+          >
+            <Download className="w-4 h-4" />
+            Baixar Documento de Segurança e Regras
+          </button>
         </div>
 
         {/* Legal & Terms placeholders */}
