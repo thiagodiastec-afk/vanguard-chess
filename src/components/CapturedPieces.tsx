@@ -1,6 +1,8 @@
 import React, { useMemo } from 'react';
 
 interface CapturedPiecesProps {
+  id?: string;
+  id?: string;
   fen: string;
   color: 'w' | 'b'; // Which player's captured pieces we are displaying. If 'w', display black pieces captured by white.
 }
@@ -8,7 +10,7 @@ interface CapturedPiecesProps {
 const PIECE_ORDER = ['p', 'n', 'b', 'r', 'q'];
 const PIECE_VALUES: Record<string, number> = { p: 1, n: 3, b: 3, r: 5, q: 9 };
 
-export default function CapturedPieces({ fen, color }: CapturedPiecesProps) {
+export default function CapturedPieces({ fen, color, id }: CapturedPiecesProps) {
   const { captured, scoreDifference } = useMemo(() => {
     const pieces = fen.split(' ')[0];
     const counts = {
@@ -81,7 +83,7 @@ export default function CapturedPieces({ fen, color }: CapturedPiecesProps) {
   if (captured.length === 0 && scoreDifference === 0) return null;
 
   return (
-    <div className="flex items-center flex-wrap gap-[-4px] ml-1">
+    <div id={id} className="flex items-center flex-wrap gap-[-4px] ml-1">
       {captured.map((p, i) => {
         // If color is 'w', captured pieces are black ('b').
         const pieceImgCode = color === 'w' ? `b${p}` : `w${p}`;

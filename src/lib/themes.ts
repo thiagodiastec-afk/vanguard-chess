@@ -1,5 +1,7 @@
 export type Theme = {
   id: string;
+  pieceSet?: string;
+
   name: string;
   darkSquareStyle: { backgroundColor: string };
   lightSquareStyle: { backgroundColor: string };
@@ -11,6 +13,7 @@ export const CHESS_THEMES: Theme[] = [
   {
     id: 'luxury',
     name: 'Premium Luxo',
+    pieceSet: 'neo',
     darkSquareStyle: { backgroundColor: '#1a1817' },
     lightSquareStyle: { backgroundColor: '#e2c596' },
     price: 0,
@@ -19,6 +22,7 @@ export const CHESS_THEMES: Theme[] = [
   {
     id: 'classic',
     name: 'Clássico (Verde)',
+    pieceSet: 'classic',
     darkSquareStyle: { backgroundColor: '#779556' },
     lightSquareStyle: { backgroundColor: '#ebecd0' },
     price: 0,
@@ -27,6 +31,7 @@ export const CHESS_THEMES: Theme[] = [
   {
     id: 'wood',
     name: 'Madeira',
+    pieceSet: 'wood',
     darkSquareStyle: { backgroundColor: '#703816' },
     lightSquareStyle: { backgroundColor: '#dcb588' },
     price: 100,
@@ -35,6 +40,7 @@ export const CHESS_THEMES: Theme[] = [
   {
     id: 'blue',
     name: 'Azul Oceano',
+    pieceSet: 'icy_sea',
     darkSquareStyle: { backgroundColor: '#4b7399' },
     lightSquareStyle: { backgroundColor: '#eae9d2' },
     price: 150,
@@ -43,6 +49,7 @@ export const CHESS_THEMES: Theme[] = [
   {
     id: 'coral',
     name: 'Coral',
+    pieceSet: 'bases',
     darkSquareStyle: { backgroundColor: '#b2655e' },
     lightSquareStyle: { backgroundColor: '#eeeed2' },
     price: 150,
@@ -51,6 +58,7 @@ export const CHESS_THEMES: Theme[] = [
   {
     id: 'dark',
     name: 'Noturno',
+    pieceSet: 'alpha',
     darkSquareStyle: { backgroundColor: '#5c7080' },
     lightSquareStyle: { backgroundColor: '#8ca2ad' },
     price: 200,
@@ -59,6 +67,7 @@ export const CHESS_THEMES: Theme[] = [
   {
     id: 'neon',
     name: 'Cyberpunk Neon',
+    pieceSet: 'neon',
     darkSquareStyle: { backgroundColor: '#180029' },
     lightSquareStyle: { backgroundColor: '#38006b' },
     price: 500,
@@ -67,6 +76,7 @@ export const CHESS_THEMES: Theme[] = [
   {
     id: 'marble',
     name: 'Mármore Imperial',
+    pieceSet: 'marble',
     darkSquareStyle: { backgroundColor: '#6e6e6e' },
     lightSquareStyle: { backgroundColor: '#cfcfcf' },
     price: 600,
@@ -75,6 +85,7 @@ export const CHESS_THEMES: Theme[] = [
   {
     id: 'gold',
     name: 'Ouro e Ônix',
+    pieceSet: 'glass',
     darkSquareStyle: { backgroundColor: '#212121' },
     lightSquareStyle: { backgroundColor: '#d4af37' },
     price: 1000,
@@ -84,6 +95,7 @@ export const CHESS_THEMES: Theme[] = [
   {
     id: 'amethyst',
     name: 'Ametista Real',
+    pieceSet: 'gothic',
     darkSquareStyle: { backgroundColor: '#4a235a' },
     lightSquareStyle: { backgroundColor: '#d7bde2' },
     price: 750,
@@ -92,6 +104,7 @@ export const CHESS_THEMES: Theme[] = [
   {
     id: 'forest',
     name: 'Floresta Élfica',
+    pieceSet: 'club',
     darkSquareStyle: { backgroundColor: '#145a32' },
     lightSquareStyle: { backgroundColor: '#abebc6' },
     price: 800,
@@ -100,6 +113,7 @@ export const CHESS_THEMES: Theme[] = [
   {
     id: 'ruby',
     name: 'Rubi e Gelo',
+    pieceSet: 'icy_sea',
     darkSquareStyle: { backgroundColor: '#7b241c' },
     lightSquareStyle: { backgroundColor: '#fadbd8' },
     price: 1200,
@@ -108,6 +122,7 @@ export const CHESS_THEMES: Theme[] = [
   {
     id: 'obsidian',
     name: 'Obsidiana e Cobre',
+    pieceSet: 'cases',
     darkSquareStyle: { backgroundColor: '#17202a' },
     lightSquareStyle: { backgroundColor: '#dc7633' },
     price: 2000,
@@ -116,6 +131,7 @@ export const CHESS_THEMES: Theme[] = [
   {
     id: 'galaxy',
     name: 'Nebulosa Infinita',
+    pieceSet: 'graffiti',
     darkSquareStyle: { backgroundColor: '#09041a' },
     lightSquareStyle: { backgroundColor: '#4a148c' },
     price: 3000,

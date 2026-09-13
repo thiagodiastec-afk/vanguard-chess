@@ -329,6 +329,7 @@ export default function Lobby({ currentUser, onPlayComputer, onPlayLocal, onSpec
                     Jogar com Amigo
                   </button>
                   <button
+                    id="tutorial-play-ai"
                     onClick={() => currentUser ? setShowBotMenu(true) : onLoginRequest?.()}
                     className="w-full bg-zinc-800 hover:bg-zinc-700 text-white font-bold py-4 px-4 rounded-2xl transition-all active:scale-95 flex items-center justify-center gap-2 group"
                   >
@@ -418,7 +419,7 @@ export default function Lobby({ currentUser, onPlayComputer, onPlayLocal, onSpec
                     </div>
                     <div className="flex flex-col">
                       <span className="text-sm font-bold text-zinc-200">
-                        {user.displayName.split(' ')[0]} {user.uid === currentUser?.uid && <span className="text-emerald-500/80 text-[10px] font-bold uppercase ml-1">(Você)</span>}
+                        {(user.displayName || 'Jogador').split(' ')[0]} {user.uid === currentUser?.uid && <span className="text-emerald-500/80 text-[10px] font-bold uppercase ml-1">(Você)</span>}
                       </span>
                       <span className="text-xs text-indigo-400 font-medium">{user.elo} ELO</span>
                     </div>
@@ -432,6 +433,7 @@ export default function Lobby({ currentUser, onPlayComputer, onPlayLocal, onSpec
 
       <div className="mt-8 mb-4">
         <button 
+          id="tutorial-pass-play"
           onClick={onPlayLocal}
           className="w-full bg-zinc-900 border border-zinc-800 hover:border-indigo-500/30 rounded-3xl p-6 sm:p-8 flex flex-col items-center justify-center text-center transition-all group"
         >

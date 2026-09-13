@@ -7,7 +7,7 @@ import confetti from 'canvas-confetti';
 import { UserData } from '../types';
 import { Flag, ChevronLeft, Bot, RefreshCcw, Undo, Sparkles, Lightbulb } from 'lucide-react';
 import { cn } from '../lib/utils';
-import { customPieces } from '../lib/chessPieces';
+import { getCustomPieces } from '../lib/chessPieces';
 import MoveHistory from './MoveHistory';
 import CapturedPieces from './CapturedPieces';
 import EvalBar from "./EvalBar";
@@ -635,7 +635,7 @@ export default function ComputerGame({ difficulty, currentUser, onExit }: Comput
                 <div className="ml-auto text-xs text-emerald-500 animate-pulse flex-shrink-0">...</div>
               )}
             </div>
-            <CapturedPieces fen={game.fen()} color="b" />
+            <CapturedPieces id="tutorial-captured-pieces" fen={game.fen()} color="b" />
           </div>
           
           <div className="my-6 border-t border-neutral-700" />
@@ -648,7 +648,7 @@ export default function ComputerGame({ difficulty, currentUser, onExit }: Comput
                 {currentUser && <p className="text-xs text-neutral-400">{currentUser.elo} Rating</p>}
               </div>
             </div>
-            <CapturedPieces fen={game.fen()} color="w" />
+            <CapturedPieces id="tutorial-captured-pieces" fen={game.fen()} color="w" />
           </div>
 
         </div>
@@ -719,7 +719,7 @@ export default function ComputerGame({ difficulty, currentUser, onExit }: Comput
                   <h3 className="font-bold text-lg">Análise do Treinador</h3>
                 </div>
                 <div className="prose prose-invert prose-sm max-w-none text-neutral-300 mb-6">
-                  {analysis.split('\n').map((paragraph, idx) => (
+                  {(analysis || '').split('\n').map((paragraph, idx) => (
                     <p key={idx} className="mb-2">{paragraph.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')}</p>
                   ))}
                 </div>
@@ -745,7 +745,7 @@ export default function ComputerGame({ difficulty, currentUser, onExit }: Comput
             boardOrientation: playerColor === 'w' ? 'white' : 'black',
             darkSquareStyle: theme.darkSquareStyle,
             lightSquareStyle: theme.lightSquareStyle,
-            pieces: customPieces,
+            customPieces: getCustomPieces(theme.pieceSet || 'neo'),
             squareStyles: { ...moveHighlights, ...optionSquares },
             arrows: hintArrow ? [{ startSquare: hintArrow[0], endSquare: hintArrow[1], color: 'rgba(245, 158, 11, 0.8)' }] : [],
             dropSquareStyle: { boxShadow: 'inset 0 0 1px 6px rgba(255,255,255,0.75)' },

@@ -1,6 +1,7 @@
 export interface UserData {
   uid: string;
   displayName: string;
+  hasSetNickname?: boolean;
   elo: number;
   gamesPlayed: number;
   stats?: {
@@ -28,6 +29,7 @@ export interface UserData {
 export interface QueueEntry {
   uid: string;
   displayName: string;
+  hasSetNickname?: boolean;
   elo: number;
   createdAt: number;  timeControl: number;
 }
@@ -54,6 +56,7 @@ export interface Message {
   roomId: string;
   uid: string;
   displayName: string;
+  hasSetNickname?: boolean;
   text: string;
   createdAt: number;  timeControl: number;
 }

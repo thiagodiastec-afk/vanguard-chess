@@ -30,6 +30,7 @@
     "react": "^19.0.1",
     "react-chessboard": "^5.1.0",
     "react-dom": "^19.0.1",
+    "react-joyride": "^3.2.0",
     "recharts": "^3.10.1",
     "stockfish.js": "^10.0.2",
     "tailwind-merge": "^3.6.0",

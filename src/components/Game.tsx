@@ -12,7 +12,7 @@ import { Flag, Handshake, ChevronLeft, MessageSquare, ShieldAlert , BrainCircuit
 import EvalBar from "./EvalBar";
 import { cn } from '../lib/utils';
 import ChatBox from './ChatBox';
-import { customPieces } from '../lib/chessPieces';
+import { getCustomPieces } from '../lib/chessPieces';
 import MoveHistory from './MoveHistory';
 import CapturedPieces from './CapturedPieces';
 import { sendNotification } from '../lib/notifications';
@@ -553,7 +553,7 @@ export default function Game({ game, currentUser, onExit }: GameProps) {
                 <p className="text-xs text-emerald-400 font-medium">{opponentElo} Elo</p>
               </div>
             </div>
-            <CapturedPieces fen={chess.fen()} color={isWhite ? 'b' : 'w'} />
+            <CapturedPieces id="tutorial-captured-pieces" fen={chess.fen()} color={isWhite ? 'b' : 'w'} />
           </div>
           {game.timeControl && (
             <div className="bg-neutral-800 px-4 py-2 rounded-xl border border-neutral-700 font-mono text-xl font-bold text-white shadow-inner">
@@ -574,7 +574,7 @@ export default function Game({ game, currentUser, onExit }: GameProps) {
                 <p className="text-xs text-emerald-400 font-medium">{bottomElo} Elo</p>
               </div>
             </div>
-            <CapturedPieces fen={chess.fen()} color={isWhite ? 'w' : 'b'} />
+            <CapturedPieces id="tutorial-captured-pieces" fen={chess.fen()} color={isWhite ? 'w' : 'b'} />
           </div>
           {game.timeControl && (
             <div className="bg-neutral-800 px-4 py-2 rounded-xl border border-neutral-700 font-mono text-xl font-bold text-emerald-400 shadow-inner">
@@ -687,7 +687,7 @@ export default function Game({ game, currentUser, onExit }: GameProps) {
               boardOrientation: myColor,
               darkSquareStyle: theme.darkSquareStyle,
               lightSquareStyle: theme.lightSquareStyle,
-              pieces: customPieces,
+              customPieces: getCustomPieces(theme.pieceSet || 'neo'),
               squareStyles: { ...moveHighlights, ...optionSquares },
               animationDurationInMs: 400,
               dropSquareStyle: { boxShadow: 'inset 0 0 1px 6px rgba(255,255,255,0.75)' }

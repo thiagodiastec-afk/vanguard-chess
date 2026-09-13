@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { collection, query, where, getDocs, doc, updateDoc, arrayUnion, arrayRemove, onSnapshot, addDoc } from 'firebase/firestore';
 import { getDb } from '../lib/firebase';
 import { UserData } from '../types';
-import { Search, UserPlus, UserMinus, Swords, Circle, Loader2 } from 'lucide-react';
+import { Search, UserPlus, UserMinus, Swords, Circle, Loader2, MessageCircle } from 'lucide-react';
 import { cn } from '../lib/utils';
 
 interface FriendsProps {

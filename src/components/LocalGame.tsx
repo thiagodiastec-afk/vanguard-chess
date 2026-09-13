@@ -6,7 +6,7 @@ import { Chessboard } from 'react-chessboard';
 import confetti from 'canvas-confetti';
 import { Flag, ChevronLeft, RefreshCcw, MonitorPlay, FlipVertical, Lightbulb } from 'lucide-react';
 import { cn } from '../lib/utils';
-import { customPieces } from '../lib/chessPieces';
+import { getCustomPieces } from '../lib/chessPieces';
 import MoveHistory from './MoveHistory';
 import CapturedPieces from './CapturedPieces';
 import EvalBar from "./EvalBar";
@@ -257,7 +257,7 @@ export default function LocalGame({ onExit }: LocalGameProps) {
                 boardOrientation: isFlipped ? 'black' : 'white',
                 darkSquareStyle: theme.darkSquareStyle,
                 lightSquareStyle: theme.lightSquareStyle,
-                pieces: customPieces,
+                customPieces: getCustomPieces(theme.pieceSet || 'neo'),
                 squareStyles: { ...moveHighlights, ...optionSquares },
                 arrows: hintArrow ? [{ startSquare: hintArrow[0], endSquare: hintArrow[1], color: 'rgba(245, 158, 11, 0.8)' }] : [],
                 animationDurationInMs: 200

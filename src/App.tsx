@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { getAuth as getFirebaseAuth, signInWithPopup, GoogleAuthProvider, signOut, User, browserPopupRedirectResolver } from 'firebase/auth';
+import { getAuth as getFirebaseAuth, signInWithPopup, signInWithRedirect, GoogleAuthProvider, signOut, User, browserPopupRedirectResolver } from 'firebase/auth';
 import { doc, setDoc, getDoc, collection, onSnapshot, query, where, or, updateDoc, addDoc } from 'firebase/firestore';
 import { initFirebase, getDb, getFirebaseAuth as getFirebaseInstance } from './lib/firebase';
 import { UserData, GameData } from './types';
@@ -17,6 +17,8 @@ import Friends from './components/Friends';
 import Leaderboard from './components/Leaderboard';
 import AdBanner from './components/AdBanner';
 import About from './components/About';
+import NicknameModal from './components/NicknameModal';
+import Tutorial from './components/Tutorial';
 import { LogIn, Loader2, LogOut, Trophy, Swords, MessageSquare, Target, Settings, Volume2, VolumeX, Palette, User as UserIcon, Bell, BellOff, Users, BookOpen, Crown, Heart, Store as StoreIcon, Copy, CheckCircle2, Info , ShieldCheck } from 'lucide-react';
 import { sounds } from './lib/sounds';
 import { themeManager, CHESS_THEMES, useTheme } from './lib/themes';
@@ -183,9 +185,9 @@ export default function App() {
              window.history.replaceState({}, document.title, window.location.pathname);
           }
 
-          const unsubscribeUser = onSnapshot(userRef, (doc) => {
-            if (doc.exists()) {
-              const data = doc.data() as UserData;
+          const unsubscribeUser = onSnapshot(userRef, async (docSnap) => {
+            if (docSnap.exists()) {
+              const data = docSnap.data() as UserData;
               setUserData(data);
               
               if (data.activeTheme && data.activeTheme !== themeManager.getTheme().id) {
@@ -193,6 +195,21 @@ export default function App() {
               }
               if (data.activeBackground && data.activeBackground !== backgroundManager.getBackground().id) {
                 backgroundManager.setBackground(data.activeBackground);
+              }
+            } else {
+              // Create user if not exists
+              const initialData: UserData = {
+                uid: firebaseUser.uid,
+                displayName: firebaseUser.displayName || 'Jogador',
+                hasSetNickname: false,
+                elo: 1000,
+                gamesPlayed: 0,
+                coins: 100
+              };
+              try {
+                await setDoc(userRef, initialData);
+              } catch (e) {
+                console.error("Error creating user document", e);
               }
             }
           });
@@ -239,11 +256,8 @@ export default function App() {
 
   const handleLogin = async () => {
     try {
-      // Must be synchronous before calling signInWithPopup to avoid browser popup blockers
       const auth = getFirebaseInstance();
       if (!auth) {
-        console.error("Firebase auth not initialized yet.");
-        // Fallback to async if somehow not initialized
         const { auth: asyncAuth } = await initFirebase();
         const provider = new GoogleAuthProvider();
         await signInWithPopup(asyncAuth, provider, browserPopupRedirectResolver);
@@ -253,9 +267,26 @@ export default function App() {
       const provider = new GoogleAuthProvider();
       provider.setCustomParameters({ prompt: 'select_account' });
       await signInWithPopup(auth, provider, browserPopupRedirectResolver);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Login error", error);
-      alert("Falha ao abrir a janela de login. Se você estiver usando Safari ou bloqueadores de pop-up, tente permitir pop-ups para esta página ou clique no botão de 'Device' ou 'Remix' no canto superior direito para abrir o app em uma nova guia.");
+      
+      // Se o popup foi bloqueado pelo navegador, tenta fazer o login por redirecionamento
+      if (error.code === 'auth/popup-blocked' || error.message?.toLowerCase().includes('popup')) {
+        try {
+          const auth = getFirebaseInstance();
+          if (auth) {
+            const provider = new GoogleAuthProvider();
+            await signInWithRedirect(auth, provider);
+          }
+        } catch (redirectError) {
+          console.error("Redirect login error", redirectError);
+          alert("Falha no login. Verifique as configurações de segurança do seu navegador e tente novamente.");
+        }
+      } else if (error.code === 'auth/popup-closed-by-user') {
+        // Usuário fechou a janela, não faz nada
+      } else {
+        alert("Falha ao abrir a janela de login. Se você estiver usando Safari ou bloqueadores de pop-up, tente permitir pop-ups para esta página ou clique no botão de 'Device' ou 'Remix' no canto superior direito para abrir o app em uma nova guia.");
+      }
     }
   };
 
@@ -292,6 +323,7 @@ export default function App() {
 
   return (
     <div className={cn("min-h-screen text-zinc-50 flex flex-col md:flex-row font-sans selection:bg-emerald-500/30", currentBackground.className || "")} style={currentBackground.style}>
+      <Tutorial inGame={!!activeGame || !!spectatingGame || isLocalGame || computerGameDifficulty !== null} />
       
       {/* Desktop Sidebar */}
       <aside className="hidden md:flex flex-col w-20 hover:w-64 transition-all duration-300 border-r border-zinc-800 bg-zinc-950/90 backdrop-blur-xl h-screen sticky top-0 z-50 group overflow-hidden">
