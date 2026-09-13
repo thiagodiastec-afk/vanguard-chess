@@ -37,8 +37,7 @@ export default function Lobby({ currentUser, onPlayComputer, onPlayLocal, onSpec
     const usersQuery = query(
       collection(db, 'users'),
       where('isOnline', '==', true),
-      orderBy('lastSeen', 'desc'),
-      limit(20)
+      limit(50) // Removed orderBy to avoid requiring composite index without manual creation
     );
     
     const unsubscribeUsers = onSnapshot(usersQuery, (snapshot) => {
