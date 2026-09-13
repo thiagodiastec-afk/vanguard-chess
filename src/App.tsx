@@ -283,6 +283,8 @@ export default function App() {
         }
       } else if (error.code === 'auth/popup-closed-by-user') {
         // Usuário fechou a janela, não faz nada
+      } else if (error.code === 'auth/unauthorized-domain') {
+        alert("Atenção! Você está usando um domínio personalizado. Você precisa adicionar '" + window.location.hostname + "' na lista de Domínios Autorizados lá no painel do Firebase (Authentication > Settings > Authorized domains).");
       } else {
         alert("Falha ao abrir a janela de login. Se você estiver usando Safari ou bloqueadores de pop-up, tente permitir pop-ups para esta página ou clique no botão de 'Device' ou 'Remix' no canto superior direito para abrir o app em uma nova guia.");
       }
