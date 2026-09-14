@@ -88,6 +88,37 @@ export default function Store({ currentUser }: StoreProps) {
     }
   };
 
+  const handleBuyBackground = async (bgId: string, price: number) => {
+    if (coins < price || unlockedBackgrounds.includes(bgId)) return;
+    setBuying(bgId);
+    try {
+      const db = getDb();
+      await updateDoc(doc(db, 'users', currentUser.uid), {
+        coins: coins - price,
+        unlockedBackgrounds: arrayUnion(bgId)
+      });
+    } catch (err) {
+      console.error('Error buying background:', err);
+    } finally {
+      setBuying(null);
+    }
+  };
+
+  const handleEquipBackground = async (bgId: string) => {
+    const bg = APP_BACKGROUNDS.find(b => b.id === bgId);
+    if (!unlockedBackgrounds.includes(bgId) && bg?.price !== 0) return;
+    try {
+      const db = getDb();
+      await updateDoc(doc(db, 'users', currentUser.uid), {
+        activeBackground: bgId
+      });
+      localStorage.setItem('chess-background', bgId);
+      window.dispatchEvent(new Event('storage'));
+    } catch (err) {
+      console.error('Error equipping background:', err);
+    }
+  };
+
   const handleSimulatePayment = async (pack: any) => {
     try {
       const db = getDb();
@@ -224,7 +255,7 @@ export default function Store({ currentUser }: StoreProps) {
                     <div className="flex items-center justify-between mt-auto">
                       {isUnlocked ? (
                         <button
-                          onClick={() => console.log(bg.id)}
+                          onClick={() => handleEquipBackground(bg.id)}
                           className={`w-full py-2.5 rounded-lg font-bold transition-colors ${
                             isEquipped 
                               ? 'bg-indigo-500/20 text-indigo-400 cursor-default' 

@@ -22,8 +22,7 @@ export default function ChatBox({ roomId, currentUser, className, title }: ChatB
     const db = getDb();
     const q = query(
       collection(db, 'messages'),
-      where('roomId', '==', roomId),
-      orderBy('createdAt', 'asc')
+      where('roomId', '==', roomId)
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -31,21 +30,25 @@ export default function ChatBox({ roomId, currentUser, className, title }: ChatB
         if (change.type === 'added') {
           const msg = change.doc.data() as Message;
           // Only notify if it's not my own message, and it's a relatively recent message to prevent spam on initial load
-          if (msg.uid !== currentUser.uid && msg.createdAt > Date.now() - 5000) {
-            sendNotification('Nova mensagem de ' + msg.displayName, {
+          if (msg.uid !== currentUser?.uid && (msg.createdAt || 0) > Date.now() - 5000) {
+            sendNotification('Nova mensagem de ' + (msg.displayName || 'Jogador'), {
               body: msg.text
             });
           }
         }
       });
       
-      const msgs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Message));
+      const msgs = snapshot.docs
+        .map(doc => ({ id: doc.id, ...doc.data() } as Message))
+        .sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
       setMessages(msgs);
       setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
+    }, (err) => {
+      console.warn("ChatBox messages error:", err);
     });
 
     return unsubscribe;
-  }, [roomId]);
+  }, [roomId, currentUser?.uid]);
 
   const sendMessage = async (e: React.FormEvent) => {
     e.preventDefault();

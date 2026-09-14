@@ -26,12 +26,12 @@ export default function Tutorial({ inGame }: TutorialProps) {
     return () => clearTimeout(t);
   }, [inGame]);
 
-  const steps: Step[] = [
+  const steps: any[] = [
     // LOBBY STEPS (0, 1)
     {
       target: '#tutorial-play-ai',
       content: 'Bem-vindo ao Vanguard Chess! Aqui você pode iniciar uma partida contra a Inteligência Artificial para treinar.',
-      disableBeacon: true as any,
+      disableBeacon: true,
       placement: 'bottom',
     },
     {
@@ -44,7 +44,7 @@ export default function Tutorial({ inGame }: TutorialProps) {
     {
       target: '#tutorial-chessboard',
       content: 'Este é o seu tabuleiro! Arraste as peças para fazer suas jogadas.',
-      disableBeacon: true as any,
+      disableBeacon: true,
       placement: 'right',
     },
     {
@@ -87,8 +87,10 @@ export default function Tutorial({ inGame }: TutorialProps) {
     }
   };
 
+  const AnyJoyride = Joyride as any;
+
   return (
-    <Joyride
+    <AnyJoyride
       steps={steps}
       run={run}
       stepIndex={stepIndex}
@@ -98,8 +100,7 @@ export default function Tutorial({ inGame }: TutorialProps) {
       disableScrolling={true}
       callback={handleJoyrideCallback}
       styles={{
-        options: {} as any, // @ts-ignore
-        _options: {
+        options: {
           primaryColor: '#10b981', // emerald-500
           backgroundColor: '#18181b', // zinc-900
           textColor: '#e4e4e7', // zinc-200
@@ -122,13 +123,13 @@ export default function Tutorial({ inGame }: TutorialProps) {
         buttonSkip: {
           color: '#a1a1aa',
         }
-      }}
+      } as any}
       locale={{
         back: 'Voltar',
         close: 'Fechar',
         last: 'Finalizar',
         next: 'Próximo',
-        skip: 'Pular'
+        skip: 'Pular',
       }}
     />
   );

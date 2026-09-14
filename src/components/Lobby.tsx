@@ -144,9 +144,13 @@ export default function Lobby({ currentUser, onPlayComputer, onPlayLocal, onSpec
       await setDoc(newGameRef, newGame);
       setInviteGameId(newGameRef.id);
       
-      const link = window.location.origin + '?invite=' + newGameRef.id;
+      const link = `${window.location.origin}${window.location.pathname}?invite=${newGameRef.id}`;
       setInviteLink(link);
-      navigator.clipboard.writeText(link);
+      try {
+        await navigator.clipboard.writeText(link);
+      } catch (err) {
+        // Clipboard write might be restricted in some iframes
+      }
     } catch (e: any) {
       setError(e.message || 'Erro ao criar convite');
     }

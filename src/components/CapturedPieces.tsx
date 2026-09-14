@@ -2,7 +2,6 @@ import React, { useMemo } from 'react';
 
 interface CapturedPiecesProps {
   id?: string;
-  id?: string;
   fen: string;
   color: 'w' | 'b'; // Which player's captured pieces we are displaying. If 'w', display black pieces captured by white.
 }

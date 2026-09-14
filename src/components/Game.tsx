@@ -30,27 +30,39 @@ export default function Game({ game, currentUser, onExit }: GameProps) {
   const theme = React.useMemo(() => CHESS_THEMES.find(t => t.id === game.whiteThemeId) || localTheme, [game.whiteThemeId, localTheme]);
   const [chess] = useState(new Chess());
   const isInitialMount = useRef(true);
-  const [fen, setFen] = useState(game.fen);
+  const [fen, setFen] = useState(game.fen || 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1');
   const [cheatWarnings, setCheatWarnings] = useState(0);
   const [showCheatAlert, setShowCheatAlert] = useState(false);
   const [reported, setReported] = useState(false);
   const [showReview, setShowReview] = useState(false);
   
-  const [whiteDisplayTime, setWhiteDisplayTime] = useState<number>(game.whiteTime ?? game.timeControl ?? 0);
-  const [blackDisplayTime, setBlackDisplayTime] = useState<number>(game.blackTime ?? game.timeControl ?? 0);
+  const [whiteDisplayTime, setWhiteDisplayTime] = useState<number>(game.whiteTime ?? game.timeControl ?? 300);
+  const [blackDisplayTime, setBlackDisplayTime] = useState<number>(game.blackTime ?? game.timeControl ?? 300);
 
-  const isWhite = currentUser.uid === game.whiteId;
-  const isBlack = currentUser.uid === game.blackId;
+  const safeUser = currentUser || {
+    uid: 'guest',
+    displayName: 'Jogador',
+    elo: 1200,
+    gamesPlayed: 0,
+    coins: 0
+  };
+
+  const isWhite = safeUser.uid === game.whiteId;
+  const isBlack = safeUser.uid === game.blackId;
   const isSpectator = !isWhite && !isBlack;
   
   const myColor = isBlack ? 'black' : 'white';
   
-  const bottomName = isSpectator ? game.whiteName : currentUser.displayName;
-  const bottomElo = isSpectator ? game.whiteElo : currentUser.elo;
+  const bottomName = isSpectator ? (game.whiteName || 'Brancas') : (safeUser.displayName || 'Jogador');
+  const bottomElo = isSpectator ? (game.whiteElo || 1200) : (safeUser.elo || 1200);
   const bottomLabel = isSpectator ? '(Brancas)' : '(Você)';
   
-  const opponentName = isSpectator ? game.blackName : (isWhite ? game.blackName : game.whiteName);
-  const opponentElo = isSpectator ? game.blackElo : (isWhite ? game.blackElo : game.whiteElo);
+  const opponentName = isSpectator 
+    ? (game.blackName || 'Pretas') 
+    : (isWhite ? (game.blackName || 'Oponente') : (game.whiteName || 'Oponente'));
+  const opponentElo = isSpectator 
+    ? (game.blackElo || 1200) 
+    : (isWhite ? (game.blackElo || 1200) : (game.whiteElo || 1200));
   const topLabel = isSpectator ? '(Pretas)' : '';
 
     const [moveFrom, setMoveFrom] = useState<string | null>(null);
@@ -137,18 +149,20 @@ export default function Game({ game, currentUser, onExit }: GameProps) {
     if (game.status !== 'playing' || !game.timeControl) return;
 
     const intervalId = setInterval(() => {
-      const timeSpent = (Date.now() - game.lastMoveAt) / 1000;
+      const now = Date.now();
+      const lastMove = game.lastMoveAt || now;
+      const timeSpent = Math.max(0, (now - lastMove) / 1000);
       if (game.turn === 'w') {
         const remaining = Math.max(0, (game.whiteTime ?? game.timeControl) - timeSpent);
         setWhiteDisplayTime(remaining);
-        if (remaining === 0 && !isSpectator) {
-           updateDoc(doc(getDb(), 'games', game.id), { status: 'black_won' });
+        if (remaining <= 0 && !isSpectator) {
+           updateDoc(doc(getDb(), 'games', game.id), { status: 'black_won' }).catch(console.error);
         }
       } else {
         const remaining = Math.max(0, (game.blackTime ?? game.timeControl) - timeSpent);
         setBlackDisplayTime(remaining);
-        if (remaining === 0 && !isSpectator) {
-           updateDoc(doc(getDb(), 'games', game.id), { status: 'white_won' });
+        if (remaining <= 0 && !isSpectator) {
+           updateDoc(doc(getDb(), 'games', game.id), { status: 'white_won' }).catch(console.error);
         }
       }
     }, 100);
@@ -206,15 +220,20 @@ export default function Game({ game, currentUser, onExit }: GameProps) {
       statsUpdated.current = true;
       const updateStats = async () => {
         try {
+          if (!safeUser.uid || safeUser.uid === 'guest') return;
           const db = getDb();
           let numericResult: 1 | 0.5 | 0 = 0;
           if (game.status === 'draw') numericResult = 0.5;
           else if ((game.status === 'white_won' && isWhite) || (game.status === 'black_won' && !isWhite)) numericResult = 1;
-          const eloChange = calculateEloChange(currentUser.elo, opponentElo, numericResult);
+          const userElo = Number(safeUser.elo) || 1200;
+          const oppElo = Number(opponentElo) || 1200;
+          const eloChange = calculateEloChange(userElo, oppElo, numericResult);
+          if (isNaN(eloChange)) return;
+
           const updateData: any = {
             elo: increment(eloChange),
             gamesPlayed: increment(1),
-            eloHistory: arrayUnion({ date: Date.now(), elo: currentUser.elo + eloChange })
+            eloHistory: arrayUnion({ date: Date.now(), elo: userElo + eloChange })
           };
           if (numericResult === 1) { 
             confetti({
@@ -230,14 +249,14 @@ export default function Game({ game, currentUser, onExit }: GameProps) {
           else { updateData['stats.draws'] = increment(1); updateData['coins'] = increment(10); }
 
           const { updates: badgeUpdates, newBadges } = calculateAchievements(
-            currentUser, 
+            safeUser, 
             numericResult, 
             chess.history().length, 
             false
           );
           Object.assign(updateData, badgeUpdates);
 
-          await updateDoc(doc(db, 'users', currentUser.uid), updateData);
+          await updateDoc(doc(db, 'users', safeUser.uid), updateData);
           for (const badgeId of newBadges) {
             const badge = ACHIEVEMENTS[badgeId];
             if (badge) {
@@ -253,7 +272,7 @@ export default function Game({ game, currentUser, onExit }: GameProps) {
       
       updateStats();
     }
-  }, [game.status, isWhite, currentUser, opponentElo]);
+  }, [game.status, isWhite, safeUser, opponentElo]);
 
   const handleGameEnd = async (result: 'white_won' | 'black_won' | 'draw') => {
     const db = getDb();
@@ -577,35 +596,34 @@ export default function Game({ game, currentUser, onExit }: GameProps) {
               <div className="w-[80%] h-[1px] bg-white/5 absolute bottom-1" />
             </div>
 
+            {/* @ts-ignore react-chessboard types in v5 */}
             <Chessboard
-              position={chess.fen()}
-              onPieceDrop={onDrop}
-              boardOrientation={isSpectator ? "white" : (isWhite ? "white" : "black")}
-              customDarkSquareStyle={{ backgroundColor: theme.dark }}
-              customLightSquareStyle={{ backgroundColor: theme.light }}
-              customBoardStyle={{
-                borderRadius: '2px',
-                boxShadow: 'inset 0 0 10px rgba(0,0,0,0.5)',
+              options={{
+                id: "OnlineGame",
+                position: chess.fen(),
+                onPieceDrop: onDrop as any,
+                onSquareClick: onSquareClick as any,
+                onPieceClick: onPieceClick as any,
+                boardOrientation: isSpectator ? "white" : (isWhite ? "white" : "black"),
+                darkSquareStyle: theme.darkSquareStyle,
+                lightSquareStyle: theme.lightSquareStyle,
+                pieces: getCustomPieces(theme.pieceSet || '3d_staunton'),
+                squareStyles: { ...moveHighlights, ...optionSquares },
+                animationDurationInMs: 200
               }}
-              customPieces={customPieces}
-              customArrows={arrows}
-              customSquareStyles={customSquareStyles}
-              onSquareClick={onSquareClick}
-              onSquareRightClick={onSquareRightClick}
-              animationDuration={200}
             />
 
-            {(game.status === 'checkmate' || game.status === 'draw' || game.status === 'stalemate' || game.status === 'resigned') && (
+            {(game.status === 'white_won' || game.status === 'black_won' || game.status === 'draw' || game.status === 'abandoned') && (
               <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm rounded-sm">
                 <div className="bg-neutral-900/90 p-8 rounded-2xl shadow-2xl text-center border border-emerald-500/30 transform animate-in zoom-in duration-300">
                   <h2 className="text-4xl font-black text-white mb-2 drop-shadow-lg">
-                    {game.status === 'draw' || game.status === 'stalemate' ? 'Empate' : 'Fim de Jogo'}
+                    {game.status === 'draw' ? 'Empate' : 'Fim de Jogo'}
                   </h2>
                   <p className="text-emerald-400 font-bold text-xl uppercase tracking-widest">
-                    {game.status === 'draw' ? 'Por Acordo' : 
-                     game.status === 'stalemate' ? 'Rei Afogado' : 
-                     game.status === 'resigned' ? 'Abandono' :
-                     'Xeque-Mate'}
+                    {game.status === 'draw' ? 'Empate' : 
+                     game.status === 'abandoned' ? 'Abandono' :
+                     game.status === 'white_won' ? (isWhite ? 'Vitória das Brancas (Você!)' : 'Vitória das Brancas') :
+                     (isBlack ? 'Vitória das Pretas (Você!)' : 'Vitória das Pretas')}
                   </p>
                 </div>
               </div>

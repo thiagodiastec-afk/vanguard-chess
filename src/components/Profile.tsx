@@ -90,10 +90,11 @@ export default function Profile({ currentUser }: ProfileProps) {
                     setNewName(currentUser.displayName);
                     setIsEditingName(true);
                   }}
-                  className="p-1.5 text-neutral-400 hover:text-emerald-400 hover:bg-neutral-700 rounded-lg transition-colors"
-                  title="Editar Nome"
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-zinc-300 hover:text-emerald-400 bg-neutral-700/60 hover:bg-neutral-700 border border-neutral-600/60 rounded-xl transition-all shadow-sm"
+                  title="Alterar Nickname"
                 >
-                  <Edit2 className="w-5 h-5" />
+                  <Edit2 className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>Alterar Apelido</span>
                 </button>
               </>
             )}
