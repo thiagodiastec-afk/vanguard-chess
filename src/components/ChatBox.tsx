@@ -68,14 +68,14 @@ export default function ChatBox({ roomId, currentUser, className, title }: ChatB
   };
 
   return (
-    <div className={cn("flex flex-col bg-neutral-800 rounded-2xl border border-neutral-700/50 shadow-xl overflow-hidden", className)}>
+    <div className={cn("flex flex-col bg-neutral-800 rounded-2xl border border-neutral-700/50 shadow-xl overflow-hidden min-h-0", className)}>
       {title && (
-        <div className="bg-neutral-900/50 border-b border-neutral-700/50 p-3 px-4">
-          <h3 className="font-semibold text-white">{title}</h3>
+        <div className="bg-neutral-900/50 border-b border-neutral-700/50 py-2.5 px-3.5 flex-shrink-0">
+          <h3 className="font-semibold text-white text-xs sm:text-sm">{title}</h3>
         </div>
       )}
       
-      <div className="flex-1 p-4 overflow-y-auto space-y-3 min-h-[200px] max-h-[400px]">
+      <div className="flex-1 p-3 sm:p-4 overflow-y-auto space-y-2 sm:space-y-3 min-h-0 custom-scrollbar">
         {messages.length === 0 ? (
           <div className="h-full flex items-center justify-center text-neutral-500 text-sm">
             Nenhuma mensagem ainda.

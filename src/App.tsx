@@ -563,10 +563,12 @@ export default function App() {
           const isPlayingGame = activeTab === 'play' && (Boolean(activeGame) || Boolean(computerGameDifficulty) || Boolean(isLocalGame));
           return (
             <main className={cn(
-              "flex-1 overflow-y-auto pb-24 md:pb-8",
-              isPlayingGame ? "p-1 sm:p-2 lg:p-3" : "p-4 md:p-8"
+              "flex-1",
+              isPlayingGame 
+                ? "overflow-y-auto md:overflow-hidden p-1 sm:p-2 lg:p-2.5 pb-20 md:pb-2 flex flex-col justify-center" 
+                : "overflow-y-auto p-4 md:p-8 pb-24 md:pb-8"
             )}>
-              <div className={cn("mx-auto h-full", isPlayingGame ? "w-full max-w-[1700px]" : "max-w-7xl")}>
+              <div className={cn("mx-auto h-full", isPlayingGame ? "w-full max-w-[1700px] flex flex-col justify-center items-center" : "max-w-7xl")}>
                 {activeTab === 'play' && (
                   activeGame ? (
                     <ErrorBoundary fallbackTitle="Erro ao carregar partida" onReset={() => setActiveGame(null)}>

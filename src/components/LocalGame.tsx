@@ -205,78 +205,78 @@ export default function LocalGame({ onExit }: LocalGameProps) {
   const capturedBlack = history.filter(m => m.color === 'w' && m.captured).map(m => m.captured);
 
   return (
-    <div className="flex-1 w-full max-w-[1700px] mx-auto p-2 sm:p-4 lg:p-5 flex flex-col items-center">
+    <div className="flex-1 w-full max-w-[1700px] mx-auto p-1 sm:p-2 lg:p-3 flex flex-col items-center">
       {/* Menu Superior */}
-      <div className="w-full bg-neutral-900/90 backdrop-blur-md border-b border-neutral-800 px-4 py-2.5 sm:px-6 rounded-2xl flex items-center justify-between mb-4 gap-3">
-        <div className="flex items-center gap-3">
+      <div className="w-full bg-neutral-900/90 backdrop-blur-md border-b border-neutral-800 px-3 py-2 sm:px-6 rounded-2xl flex items-center justify-between mb-2 sm:mb-3 gap-2">
+        <div className="flex items-center gap-2 sm:gap-3">
           <button
             onClick={onExit}
-            className="flex items-center justify-center gap-1.5 px-3 py-1.5 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white rounded-xl font-bold transition-all text-xs sm:text-sm active:scale-95"
+            className="flex items-center justify-center gap-1 sm:gap-1.5 px-2.5 py-1.5 sm:px-3 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white rounded-xl font-bold transition-all text-xs sm:text-sm active:scale-95"
           >
             <ChevronLeft className="w-4 h-4" />
             Sair
           </button>
           <div className="h-5 w-px bg-neutral-800 hidden sm:block" />
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2">
             <MonitorPlay className="w-4 h-4 text-emerald-400" />
-            <span className="font-bold text-white text-sm sm:text-base">Partida Local (Pass & Play)</span>
+            <span className="font-bold text-white text-xs sm:text-base">Partida Local (Pass & Play)</span>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2">
           <button
             onClick={handleHint}
             disabled={gameOver || isGettingHint}
-            className="flex items-center justify-center gap-1.5 px-3 py-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/20 rounded-xl font-bold transition-all disabled:opacity-40 disabled:cursor-not-allowed text-xs sm:text-sm active:scale-95"
+            className="flex items-center justify-center gap-1 px-2.5 py-1.5 sm:px-3 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/20 rounded-xl font-bold transition-all disabled:opacity-40 disabled:cursor-not-allowed text-xs sm:text-sm active:scale-95"
             title="Dica da IA"
           >
-            <Lightbulb className={cn("w-4 h-4", isGettingHint && "animate-pulse")} />
+            <Lightbulb className={cn("w-3.5 h-3.5 sm:w-4 sm:h-4", isGettingHint && "animate-pulse")} />
             <span className="hidden sm:inline">Dica</span>
           </button>
           <button
             onClick={() => setIsFlipped(!isFlipped)}
-            className="flex items-center justify-center gap-1.5 px-3 py-1.5 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white rounded-xl font-bold transition-all text-xs sm:text-sm active:scale-95"
+            className="flex items-center justify-center gap-1 px-2.5 py-1.5 sm:px-3 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white rounded-xl font-bold transition-all text-xs sm:text-sm active:scale-95"
             title="Girar Tabuleiro"
           >
-            <FlipVertical className="w-4 h-4" />
+            <FlipVertical className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             <span className="hidden sm:inline">Girar</span>
           </button>
           <button
             onClick={resetGame}
-            className="flex items-center justify-center gap-1.5 px-3 py-1.5 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white rounded-xl font-bold transition-all text-xs sm:text-sm active:scale-95"
+            className="flex items-center justify-center gap-1 px-2.5 py-1.5 sm:px-3 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white rounded-xl font-bold transition-all text-xs sm:text-sm active:scale-95"
             title="Reiniciar"
           >
-            <RefreshCcw className="w-4 h-4" />
+            <RefreshCcw className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             <span className="hidden sm:inline">Reiniciar</span>
           </button>
         </div>
       </div>
 
-      <div className="w-full flex flex-col lg:flex-row gap-4 lg:gap-6 items-center lg:items-start justify-center">
+      <div className="w-full flex flex-col lg:flex-row gap-3 lg:gap-5 items-center lg:items-start justify-center flex-1">
         {/* Left Side: Controls & History */}
-        <div className="w-full lg:w-[320px] xl:w-[350px] flex flex-col gap-3 flex-shrink-0 order-2 lg:order-1">
-          <div className="bg-neutral-900/95 rounded-2xl p-4 border border-neutral-800 shadow-xl flex flex-col gap-3.5">
-            <div className="flex items-center justify-between border-b border-neutral-800/80 pb-2.5">
+        <div className="w-full lg:w-[300px] xl:w-[340px] flex flex-col gap-2.5 flex-shrink-0 order-2 lg:order-1 lg:h-[min(calc(100dvh-115px),780px)]">
+          <div className="bg-neutral-900/95 rounded-2xl p-3 sm:p-3.5 border border-neutral-800 shadow-xl flex flex-col gap-2.5 flex-shrink-0">
+            <div className="flex items-center justify-between border-b border-neutral-800/80 pb-2">
               <h3 className="text-xs uppercase tracking-wider font-bold text-neutral-400">Jogadores Locais</h3>
-              <span className="text-[11px] font-mono font-semibold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full">
+              <span className="text-[10px] font-mono font-semibold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full">
                 Vez: {game.turn() === 'w' ? 'Brancas' : 'Pretas'}
               </span>
             </div>
 
             {/* White player */}
             <div className={cn(
-              "flex items-center justify-between p-3 rounded-xl border transition-colors",
+              "flex items-center justify-between p-2.5 rounded-xl border transition-colors",
               game.turn() === 'w' ? "bg-emerald-500/10 border-emerald-500/30" : "bg-neutral-950/60 border-neutral-800/60"
             )}>
-              <div className="flex items-center gap-2.5">
-                <div className="w-4 h-4 rounded-full bg-white border-2 border-neutral-400 flex-shrink-0" />
-                <span className={cn("font-bold text-sm", game.turn() === 'w' ? "text-white" : "text-neutral-400")}>
+              <div className="flex items-center gap-2">
+                <div className="w-3.5 h-3.5 rounded-full bg-white border-2 border-neutral-400 flex-shrink-0" />
+                <span className={cn("font-bold text-xs sm:text-sm", game.turn() === 'w' ? "text-white" : "text-neutral-400")}>
                   Brancas
                 </span>
               </div>
               <div className="flex gap-1 flex-wrap justify-end max-w-[140px]">
                 {capturedWhite.map((p, i) => (
-                  <span key={i} className="text-neutral-400 text-base font-chess leading-none">{
+                  <span key={i} className="text-neutral-400 text-sm font-chess leading-none">{
                     p === 'p' ? '♙' : p === 'n' ? '♘' : p === 'b' ? '♗' : p === 'r' ? '♖' : '♕'
                   }</span>
                 ))}
@@ -285,35 +285,35 @@ export default function LocalGame({ onExit }: LocalGameProps) {
 
             {/* Black player */}
             <div className={cn(
-              "flex items-center justify-between p-3 rounded-xl border transition-colors",
+              "flex items-center justify-between p-2.5 rounded-xl border transition-colors",
               game.turn() === 'b' ? "bg-emerald-500/10 border-emerald-500/30" : "bg-neutral-950/60 border-neutral-800/60"
             )}>
-              <div className="flex items-center gap-2.5">
-                <div className="w-4 h-4 rounded-full bg-black border-2 border-neutral-600 flex-shrink-0" />
-                <span className={cn("font-bold text-sm", game.turn() === 'b' ? "text-white" : "text-neutral-400")}>
+              <div className="flex items-center gap-2">
+                <div className="w-3.5 h-3.5 rounded-full bg-black border-2 border-neutral-600 flex-shrink-0" />
+                <span className={cn("font-bold text-xs sm:text-sm", game.turn() === 'b' ? "text-white" : "text-neutral-400")}>
                   Pretas
                 </span>
               </div>
               <div className="flex gap-1 flex-wrap justify-end max-w-[140px]">
                 {capturedBlack.map((p, i) => (
-                  <span key={i} className="text-neutral-400 text-base font-chess leading-none">{
+                  <span key={i} className="text-neutral-400 text-sm font-chess leading-none">{
                     p === 'p' ? '♟' : p === 'n' ? '♞' : p === 'b' ? '♝' : p === 'r' ? '♜' : '♛'
                   }</span>
                 ))}
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-2 pt-1">
+            <div className="grid grid-cols-2 gap-2 pt-0.5">
               <button
                 onClick={() => setIsFlipped(!isFlipped)}
-                className="flex items-center justify-center gap-1.5 py-2 px-3 bg-neutral-800 hover:bg-neutral-700 text-neutral-200 rounded-xl text-xs font-bold transition-all active:scale-95"
+                className="flex items-center justify-center gap-1.5 py-1.5 px-3 bg-neutral-800 hover:bg-neutral-700 text-neutral-200 rounded-xl text-xs font-bold transition-all active:scale-95"
               >
                 <FlipVertical className="w-3.5 h-3.5" />
                 <span>Girar Mesa</span>
               </button>
               <button
                 onClick={resetGame}
-                className="flex items-center justify-center gap-1.5 py-2 px-3 bg-neutral-800 hover:bg-neutral-700 text-neutral-200 rounded-xl text-xs font-bold transition-all active:scale-95"
+                className="flex items-center justify-center gap-1.5 py-1.5 px-3 bg-neutral-800 hover:bg-neutral-700 text-neutral-200 rounded-xl text-xs font-bold transition-all active:scale-95"
               >
                 <RefreshCcw className="w-3.5 h-3.5" />
                 <span>Nova Partida</span>
@@ -321,17 +321,17 @@ export default function LocalGame({ onExit }: LocalGameProps) {
             </div>
           </div>
 
-          <MoveHistory history={game.history()} className="max-h-[340px]" />
+          <MoveHistory history={game.history()} className="flex-1 min-h-[140px]" />
         </div>
 
         {/* Right Side: Board */}
-        <div className="flex-1 w-full max-w-[880px] xl:max-w-[940px] 2xl:max-w-[1000px] flex items-center justify-center gap-3 order-1 lg:order-2">
-          <div className="py-1">
+        <div className="flex-1 w-full max-w-[min(100%,calc(100dvh-115px))] lg:max-w-[min(calc(100dvh-115px),760px)] flex items-center justify-center gap-2 sm:gap-3 order-1 lg:order-2">
+          <div className="py-1 self-stretch">
             <EvalBar game={game} isFlipped={isFlipped} />
           </div>
 
           <div className="flex-1 w-full relative">
-            <div className="w-full rounded-2xl bg-gradient-to-br from-[#2a170e] via-[#1a0c06] to-[#0f0703] p-2.5 sm:p-3.5 border-2 sm:border-4 border-[#613318] shadow-[0_20px_50px_rgba(0,0,0,0.8)]">
+            <div className="w-full rounded-xl sm:rounded-2xl bg-gradient-to-br from-[#2a170e] via-[#1a0c06] to-[#0f0703] p-1.5 sm:p-2.5 border-2 sm:border-4 border-[#613318] shadow-[0_20px_50px_rgba(0,0,0,0.8)]">
               <div className="w-full aspect-square relative rounded-xl overflow-hidden shadow-inner bg-black">
                 {gameOver && (
                   <div className="absolute inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-6 text-center animate-in fade-in">

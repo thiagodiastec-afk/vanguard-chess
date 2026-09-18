@@ -632,7 +632,7 @@ export default function Game({ game, currentUser, onExit }: GameProps) {
   const hasOpponentOfferedDraw = game.drawOffer && ((game.drawOffer === 'w' && !isWhite) || (game.drawOffer === 'b' && isWhite));
 
   return (
-    <div className="flex-1 w-full max-w-[1600px] mx-auto p-3 sm:p-4 lg:p-6 flex flex-col xl:flex-row gap-6 items-center xl:items-start justify-center relative">
+    <div className="flex-1 w-full max-w-[1600px] mx-auto p-1.5 sm:p-3 lg:p-4 flex flex-col xl:flex-row gap-3 lg:gap-5 items-center xl:items-start justify-center relative">
       
       {/* Fair play alert */}
       {showCheatAlert && (
@@ -737,26 +737,26 @@ export default function Game({ game, currentUser, onExit }: GameProps) {
       )}
 
       {/* Left Side: Board Area (Order 1) */}
-      <div className="flex-1 flex flex-col items-center justify-center w-full max-w-[850px] order-1">
+      <div className="flex-1 flex flex-col items-center justify-center w-full max-w-[min(100%,calc(100dvh-120px))] xl:max-w-[min(calc(100dvh-120px),740px)] order-1">
         
         {/* Top Player (Opponent) Bar */}
-        <div className="w-full flex items-center justify-between mb-3 px-2">
-          <div className="flex items-center gap-3">
-            <div className={cn("w-4 h-4 rounded-full border-2 shadow-sm", isWhite ? "bg-black border-neutral-600" : "bg-white border-neutral-300")} />
+        <div className="w-full flex items-center justify-between mb-1.5 sm:mb-2 px-1">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className={cn("w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full border-2 shadow-sm", isWhite ? "bg-black border-neutral-600" : "bg-white border-neutral-300")} />
             <div className="flex flex-col">
-              <div className="flex items-center gap-2">
-                <span className="font-bold text-white text-base sm:text-lg leading-tight">{opponentName} {topLabel}</span>
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <span className="font-bold text-white text-sm sm:text-base leading-tight">{opponentName} {topLabel}</span>
                 {isOpponentDisconnected ? (
-                  <span className="flex items-center gap-1 text-[10px] text-red-400 bg-red-500/10 px-2 py-0.5 rounded-full font-medium">
-                    <WifiOff className="w-3 h-3" /> Offline
+                  <span className="flex items-center gap-1 text-[9px] sm:text-[10px] text-red-400 bg-red-500/10 px-1.5 py-0.5 rounded-full font-medium">
+                    <WifiOff className="w-2.5 h-2.5 sm:w-3 sm:h-3" /> Offline
                   </span>
                 ) : (
-                  <span className="flex items-center gap-1 text-[10px] text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full font-medium">
-                    <Wifi className="w-3 h-3" /> Online
+                  <span className="flex items-center gap-1 text-[9px] sm:text-[10px] text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded-full font-medium">
+                    <Wifi className="w-2.5 h-2.5 sm:w-3 sm:h-3" /> Online
                   </span>
                 )}
               </div>
-              <span className="text-xs text-emerald-400 font-bold">{opponentElo} Elo</span>
+              <span className="text-[11px] sm:text-xs text-emerald-400 font-bold">{opponentElo} Elo</span>
             </div>
             <div className="ml-2 hidden sm:block">
               <CapturedPieces id="opponent-captured-pieces" fen={chess.fen()} color={isWhite ? 'b' : 'w'} />
@@ -764,7 +764,7 @@ export default function Game({ game, currentUser, onExit }: GameProps) {
           </div>
           {game.timeControl && (
             <div className={cn(
-              "px-4 py-2 rounded-2xl border font-mono text-xl sm:text-2xl font-bold shadow-xl min-w-[90px] text-center transition-all",
+              "px-3 py-1 sm:px-3.5 sm:py-1.5 rounded-xl border font-mono text-base sm:text-xl font-bold shadow-xl min-w-[75px] sm:min-w-[85px] text-center transition-all",
               (isWhite ? blackDisplayTime : whiteDisplayTime) < 30 ? "bg-red-950/80 border-red-600 text-red-400 animate-pulse" : "bg-zinc-900 border-zinc-800 text-white"
             )}>
               {formatTime(isSpectator ? blackDisplayTime : (isWhite ? blackDisplayTime : whiteDisplayTime))}
@@ -773,14 +773,14 @@ export default function Game({ game, currentUser, onExit }: GameProps) {
         </div>
 
         {/* Board & EvalBar */}
-        <div className="w-full flex gap-2 sm:gap-4 lg:gap-6 items-center justify-center">
-          <div className="py-2 hidden md:block self-stretch">
+        <div className="w-full flex gap-2 sm:gap-3 items-center justify-center">
+          <div className="py-1 hidden md:block self-stretch">
              <EvalBar game={chess} isFlipped={!isWhite} />
           </div>
           
           {/* Pure Square Board Container with Unclipped Framing */}
-          <div className="flex-1 max-w-[700px] w-full relative">
-            <div className="w-full aspect-square relative rounded-2xl bg-gradient-to-br from-[#2a170e] via-[#1a0c06] to-[#0f0703] p-2 sm:p-3 border-2 sm:border-4 border-[#613318] shadow-[0_20px_50px_rgba(0,0,0,0.8)] flex flex-col justify-between overflow-hidden">
+          <div className="flex-1 max-w-[min(calc(100dvh-180px),680px)] w-full relative">
+            <div className="w-full aspect-square relative rounded-xl sm:rounded-2xl bg-gradient-to-br from-[#2a170e] via-[#1a0c06] to-[#0f0703] p-1.5 sm:p-2.5 border-2 sm:border-4 border-[#613318] shadow-[0_15px_40px_rgba(0,0,0,0.8)] flex flex-col justify-between overflow-hidden">
               
               {/* Inner 1:1 chessboard */}
               <div className="w-full h-full relative rounded-lg overflow-hidden shadow-inner">
@@ -803,10 +803,10 @@ export default function Game({ game, currentUser, onExit }: GameProps) {
               </div>
 
               {/* Bottom Subtle Vanguard Label */}
-              <div className="w-full pt-1.5 flex items-center justify-center gap-2 opacity-50 select-none pointer-events-none">
-                <div className="h-[1px] w-8 sm:w-12 bg-amber-600/40" />
-                <span className="text-[9px] sm:text-[10px] font-serif tracking-[0.25em] text-amber-200/80 font-bold uppercase">Vanguard Chess</span>
-                <div className="h-[1px] w-8 sm:w-12 bg-amber-600/40" />
+              <div className="w-full pt-1 flex items-center justify-center gap-2 opacity-50 select-none pointer-events-none">
+                <div className="h-[1px] w-6 sm:w-10 bg-amber-600/40" />
+                <span className="text-[8px] sm:text-[9px] font-serif tracking-[0.25em] text-amber-200/80 font-bold uppercase">Vanguard Chess</span>
+                <div className="h-[1px] w-6 sm:w-10 bg-amber-600/40" />
               </div>
             </div>
 
@@ -872,38 +872,38 @@ export default function Game({ game, currentUser, onExit }: GameProps) {
         </div>
 
         {/* Bottom Player (You) Bar & Action Controls */}
-        <div className="w-full flex items-center justify-between mt-4 px-2">
-          <div className="flex items-center gap-3">
-            <div className={cn("w-4 h-4 rounded-full border-2 shadow-sm", isWhite ? "bg-white border-neutral-300" : "bg-black border-neutral-600")} />
+        <div className="w-full flex items-center justify-between mt-1.5 sm:mt-2 px-1">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className={cn("w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full border-2 shadow-sm", isWhite ? "bg-white border-neutral-300" : "bg-black border-neutral-600")} />
             <div className="flex flex-col">
-              <span className="font-bold text-white text-base sm:text-lg leading-tight">{bottomName} {bottomLabel}</span>
-              <span className="text-xs text-emerald-400 font-bold">{bottomElo} Elo</span>
+              <span className="font-bold text-white text-sm sm:text-base leading-tight">{bottomName} {bottomLabel}</span>
+              <span className="text-[11px] sm:text-xs text-emerald-400 font-bold">{bottomElo} Elo</span>
             </div>
             <div className="ml-2 hidden sm:block">
               <CapturedPieces id="my-captured-pieces" fen={chess.fen()} color={isWhite ? 'w' : 'b'} />
             </div>
           </div>
           
-          <div className="flex items-center gap-3 sm:gap-4">
+          <div className="flex items-center gap-2 sm:gap-3">
             {/* In-game action controls */}
-            <div className="flex gap-2">
+            <div className="flex gap-1.5 sm:gap-2">
               {!isSpectator && game.status === 'playing' && (
                 <>
                   <button
                     onClick={offerDraw}
-                    className="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white font-bold py-2 px-3 rounded-xl flex items-center gap-1.5 transition-all text-xs border border-zinc-700/60 shadow-sm"
+                    className="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white font-bold py-1.5 px-2.5 sm:py-2 sm:px-3 rounded-xl flex items-center gap-1.5 transition-all text-xs border border-zinc-700/60 shadow-sm"
                     title="Oferecer Empate"
                   >
-                    <Handshake className="w-4 h-4 text-emerald-400" />
+                    <Handshake className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-400" />
                     <span className="hidden sm:inline">Empate</span>
                   </button>
 
                   <button
                     onClick={() => setShowResignConfirm(true)}
-                    className="bg-red-500/10 hover:bg-red-500/20 text-red-400 font-bold py-2 px-3 rounded-xl flex items-center gap-1.5 transition-all text-xs border border-red-500/20 shadow-sm"
+                    className="bg-red-500/10 hover:bg-red-500/20 text-red-400 font-bold py-1.5 px-2.5 sm:py-2 sm:px-3 rounded-xl flex items-center gap-1.5 transition-all text-xs border border-red-500/20 shadow-sm"
                     title="Abandonar / Desistir"
                   >
-                    <Flag className="w-4 h-4 text-red-400" />
+                    <Flag className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-red-400" />
                     <span className="hidden sm:inline">Desistir</span>
                   </button>
                 </>
@@ -913,9 +913,9 @@ export default function Game({ game, currentUser, onExit }: GameProps) {
               {(isSpectator || game.status !== 'playing') && (
                 <button
                   onClick={onExit}
-                  className="bg-zinc-800 hover:bg-zinc-700 text-white font-bold py-2 px-4 rounded-xl flex items-center gap-1.5 transition-colors text-xs border border-zinc-700"
+                  className="bg-zinc-800 hover:bg-zinc-700 text-white font-bold py-1.5 px-3 sm:py-2 sm:px-4 rounded-xl flex items-center gap-1.5 transition-colors text-xs border border-zinc-700"
                 >
-                  <LogOut className="w-4 h-4 text-zinc-400" />
+                  <LogOut className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-zinc-400" />
                   Sair
                 </button>
               )}
@@ -924,21 +924,21 @@ export default function Game({ game, currentUser, onExit }: GameProps) {
                 <button
                   onClick={toggleSpectatorAccess}
                   className={cn(
-                    "font-bold py-2 px-3 rounded-xl flex items-center justify-center gap-2 transition-colors text-xs border",
+                    "font-bold py-1.5 px-2.5 sm:py-2 sm:px-3 rounded-xl flex items-center justify-center gap-1.5 transition-colors text-xs border",
                     (isWhite ? game.spectatorsAllowedWhite : game.spectatorsAllowedBlack)
                       ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30"
                       : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700 border-zinc-700"
                   )}
                   title="Permitir Espectadores"
                 >
-                  <Eye className="w-4 h-4" />
+                  <Eye className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 </button>
               )}
             </div>
 
             {game.timeControl && (
               <div className={cn(
-                "px-4 py-2 rounded-2xl border font-mono text-xl sm:text-2xl font-bold shadow-xl min-w-[90px] text-center transition-all",
+                "px-3 py-1 sm:px-3.5 sm:py-1.5 rounded-xl border font-mono text-base sm:text-xl font-bold shadow-xl min-w-[75px] sm:min-w-[85px] text-center transition-all",
                 (isWhite ? whiteDisplayTime : blackDisplayTime) < 30 ? "bg-red-950/80 border-red-600 text-red-400 animate-pulse" : "bg-zinc-900 border-zinc-800 text-emerald-400"
               )}>
                 {formatTime(isSpectator ? whiteDisplayTime : (isWhite ? whiteDisplayTime : blackDisplayTime))}
@@ -948,16 +948,16 @@ export default function Game({ game, currentUser, onExit }: GameProps) {
         </div>
 
         {drawOfferFeedback && (
-          <p className="text-xs text-emerald-400 font-semibold mt-2 animate-in fade-in">{drawOfferFeedback}</p>
+          <p className="text-xs text-emerald-400 font-semibold mt-1.5 animate-in fade-in">{drawOfferFeedback}</p>
         )}
       </div>
 
       {/* Right Sidebar: History & Chat (Order 2) */}
-      <div className="w-full xl:w-[350px] flex-shrink-0 flex flex-col gap-4 order-2 xl:h-[750px]">
-        <div className="flex flex-col bg-zinc-900 border border-zinc-800 rounded-2xl shadow-xl overflow-hidden h-[260px] xl:h-[40%]">
+      <div className="w-full xl:w-[320px] 2xl:w-[350px] flex-shrink-0 flex flex-col gap-2.5 sm:gap-3 order-2 xl:h-[min(calc(100dvh-120px),740px)]">
+        <div className="flex flex-col bg-zinc-900 border border-zinc-800 rounded-2xl shadow-xl overflow-hidden h-[180px] xl:h-[40%] flex-shrink-0">
           <MoveHistory history={chess.history()} />
         </div>
-        <div className="flex flex-col bg-zinc-900 border border-zinc-800 rounded-2xl shadow-xl overflow-hidden h-[360px] xl:h-[60%]">
+        <div className="flex flex-col bg-zinc-900 border border-zinc-800 rounded-2xl shadow-xl overflow-hidden h-[250px] xl:h-[60%] flex-1 min-h-0">
           <ChatBox 
             roomId={`game_${game.id}`} 
             currentUser={currentUser} 
