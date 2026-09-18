@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
-  getAuth, 
   signInWithPopup, 
   signInWithRedirect, 
   GoogleAuthProvider, 
@@ -16,7 +15,7 @@ import {
   browserPopupRedirectResolver
 } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { initFirebase, getDb } from '../lib/firebase';
+import { initFirebase } from '../lib/firebase';
 import { UserData } from '../types';
 import { 
   X, 
@@ -32,6 +31,7 @@ import {
   User as UserIcon, 
   Sparkles,
   ShieldCheck,
+  LogIn,
   RotateCcw
 } from 'lucide-react';
 import { cn } from '../lib/utils';
@@ -42,13 +42,13 @@ interface AuthModalProps {
   defaultMode?: 'register' | 'login';
 }
 
-type AuthView = 'main' | 'email' | 'phone' | 'forgot_password' | 'phone_verify';
+type AuthView = 'email' | 'phone' | 'forgot_password' | 'phone_verify';
 
 export default function AuthModal({ isOpen, onClose, defaultMode = 'register' }: AuthModalProps) {
   const [mode, setMode] = useState<'register' | 'login'>(defaultMode);
-  const [currentView, setCurrentView] = useState<AuthView>('main');
+  const [currentView, setCurrentView] = useState<AuthView>('email');
   
-  // Email form state
+  // Form states
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
@@ -71,7 +71,7 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'register' }:
   useEffect(() => {
     if (isOpen) {
       setMode(defaultMode);
-      setCurrentView('main');
+      setCurrentView('email');
       setError(null);
       setSuccessMessage(null);
       setEmail('');
@@ -111,7 +111,7 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'register' }:
   // Helper to ensure user document exists in Firestore
   const ensureUserInFirestore = async (firebaseUser: any, customName?: string) => {
     try {
-      const db = getDb();
+      const { db } = await initFirebase();
       if (!db) return;
       const userRef = doc(db, 'users', firebaseUser.uid);
       const userSnap = await getDoc(userRef);
@@ -150,9 +150,9 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'register' }:
       case 'auth/invalid-credential':
         return 'E-mail ou senha incorretos.';
       case 'auth/email-already-in-use':
-        return 'Este e-mail já está cadastrado. Faça login ou use outro.';
+        return 'Este e-mail já está cadastrado. Faça login na aba "Entrar" ou use outro e-mail.';
       case 'auth/weak-password':
-        return 'A senha é muito fraca. Utilize pelo menos 6 caracteres.';
+        return 'A senha deve ter pelo menos 6 caracteres.';
       case 'auth/popup-closed-by-user':
         return 'A janela de autenticação foi fechada antes de concluir.';
       case 'auth/popup-blocked':
@@ -228,18 +228,18 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'register' }:
           setError(getTranslatedErrorMessage(redirectErr.code, redirectErr.message));
         }
       } else if (err.code !== 'auth/popup-closed-by-user') {
-        setError(getTranslatedErrorMessage(err.code, "Login com Apple não configurado ou indisponível no momento. Utilize Google ou E-mail."));
+        setError(getTranslatedErrorMessage(err.code, "Login com Apple indisponível no momento. Utilize Google ou E-mail."));
       }
     } finally {
       setLoading(false);
     }
   };
 
-  // Email/Password Submit
+  // Email/Password Submit (Registration or Login)
   const handleEmailAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.trim() || !password.trim()) {
-      setError('Preencha todos os campos obrigatórios.');
+      setError('Por favor, preencha todos os campos obrigatórios.');
       return;
     }
 
@@ -256,14 +256,13 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'register' }:
       
       if (mode === 'register') {
         const userCredential = await createUserWithEmailAndPassword(auth, email.trim(), password);
-        if (displayName.trim()) {
-          try {
-            await updateProfile(userCredential.user, { displayName: displayName.trim() });
-          } catch (e) {
-            // ignore
-          }
+        const finalNickname = displayName.trim() || email.trim().split('@')[0];
+        try {
+          await updateProfile(userCredential.user, { displayName: finalNickname });
+        } catch (e) {
+          // ignore profile update error
         }
-        await ensureUserInFirestore(userCredential.user, displayName.trim() || undefined);
+        await ensureUserInFirestore(userCredential.user, finalNickname);
         onClose();
       } else {
         const userCredential = await signInWithEmailAndPassword(auth, email.trim(), password);
@@ -294,7 +293,7 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'register' }:
       setTimeout(() => {
         setCurrentView('email');
         setMode('login');
-      }, 3500);
+      }, 3000);
     } catch (err: any) {
       console.error("Password reset error:", err);
       setError(getTranslatedErrorMessage(err.code, err.message));
@@ -303,41 +302,34 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'register' }:
     }
   };
 
-  // Initialize Recaptcha for Phone Auth
+  // Setup reCAPTCHA for phone auth
   const setupRecaptcha = async () => {
-    if (recaptchaVerifierRef.current) {
-      return recaptchaVerifierRef.current;
-    }
-    const { auth } = await initFirebase();
-    const verifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
-      size: 'invisible',
-      callback: () => {
-        // reCAPTCHA solved
-      },
-      'expired-callback': () => {
-        setError('O reCAPTCHA expirou. Tente novamente.');
+    try {
+      const { auth } = await initFirebase();
+      if (!recaptchaVerifierRef.current && recaptchaContainerRef.current) {
+        recaptchaVerifierRef.current = new RecaptchaVerifier(auth, recaptchaContainerRef.current, {
+          size: 'invisible',
+          callback: () => {
+            // reCAPTCHA solved
+          },
+          'expired-callback': () => {
+            setError('Verificação de segurança expirada. Tente novamente.');
+          }
+        });
       }
-    });
-    recaptchaVerifierRef.current = verifier;
-    return verifier;
+      return recaptchaVerifierRef.current;
+    } catch (err: any) {
+      console.error("Erro ao configurar reCAPTCHA:", err);
+      return null;
+    }
   };
 
-  // Send Phone SMS
+  // Send SMS Code
   const handleSendPhoneCode = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!phoneNumber.trim()) {
-      setError('Por favor, informe seu número de telefone.');
+      setError('Digite o número de telefone com DDD.');
       return;
-    }
-
-    // Format phone with +55 if Brazilian standard without country code
-    let formattedPhone = phoneNumber.replace(/[\s\(\)\-]/g, '');
-    if (!formattedPhone.startsWith('+')) {
-      if (formattedPhone.length === 10 || formattedPhone.length === 11) {
-        formattedPhone = '+55' + formattedPhone;
-      } else {
-        formattedPhone = '+' + formattedPhone;
-      }
     }
 
     setLoading(true);
@@ -345,14 +337,27 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'register' }:
 
     try {
       const { auth } = await initFirebase();
-      const verifier = await setupRecaptcha();
-      const confirmation = await signInWithPhoneNumber(auth, formattedPhone, verifier);
+      const appVerifier = await setupRecaptcha();
+      if (!appVerifier) {
+        throw new Error('Falha ao inicializar verificação de segurança.');
+      }
+
+      let formattedPhone = phoneNumber.trim().replace(/\D/g, '');
+      if (!formattedPhone.startsWith('55') && formattedPhone.length <= 11) {
+        formattedPhone = '+55' + formattedPhone;
+      } else if (!formattedPhone.startsWith('+')) {
+        formattedPhone = '+' + formattedPhone;
+      }
+
+      const confirmation = await signInWithPhoneNumber(auth, formattedPhone, appVerifier);
       setConfirmationResult(confirmation);
       setCurrentView('phone_verify');
       setResendCountdown(60);
-      setSuccessMessage(`Código enviado por SMS para ${formattedPhone}!`);
+      setSuccessMessage('Código SMS enviado com sucesso!');
+      setTimeout(() => setSuccessMessage(null), 4000);
     } catch (err: any) {
-      console.error("Phone Auth send error:", err);
+      console.error("Erro ao enviar SMS:", err);
+      setError(getTranslatedErrorMessage(err.code, err.message));
       if (recaptchaVerifierRef.current) {
         try {
           recaptchaVerifierRef.current.clear();
@@ -361,16 +366,15 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'register' }:
           // ignore
         }
       }
-      setError(getTranslatedErrorMessage(err.code, "Erro ao enviar SMS. Verifique o número informado com DDD."));
     } finally {
       setLoading(false);
     }
   };
 
-  // Verify Phone Code
+  // Verify SMS Code
   const handleVerifyPhoneCode = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!verificationCode.trim() || !confirmationResult) {
+    if (!verificationCode || verificationCode.length < 6 || !confirmationResult) {
       setError('Digite o código de 6 dígitos recebido por SMS.');
       return;
     }
@@ -379,20 +383,20 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'register' }:
     setError(null);
 
     try {
-      const result = await confirmationResult.confirm(verificationCode.trim());
+      const result = await confirmationResult.confirm(verificationCode);
       if (result.user) {
         await ensureUserInFirestore(result.user);
         onClose();
       }
     } catch (err: any) {
-      console.error("Phone verify error:", err);
-      setError(getTranslatedErrorMessage(err.code, 'Código SMS inválido. Tente novamente.'));
+      console.error("Erro ao verificar código SMS:", err);
+      setError(getTranslatedErrorMessage(err.code, err.message));
     } finally {
       setLoading(false);
     }
   };
 
-  // Anonymous Guest Login
+  // Guest Login
   const handleGuestLogin = async () => {
     setLoading(true);
     setError(null);
@@ -400,103 +404,104 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'register' }:
       const { auth } = await initFirebase();
       const result = await signInAnonymously(auth);
       if (result.user) {
-        await ensureUserInFirestore(result.user, `Convidado_${Math.floor(1000 + Math.random() * 9000)}`);
+        const guestName = `Convidado_${Math.floor(1000 + Math.random() * 9000)}`;
+        await ensureUserInFirestore(result.user, guestName);
         onClose();
       }
     } catch (err: any) {
-      console.error("Guest login error:", err);
-      setError(getTranslatedErrorMessage(err.code, err.message));
+      console.error("Guest login error", err);
+      setError(getTranslatedErrorMessage(err.code, "Erro ao entrar como convidado."));
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 z-[100] bg-black/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-in fade-in duration-200">
+    <div 
+      className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-200"
+      onClick={onClose}
+    >
       <div 
-        className="relative w-full max-w-[440px] bg-[#262421] text-white rounded-3xl border border-[#3d3a34] shadow-[0_25px_60px_-15px_rgba(0,0,0,0.9)] p-6 sm:p-8 flex flex-col items-center"
+        className="bg-[#262421] border border-[#3d3a34] rounded-3xl p-5 sm:p-7 max-w-md w-full shadow-2xl relative flex flex-col items-center max-h-[92vh] overflow-y-auto custom-scrollbar"
         onClick={e => e.stopPropagation()}
       >
-        {/* Invisible Recaptcha Container for Phone Authentication */}
-        <div id="recaptcha-container" ref={recaptchaContainerRef} />
+        {/* Invisible reCAPTCHA container */}
+        <div ref={recaptchaContainerRef} id="recaptcha-container" />
 
-        {/* Close Button */}
-        <button 
-          onClick={onClose}
-          className="absolute top-4 right-4 text-neutral-400 hover:text-white p-2 rounded-full hover:bg-neutral-800/60 transition-colors"
-          title="Fechar"
-        >
-          <X className="w-5 h-5" />
-        </button>
-
-        {/* Back Button (when inside subviews) */}
-        {currentView !== 'main' && (
-          <button 
-            onClick={() => {
-              setError(null);
-              setSuccessMessage(null);
-              if (currentView === 'phone_verify') {
-                setCurrentView('phone');
-              } else {
-                setCurrentView('main');
-              }
-            }}
-            className="absolute top-4 left-4 text-neutral-400 hover:text-white p-2 rounded-full hover:bg-neutral-800/60 transition-colors flex items-center gap-1 text-xs font-semibold"
-            title="Voltar"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-        )}
-
-        {/* Chess.com Signature 3D Green Pawn Icon and Isometric Tile Header */}
-        <div className="flex flex-col items-center justify-center mb-5 mt-1 select-none">
-          <div className="relative w-20 h-20 sm:w-24 sm:h-24 flex items-center justify-center">
-            {/* Isometric Board Base Tile */}
-            <div className="absolute bottom-1 w-16 h-8 bg-[#383531] rounded-full transform -rotate-12 border border-[#4d4944] shadow-lg opacity-80" />
-            <div className="absolute bottom-2 w-14 h-7 bg-[#45423c] rounded-full transform -rotate-12 border border-[#59554f]" />
-            
-            {/* 3D Glossy Green Pawn (Chess.com Style) */}
-            <svg 
-              className="w-16 h-16 sm:w-20 sm:h-20 drop-shadow-[0_12px_18px_rgba(0,0,0,0.65)] relative z-10 animate-bounce-subtle" 
-              viewBox="0 0 100 100" 
-              fill="none" 
-              xmlns="http://www.w3.org/2000/svg"
+        {/* Top Header Controls */}
+        <div className="w-full flex items-center justify-between mb-2">
+          {currentView !== 'email' ? (
+            <button 
+              onClick={() => {
+                setError(null);
+                setSuccessMessage(null);
+                setCurrentView('email');
+              }}
+              className="p-1.5 text-neutral-400 hover:text-white rounded-lg hover:bg-neutral-800/60 transition-colors flex items-center gap-1 text-xs font-semibold"
             >
-              <defs>
-                <linearGradient id="pawnGreenGrad" x1="20%" y1="0%" x2="80%" y2="100%">
-                  <stop offset="0%" stopColor="#a3d868" />
-                  <stop offset="35%" stopColor="#81b64c" />
-                  <stop offset="80%" stopColor="#5c8a32" />
-                  <stop offset="100%" stopColor="#416323" />
-                </linearGradient>
-                <radialGradient id="pawnHighlight" cx="35%" cy="30%" r="60%">
-                  <stop offset="0%" stopColor="#d4f79c" stopOpacity="0.9" />
-                  <stop offset="50%" stopColor="#81b64c" stopOpacity="0" />
-                </radialGradient>
-              </defs>
-              
-              {/* Pawn Base */}
-              <ellipse cx="50" cy="85" rx="30" ry="9" fill="url(#pawnGreenGrad)" stroke="#39561f" strokeWidth="2.5" />
-              <ellipse cx="50" cy="83" rx="26" ry="6" fill="#a3d868" opacity="0.4" />
-              
-              {/* Lower Collar */}
-              <path d="M26 84 C26 73, 34 68, 38 64 C42 60, 43 55, 43 47 L57 47 C57 55, 58 60, 62 64 C66 68, 74 73, 74 84 Z" fill="url(#pawnGreenGrad)" stroke="#39561f" strokeWidth="2.5" />
-              
-              {/* Mid Ring / Neck */}
-              <ellipse cx="50" cy="46" rx="14" ry="4.5" fill="url(#pawnGreenGrad)" stroke="#39561f" strokeWidth="2" />
-              <ellipse cx="50" cy="45" rx="12" ry="3" fill="#a3d868" opacity="0.5" />
-              
-              {/* Pawn Head (Sphere) */}
-              <circle cx="50" cy="27" r="16.5" fill="url(#pawnGreenGrad)" stroke="#39561f" strokeWidth="2.5" />
-              <circle cx="50" cy="27" r="16.5" fill="url(#pawnHighlight)" />
-              
-              {/* Glossy Reflection Spot */}
-              <ellipse cx="44" cy="21" rx="4.5" ry="3" transform="rotate(-25 44 21)" fill="white" opacity="0.65" />
-            </svg>
-          </div>
+              <ArrowLeft className="w-4 h-4" />
+              <span>Voltar</span>
+            </button>
+          ) : (
+            <div />
+          )}
+
+          <button 
+            onClick={onClose}
+            className="p-1.5 text-neutral-400 hover:text-white rounded-lg hover:bg-neutral-800/60 transition-colors ml-auto"
+            title="Fechar"
+          >
+            <X className="w-5 h-5" />
+          </button>
         </div>
 
-        {/* Modal Title */}
+        {/* Chess.com 3D Isometric Green Pawn Icon */}
+        <div className="w-20 h-20 relative flex items-center justify-center mb-3">
+          <svg viewBox="0 0 100 100" className="w-full h-full drop-shadow-[0_8px_16px_rgba(0,0,0,0.5)]">
+            <ellipse cx="50" cy="80" rx="36" ry="12" fill="#151412" opacity="0.6" />
+            <path
+              d="M50 16 C 50 16, 56 22, 54 28 C 52 33, 44 33, 44 33 C 44 33, 38 31, 38 24 C 38 18, 44 16, 50 16 Z"
+              fill="url(#pawnHeadLight)"
+            />
+            <path
+              d="M32 38 L68 38 L62 44 L38 44 Z"
+              fill="#6ea33c"
+            />
+            <path
+              d="M38 44 C 42 56, 44 64, 30 74 L70 74 C 56 64, 58 56, 62 44 Z"
+              fill="url(#pawnBodyGrad)"
+            />
+            <ellipse cx="50" cy="74" rx="22" ry="5" fill="#58852d" />
+            <path
+              d="M24 74 C 24 74, 20 78, 20 82 C 20 84, 80 84, 80 82 C 80 78, 76 74, 76 74 Z"
+              fill="url(#pawnBaseGrad)"
+            />
+            <ellipse cx="50" cy="82" rx="30" ry="4" fill="#3f611f" />
+            <path
+              d="M48 18 C 48 18, 51 22, 50 25 C 47 25, 45 22, 46 19 Z"
+              fill="#ffffff"
+              opacity="0.3"
+            />
+            <defs>
+              <linearGradient id="pawnHeadLight" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#a3d969" />
+                <stop offset="40%" stopColor="#81b64c" />
+                <stop offset="100%" stopColor="#4f7529" />
+              </linearGradient>
+              <linearGradient id="pawnBodyGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#95cc5c" />
+                <stop offset="50%" stopColor="#81b64c" />
+                <stop offset="100%" stopColor="#446822" />
+              </linearGradient>
+              <linearGradient id="pawnBaseGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#81b64c" />
+                <stop offset="100%" stopColor="#3b591b" />
+              </linearGradient>
+            </defs>
+          </svg>
+        </div>
+
+        {/* Title */}
         <h2 className="text-xl sm:text-2xl font-black text-center text-white tracking-tight leading-snug mb-1">
           {currentView === 'forgot_password' 
             ? 'Recuperar Senha' 
@@ -507,12 +512,12 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'register' }:
             : 'Entrar na sua Conta'}
         </h2>
 
-        {/* Subtitle / Mode Toggle */}
-        <p className="text-xs text-neutral-400 text-center mb-5 max-w-xs">
+        {/* Subtitle */}
+        <p className="text-xs text-neutral-400 text-center mb-4 max-w-xs">
           {currentView === 'forgot_password' 
-            ? 'Informe seu e-mail para enviarmos as instruções de redefinição.'
+            ? 'Informe seu e-mail para enviarmos o link de recuperação.'
             : currentView === 'phone_verify'
-            ? `Digite o código de 6 dígitos que enviamos para o seu celular.`
+            ? 'Digite o código de 6 dígitos enviado por SMS.'
             : mode === 'register' 
             ? 'Junte-se a milhares de jogadores online ao redor do mundo.' 
             : 'Bem-vindo de volta! Acesse suas partidas e progresso.'}
@@ -533,209 +538,237 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'register' }:
           </div>
         )}
 
-        {/* ========================================================================= */}
-        {/* VIEW 1: MAIN MENU (EXACT CHESS.COM SOCIAL & EMAIL BUTTONS) */}
-        {/* ========================================================================= */}
-        {currentView === 'main' && (
-          <div className="w-full space-y-3">
-            {/* Primary Green Button: Continuar com Email */}
+        {/* Top Mode Segmented Tabs (Cadastrar vs Entrar) */}
+        {currentView === 'email' && (
+          <div className="flex bg-[#1e1c19] p-1 rounded-2xl border border-[#383531] mb-5 w-full">
             <button
+              type="button"
               onClick={() => {
+                setMode('register');
                 setError(null);
-                setCurrentView('email');
+                setSuccessMessage(null);
               }}
-              disabled={loading}
-              className="w-full bg-[#81b64c] hover:bg-[#76a843] active:bg-[#6c9a3c] text-white font-bold py-3.5 px-4 rounded-xl text-sm sm:text-base transition-all duration-150 shadow-[0_4px_0_#5c8734] active:translate-y-1 active:shadow-none flex items-center justify-center gap-2.5 group"
+              className={cn(
+                "flex-1 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all flex items-center justify-center gap-1.5",
+                mode === 'register'
+                  ? "bg-[#81b64c] text-white shadow-md"
+                  : "text-neutral-400 hover:text-white"
+              )}
             >
-              <Mail className="w-5 h-5 text-white/90 group-hover:scale-105 transition-transform" />
-              <span>Continuar com Email</span>
+              <Sparkles className="w-4 h-4" />
+              Cadastrar
             </button>
+            <button
+              type="button"
+              onClick={() => {
+                setMode('login');
+                setError(null);
+                setSuccessMessage(null);
+              }}
+              className={cn(
+                "flex-1 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all flex items-center justify-center gap-1.5",
+                mode === 'login'
+                  ? "bg-[#81b64c] text-white shadow-md"
+                  : "text-neutral-400 hover:text-white"
+              )}
+            >
+              <LogIn className="w-4 h-4" />
+              Entrar
+            </button>
+          </div>
+        )}
 
-            {/* Divider "OU" (matching screenshot) */}
-            <div className="flex items-center gap-3 py-1">
+        {/* ========================================================================= */}
+        {/* VIEW 1: EMAIL & PASSWORD FORM (REGISTRATION OR LOGIN) */}
+        {/* ========================================================================= */}
+        {currentView === 'email' && (
+          <div className="w-full">
+            <form onSubmit={handleEmailAuth} className="w-full space-y-3">
+              {/* Nickname Field (Cadastro only) */}
+              {mode === 'register' && (
+                <div>
+                  <label className="block text-xs font-bold text-neutral-300 uppercase tracking-wider mb-1">
+                    Apelido no Jogo
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-neutral-500">
+                      <UserIcon className="w-4 h-4" />
+                    </div>
+                    <input
+                      type="text"
+                      required
+                      value={displayName}
+                      onChange={e => setDisplayName(e.target.value)}
+                      placeholder="Ex: MestreDoXadrez"
+                      maxLength={18}
+                      className="w-full bg-[#1e1c19] border border-[#3d3a34] focus:border-[#81b64c] rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder-neutral-500 focus:outline-none focus:ring-1 focus:ring-[#81b64c] transition-all"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Email Field */}
+              <div>
+                <label className="block text-xs font-bold text-neutral-300 uppercase tracking-wider mb-1">
+                  E-mail
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-neutral-500">
+                    <Mail className="w-4 h-4" />
+                  </div>
+                  <input
+                    type="email"
+                    required
+                    value={email}
+                    onChange={e => setEmail(e.target.value)}
+                    placeholder="seuemail@exemplo.com"
+                    className="w-full bg-[#1e1c19] border border-[#3d3a34] focus:border-[#81b64c] rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder-neutral-500 focus:outline-none focus:ring-1 focus:ring-[#81b64c] transition-all"
+                  />
+                </div>
+              </div>
+
+              {/* Password Field */}
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs font-bold text-neutral-300 uppercase tracking-wider">
+                    Senha
+                  </label>
+                  {mode === 'login' && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setError(null);
+                        setSuccessMessage(null);
+                        setCurrentView('forgot_password');
+                      }}
+                      className="text-xs text-neutral-400 hover:text-emerald-400 transition-colors"
+                    >
+                      Esqueceu a senha?
+                    </button>
+                  )}
+                </div>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-neutral-500">
+                    <Lock className="w-4 h-4" />
+                  </div>
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    required
+                    value={password}
+                    onChange={e => setPassword(e.target.value)}
+                    placeholder={mode === 'register' ? 'Mínimo de 6 caracteres' : 'Digite sua senha'}
+                    minLength={6}
+                    className="w-full bg-[#1e1c19] border border-[#3d3a34] focus:border-[#81b64c] rounded-xl pl-10 pr-11 py-2.5 text-sm text-white placeholder-neutral-500 focus:outline-none focus:ring-1 focus:ring-[#81b64c] transition-all"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-neutral-400 hover:text-white transition-colors"
+                    title={showPassword ? 'Ocultar senha' : 'Ver senha'}
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+
+              {/* Primary Green Submit Button */}
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full bg-[#81b64c] hover:bg-[#76a843] active:bg-[#6c9a3c] text-white font-bold py-3.5 px-4 rounded-xl text-sm sm:text-base transition-all duration-150 shadow-[0_4px_0_#5c8734] active:translate-y-1 active:shadow-none flex items-center justify-center gap-2 mt-2 disabled:opacity-50"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    <span>Processando...</span>
+                  </>
+                ) : (
+                  <span>{mode === 'register' ? 'Criar Minha Conta Grátis' : 'Entrar no Chess'}</span>
+                )}
+              </button>
+            </form>
+
+            {/* Divider "OU CONTINUE COM" */}
+            <div className="flex items-center gap-3 my-4">
               <div className="flex-1 h-[1px] bg-[#3d3a34]" />
-              <span className="text-[11px] font-bold text-neutral-500 uppercase tracking-widest">OU</span>
+              <span className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest">OU CONTINUE COM</span>
               <div className="flex-1 h-[1px] bg-[#3d3a34]" />
             </div>
 
-            {/* Secondary Option: Continue com o Celular */}
-            <button
-              onClick={() => {
-                setError(null);
-                setCurrentView('phone');
-              }}
-              disabled={loading}
-              className="w-full bg-[#363430] hover:bg-[#423f3a] active:bg-[#2d2b27] text-neutral-100 font-bold py-3.5 px-4 rounded-xl text-sm sm:text-base border border-[#48443e] transition-all duration-150 flex items-center justify-center gap-3 shadow-sm active:scale-[0.99] group"
-            >
-              <Smartphone className="w-5 h-5 text-neutral-300 group-hover:scale-105 transition-transform" />
-              <span>Continue com o Celular</span>
-            </button>
-
-            {/* Secondary Option: Continue com Google */}
-            <button
-              onClick={handleGoogleAuth}
-              disabled={loading}
-              className="w-full bg-[#363430] hover:bg-[#423f3a] active:bg-[#2d2b27] text-neutral-100 font-bold py-3.5 px-4 rounded-xl text-sm sm:text-base border border-[#48443e] transition-all duration-150 flex items-center justify-center gap-3 shadow-sm active:scale-[0.99] group disabled:opacity-50"
-            >
-              {/* Google multicolored G SVG */}
-              <svg className="w-5 h-5 group-hover:scale-105 transition-transform" viewBox="0 0 24 24">
-                <path
-                  fill="#4285F4"
-                  d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                />
-                <path
-                  fill="#34A853"
-                  d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                />
-                <path
-                  fill="#FBBC05"
-                  d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
-                />
-                <path
-                  fill="#EA4335"
-                  d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
-                />
-              </svg>
-              <span>{loading ? 'Conectando...' : 'Continue com Google'}</span>
-            </button>
-
-            {/* Secondary Option: Continuar com Apple */}
-            <button
-              onClick={handleAppleAuth}
-              disabled={loading}
-              className="w-full bg-[#363430] hover:bg-[#423f3a] active:bg-[#2d2b27] text-neutral-100 font-bold py-3.5 px-4 rounded-xl text-sm sm:text-base border border-[#48443e] transition-all duration-150 flex items-center justify-center gap-3 shadow-sm active:scale-[0.99] group disabled:opacity-50"
-            >
-              {/* Apple White Logo SVG */}
-              <svg className="w-5 h-5 fill-white group-hover:scale-105 transition-transform" viewBox="0 0 170 170">
-                <path d="M150.37 130.25c-2.45 5.66-5.35 10.87-8.71 15.66-4.58 6.53-8.33 11.05-11.22 13.56-4.48 4.12-9.28 6.23-14.42 6.35-3.69 0-8.14-1.05-13.32-3.18-5.19-2.12-9.97-3.17-14.34-3.17-4.58 0-9.49 1.05-14.75 3.17-5.26 2.13-9.5 3.24-12.74 3.35-4.35.13-9.16-1.9-14.42-6.08-3.7-3.08-7.61-7.85-11.75-14.34-5.38-8.44-9.75-18.23-13.1-29.35C2.17 99.85.5 88.94.5 77.49c0-13.43 3.37-24.97 10.12-34.62 6.74-9.66 15.35-14.58 25.82-14.77 5.03 0 10.51 1.34 16.44 4.02 5.92 2.68 9.94 4.08 12.06 4.2 2.45 0 6.64-1.46 12.57-4.38 5.93-2.92 11.27-4.32 16.03-4.2 11.83.56 21.26 4.88 28.3 12.97-10.42 6.3-15.53 14.86-15.32 25.68.21 8.44 3.44 15.55 9.68 21.32 6.25 5.78 13.59 9.07 22.04 9.87-1.9 5.86-4.3 11.51-7.21 16.95zM119.22 3.01c0 7.4-2.65 14.3-7.95 20.7-5.3 6.4-11.78 10.28-19.45 11.64-.13-1.1-.2-2.12-.2-3.07 0-7.27 2.87-14.4 8.6-21.38 5.74-6.98 12.38-10.74 19.92-11.29.07 1.13.1 2.26.1 3.4z" />
-              </svg>
-              <span>Continuar com Apple</span>
-            </button>
-
-            {/* Guest / Anônimo */}
-            <div className="pt-2 text-center">
+            {/* Social & Alternative Auth Buttons */}
+            <div className="space-y-2.5">
+              {/* Google Button */}
               <button
-                onClick={handleGuestLogin}
+                type="button"
+                onClick={handleGoogleAuth}
                 disabled={loading}
-                className="text-xs text-neutral-400 hover:text-emerald-400 transition-colors py-1 px-3 rounded-lg hover:bg-neutral-800/40"
+                className="w-full bg-[#363430] hover:bg-[#423f3a] active:bg-[#2d2b27] text-neutral-100 font-bold py-3 px-4 rounded-xl text-sm border border-[#48443e] transition-all flex items-center justify-center gap-3 shadow-sm active:scale-[0.99] disabled:opacity-50"
               >
-                Ou jogar temporariamente como Convidado
+                <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24">
+                  <path
+                    fill="#4285F4"
+                    d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                  />
+                  <path
+                    fill="#34A853"
+                    d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                  />
+                  <path
+                    fill="#FBBC05"
+                    d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
+                  />
+                  <path
+                    fill="#EA4335"
+                    d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
+                  />
+                </svg>
+                <span>Continue com Google</span>
               </button>
+
+              {/* Phone Button */}
+              <button
+                type="button"
+                onClick={() => {
+                  setError(null);
+                  setCurrentView('phone');
+                }}
+                disabled={loading}
+                className="w-full bg-[#363430] hover:bg-[#423f3a] active:bg-[#2d2b27] text-neutral-100 font-bold py-3 px-4 rounded-xl text-sm border border-[#48443e] transition-all flex items-center justify-center gap-3 shadow-sm active:scale-[0.99] disabled:opacity-50"
+              >
+                <Smartphone className="w-4 h-4 text-neutral-300 flex-shrink-0" />
+                <span>Continue com o Celular (SMS)</span>
+              </button>
+
+              {/* Apple Button */}
+              <button
+                type="button"
+                onClick={handleAppleAuth}
+                disabled={loading}
+                className="w-full bg-[#363430] hover:bg-[#423f3a] active:bg-[#2d2b27] text-neutral-100 font-bold py-3 px-4 rounded-xl text-sm border border-[#48443e] transition-all flex items-center justify-center gap-3 shadow-sm active:scale-[0.99] disabled:opacity-50"
+              >
+                <svg className="w-4 h-4 fill-white flex-shrink-0" viewBox="0 0 170 170">
+                  <path d="M150.37 130.25c-2.45 5.66-5.35 10.87-8.71 15.66-4.58 6.53-8.33 11.05-11.22 13.56-4.48 4.12-9.28 6.23-14.42 6.35-3.69 0-8.14-1.05-13.32-3.18-5.19-2.12-9.97-3.17-14.34-3.17-4.58 0-9.49 1.05-14.75 3.17-5.26 2.13-9.5 3.24-12.74 3.35-4.35.13-9.16-1.9-14.42-6.08-3.7-3.08-7.61-7.85-11.75-14.34-5.38-8.44-9.75-18.23-13.1-29.35C2.17 99.85.5 88.94.5 77.49c0-13.43 3.37-24.97 10.12-34.62 6.74-9.66 15.35-14.58 25.82-14.77 5.03 0 10.51 1.34 16.44 4.02 5.92 2.68 9.94 4.08 12.06 4.2 2.45 0 6.64-1.46 12.57-4.38 5.93-2.92 11.27-4.32 16.03-4.2 11.83.56 21.26 4.88 28.3 12.97-10.42 6.3-15.53 14.86-15.32 25.68.21 8.44 3.44 15.55 9.68 21.32 6.25 5.78 13.59 9.07 22.04 9.87-1.9 5.86-4.3 11.51-7.21 16.95zM119.22 3.01c0 7.4-2.65 14.3-7.95 20.7-5.3 6.4-11.78 10.28-19.45 11.64-.13-1.1-.2-2.12-.2-3.07 0-7.27 2.87-14.4 8.6-21.38 5.74-6.98 12.38-10.74 19.92-11.29.07 1.13.1 2.26.1 3.4z" />
+                </svg>
+                <span>Continuar com Apple</span>
+              </button>
+
+              {/* Guest / Anônimo */}
+              <div className="pt-1 text-center">
+                <button
+                  type="button"
+                  onClick={handleGuestLogin}
+                  disabled={loading}
+                  className="text-xs text-neutral-400 hover:text-emerald-400 transition-colors py-1 px-3 rounded-lg hover:bg-neutral-800/40"
+                >
+                  Ou jogar temporariamente como Convidado
+                </button>
+              </div>
             </div>
           </div>
         )}
 
         {/* ========================================================================= */}
-        {/* VIEW 2: EMAIL FORM (LOGIN OR REGISTRATION) */}
-        {/* ========================================================================= */}
-        {currentView === 'email' && (
-          <form onSubmit={handleEmailAuth} className="w-full space-y-3.5 animate-in fade-in duration-150">
-            {/* Nickname / Display Name (Registration only) */}
-            {mode === 'register' && (
-              <div>
-                <label className="block text-xs font-bold text-neutral-300 uppercase tracking-wider mb-1.5">
-                  Apelido no Jogo
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-neutral-500">
-                    <UserIcon className="w-4 h-4" />
-                  </div>
-                  <input
-                    type="text"
-                    value={displayName}
-                    onChange={e => setDisplayName(e.target.value)}
-                    placeholder="Ex: MestreDoXadrez"
-                    maxLength={15}
-                    className="w-full bg-[#1e1c19] border border-[#3d3a34] focus:border-[#81b64c] rounded-xl pl-10 pr-4 py-3 text-sm text-white placeholder-neutral-500 focus:outline-none focus:ring-1 focus:ring-[#81b64c] transition-all"
-                  />
-                </div>
-              </div>
-            )}
-
-            {/* Email Field */}
-            <div>
-              <label className="block text-xs font-bold text-neutral-300 uppercase tracking-wider mb-1.5">
-                E-mail
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-neutral-500">
-                  <Mail className="w-4 h-4" />
-                </div>
-                <input
-                  type="email"
-                  required
-                  value={email}
-                  onChange={e => setEmail(e.target.value)}
-                  placeholder="seuemail@exemplo.com"
-                  className="w-full bg-[#1e1c19] border border-[#3d3a34] focus:border-[#81b64c] rounded-xl pl-10 pr-4 py-3 text-sm text-white placeholder-neutral-500 focus:outline-none focus:ring-1 focus:ring-[#81b64c] transition-all"
-                />
-              </div>
-            </div>
-
-            {/* Password Field */}
-            <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label className="block text-xs font-bold text-neutral-300 uppercase tracking-wider">
-                  Senha
-                </label>
-                {mode === 'login' && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setError(null);
-                      setSuccessMessage(null);
-                      setCurrentView('forgot_password');
-                    }}
-                    className="text-xs text-neutral-400 hover:text-emerald-400 transition-colors"
-                  >
-                    Esqueceu a senha?
-                  </button>
-                )}
-              </div>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-neutral-500">
-                  <Lock className="w-4 h-4" />
-                </div>
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  required
-                  value={password}
-                  onChange={e => setPassword(e.target.value)}
-                  placeholder="Digite sua senha"
-                  minLength={6}
-                  className="w-full bg-[#1e1c19] border border-[#3d3a34] focus:border-[#81b64c] rounded-xl pl-10 pr-11 py-3 text-sm text-white placeholder-neutral-500 focus:outline-none focus:ring-1 focus:ring-[#81b64c] transition-all"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-neutral-400 hover:text-white transition-colors"
-                  title={showPassword ? 'Ocultar senha' : 'Ver senha'}
-                >
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
-              </div>
-            </div>
-
-            {/* Submit Button */}
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-[#81b64c] hover:bg-[#76a843] active:bg-[#6c9a3c] text-white font-bold py-3.5 px-4 rounded-xl text-sm sm:text-base transition-all duration-150 shadow-[0_4px_0_#5c8734] active:translate-y-1 active:shadow-none flex items-center justify-center gap-2 mt-2 disabled:opacity-50"
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                  <span>Processando...</span>
-                </>
-              ) : (
-                <span>{mode === 'register' ? 'Criar Minha Conta' : 'Entrar na Conta'}</span>
-              )}
-            </button>
-          </form>
-        )}
-
-        {/* ========================================================================= */}
-        {/* VIEW 3: PHONE FORM (ENTER PHONE NUMBER) */}
+        {/* VIEW 2: PHONE FORM (ENTER PHONE NUMBER) */}
         {/* ========================================================================= */}
         {currentView === 'phone' && (
           <form onSubmit={handleSendPhoneCode} className="w-full space-y-4 animate-in fade-in duration-150">
@@ -780,7 +813,7 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'register' }:
         )}
 
         {/* ========================================================================= */}
-        {/* VIEW 4: PHONE SMS CODE VERIFICATION */}
+        {/* VIEW 3: PHONE SMS CODE VERIFICATION */}
         {/* ========================================================================= */}
         {currentView === 'phone_verify' && (
           <form onSubmit={handleVerifyPhoneCode} className="w-full space-y-4 animate-in fade-in duration-150">
@@ -834,7 +867,7 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'register' }:
         )}
 
         {/* ========================================================================= */}
-        {/* VIEW 5: FORGOT PASSWORD */}
+        {/* VIEW 4: FORGOT PASSWORD */}
         {/* ========================================================================= */}
         {currentView === 'forgot_password' && (
           <form onSubmit={handleForgotPassword} className="w-full space-y-4 animate-in fade-in duration-150">
@@ -875,22 +908,24 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'register' }:
           </form>
         )}
 
-        {/* Bottom Switcher: Register / Login Toggle */}
-        <div className="mt-6 pt-4 border-t border-[#383531] w-full flex flex-col items-center gap-3">
-          <p className="text-xs text-neutral-400 text-center">
-            {mode === 'register' ? 'Já tem uma conta?' : 'Ainda não tem uma conta?'}{' '}
-            <button
-              type="button"
-              onClick={() => {
-                setError(null);
-                setSuccessMessage(null);
-                setMode(mode === 'register' ? 'login' : 'register');
-              }}
-              className="text-[#81b64c] hover:text-[#97d159] font-bold transition-colors underline underline-offset-2 ml-1"
-            >
-              {mode === 'register' ? 'Entrar' : 'Cadastre-se'}
-            </button>
-          </p>
+        {/* Bottom Switcher & Security Footer */}
+        <div className="mt-5 pt-3 border-t border-[#383531] w-full flex flex-col items-center gap-2">
+          {currentView === 'email' && (
+            <p className="text-xs text-neutral-400 text-center">
+              {mode === 'register' ? 'Já tem uma conta?' : 'Ainda não tem uma conta?'}{' '}
+              <button
+                type="button"
+                onClick={() => {
+                  setError(null);
+                  setSuccessMessage(null);
+                  setMode(mode === 'register' ? 'login' : 'register');
+                }}
+                className="text-[#81b64c] hover:text-[#97d159] font-bold transition-colors underline underline-offset-2 ml-1"
+              >
+                {mode === 'register' ? 'Entrar' : 'Cadastre-se'}
+              </button>
+            </p>
+          )}
 
           <p className="text-[10px] text-neutral-500 text-center leading-tight max-w-xs flex items-center justify-center gap-1">
             <ShieldCheck className="w-3.5 h-3.5 text-emerald-500/70 flex-shrink-0" />
