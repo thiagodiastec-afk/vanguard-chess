@@ -18,8 +18,9 @@ import Leaderboard from './components/Leaderboard';
 import AdBanner from './components/AdBanner';
 import About from './components/About';
 import NicknameModal from './components/NicknameModal';
+import AuthModal from './components/AuthModal';
 import ErrorBoundary from './components/ErrorBoundary';
-import { LogIn, Loader2, LogOut, Trophy, Swords, MessageSquare, Target, Settings, Volume2, VolumeX, Palette, User as UserIcon, Bell, BellOff, Users, BookOpen, Crown, Heart, Store as StoreIcon, Copy, CheckCircle2, Info , ShieldCheck, Check, Edit2 } from 'lucide-react';
+import { LogIn, Loader2, LogOut, Trophy, Swords, MessageSquare, Target, Settings, Volume2, VolumeX, Palette, User as UserIcon, Bell, BellOff, Users, BookOpen, Crown, Heart, Store as StoreIcon, Copy, CheckCircle2, Info , ShieldCheck, Check, Edit2, Sparkles } from 'lucide-react';
 import { sounds } from './lib/sounds';
 import { themeManager, CHESS_THEMES, useTheme } from './lib/themes';
 import { backgroundManager, useBackground } from './lib/backgrounds';
@@ -45,6 +46,8 @@ export default function App() {
   const [soundEnabled, setSoundEnabled] = useState(sounds.getSoundEnabled());
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const [incomingChallenge, setIncomingChallenge] = useState<any>(null);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [authModalMode, setAuthModalMode] = useState<'register' | 'login'>('register');
 
   // Quick Nickname Editing in Settings
   const [editNickname, setEditNickname] = useState('');
@@ -162,6 +165,8 @@ export default function App() {
           };
           
           setOnlineStatus(true);
+          const heartbeatInterval = setInterval(() => setOnlineStatus(true), 15000);
+          unsubs.push(() => clearInterval(heartbeatInterval));
           
           const handleVisibility = () => {
             if (document.visibilityState === 'visible') {
@@ -177,6 +182,11 @@ export default function App() {
           
           window.addEventListener('visibilitychange', handleVisibility);
           window.addEventListener('beforeunload', handleUnload);
+          unsubs.push(() => {
+            window.removeEventListener('visibilitychange', handleVisibility);
+            window.removeEventListener('beforeunload', handleUnload);
+            setOnlineStatus(false);
+          });
 
           // Listen for incoming challenges
           const challengesQuery = query(
@@ -346,42 +356,9 @@ export default function App() {
   }, []);
   
 
-  const handleLogin = async () => {
-    try {
-      const auth = getFirebaseInstance();
-      if (!auth) {
-        const { auth: asyncAuth } = await initFirebase();
-        const provider = new GoogleAuthProvider();
-        await signInWithPopup(asyncAuth, provider, browserPopupRedirectResolver);
-        return;
-      }
-      
-      const provider = new GoogleAuthProvider();
-      provider.setCustomParameters({ prompt: 'select_account' });
-      await signInWithPopup(auth, provider, browserPopupRedirectResolver);
-    } catch (error: any) {
-      console.error("Login error", error);
-      
-      // Se o popup foi bloqueado pelo navegador, tenta fazer o login por redirecionamento
-      if (error.code === 'auth/popup-blocked' || error.message?.toLowerCase().includes('popup')) {
-        try {
-          const auth = getFirebaseInstance();
-          if (auth) {
-            const provider = new GoogleAuthProvider();
-            await signInWithRedirect(auth, provider);
-          }
-        } catch (redirectError) {
-          console.error("Redirect login error", redirectError);
-          alert("Falha no login. Verifique as configurações de segurança do seu navegador e tente novamente.");
-        }
-      } else if (error.code === 'auth/popup-closed-by-user') {
-        // Usuário fechou a janela, não faz nada
-      } else if (error.code === 'auth/unauthorized-domain') {
-        alert("Atenção! Você está usando um domínio personalizado. Você precisa adicionar '" + window.location.hostname + "' na lista de Domínios Autorizados lá no painel do Firebase (Authentication > Settings > Authorized domains).");
-      } else {
-        alert("Erro detalhado: " + error.code + " - " + error.message + "\n\nSe estiver usando Safari ou bloqueador de pop-ups, desative-o.");
-      }
-    }
+  const handleLogin = (mode: 'register' | 'login' = 'login') => {
+    setAuthModalMode(mode);
+    setShowAuthModal(true);
   };
 
   const handleSaveNickname = async (e: React.FormEvent) => {
@@ -513,9 +490,13 @@ export default function App() {
             </div>
           ) : (
             <div className="space-y-2 flex flex-col items-center group-hover:items-stretch transition-all overflow-hidden">
-              <button onClick={handleLogin} className="w-10 h-10 group-hover:w-full group-hover:h-auto bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-bold group-hover:py-3 group-hover:px-4 rounded-xl transition-all active:scale-95 text-sm flex items-center justify-center gap-2" title="Entrar">
+              <button 
+                onClick={() => handleLogin('register')} 
+                className="w-10 h-10 group-hover:w-full group-hover:h-auto bg-[#81b64c] hover:bg-[#76a843] active:bg-[#6c9a3c] text-white font-bold group-hover:py-3 group-hover:px-4 rounded-xl transition-all active:scale-95 text-sm flex items-center justify-center gap-2 shadow-[0_3px_0_#5c8734]" 
+                title="Cadastrar / Entrar"
+              >
                 <LogIn className="w-5 h-5 group-hover:w-4 group-hover:h-4 flex-shrink-0" />
-                <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 hidden group-hover:inline whitespace-nowrap">Entrar</span>
+                <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 hidden group-hover:inline whitespace-nowrap">Cadastre-se / Entrar</span>
               </button>
               <button onClick={() => setShowPix(true)} className="w-10 h-10 group-hover:w-full group-hover:h-auto bg-zinc-800 hover:bg-zinc-700 text-emerald-400 font-bold group-hover:py-3 group-hover:px-4 rounded-xl transition-all active:scale-95 text-sm flex items-center justify-center gap-2 border border-emerald-500/20" title="Apoiar">
                 <Heart className="w-5 h-5 group-hover:w-4 group-hover:h-4 fill-emerald-500 flex-shrink-0" /> 
@@ -557,7 +538,20 @@ export default function App() {
                 <button onClick={handleLogout} className="p-2 text-red-500" title="Sair"><LogOut className="w-5 h-5" /></button>
               </>
             ) : (
-              <button onClick={handleLogin} className="bg-emerald-500 text-zinc-950 px-3 py-1.5 rounded-lg font-bold text-xs">Entrar</button>
+              <div className="flex items-center gap-1.5">
+                <button 
+                  onClick={() => handleLogin('login')} 
+                  className="bg-[#363430] hover:bg-[#423f3a] text-neutral-200 border border-[#48443e] px-2.5 py-1.5 rounded-lg font-bold text-xs"
+                >
+                  Entrar
+                </button>
+                <button 
+                  onClick={() => handleLogin('register')} 
+                  className="bg-[#81b64c] hover:bg-[#76a843] text-white px-3 py-1.5 rounded-lg font-bold text-xs shadow-[0_2px_0_#5c8734]"
+                >
+                  Cadastre-se
+                </button>
+              </div>
             )}
           </div>
         </header>
@@ -565,76 +559,95 @@ export default function App() {
         {/* AdBanner area (below mobile header, top of main content) */}
         {!userData?.isPremium && <AdBanner />}
 
-        <main className="flex-1 overflow-y-auto p-4 md:p-8 pb-24 md:pb-8">
-          <div className="max-w-7xl mx-auto h-full">
-            {activeTab === 'play' && (
-              activeGame ? (
-                <ErrorBoundary fallbackTitle="Erro ao carregar partida" onReset={() => setActiveGame(null)}>
-                  <Game 
-                    game={activeGame} 
-                    currentUser={userData || {
-                      uid: user?.uid || 'guest',
-                      displayName: user?.displayName || 'Jogador',
-                      elo: 1200,
-                      gamesPlayed: 0,
-                      coins: 0
-                    }} 
-                    onExit={() => setActiveGame(null)} 
-                  />
-                </ErrorBoundary>
-              ) : computerGameDifficulty ? (
-                <ErrorBoundary fallbackTitle="Erro no jogo contra computador" onReset={() => setComputerGameDifficulty(null)}>
-                  <ComputerGame 
-                    difficulty={computerGameDifficulty} 
-                    currentUser={userData} 
-                    onExit={() => setComputerGameDifficulty(null)} 
-                  />
-                </ErrorBoundary>
-              ) : isLocalGame ? (
-                <LocalGame onExit={() => setIsLocalGame(false)} />
-              ) : (
-                <Lobby currentUser={userData} onPlayComputer={(diff) => setComputerGameDifficulty(diff)} onPlayLocal={() => setIsLocalGame(true)} onLoginRequest={handleLogin} />
-              )
-            )}
-            {activeTab === 'rules' && <Rules />}
-            {activeTab === 'ranking' && <Leaderboard />}
-            {activeTab === 'about' && <About />}
-            
-            {/* Protected Routes */}
-            {!userData && ['tournaments', 'chat', 'training', 'friends', 'store', 'profile'].includes(activeTab) && (
-              <div className="flex-1 flex items-center justify-center h-[60vh]">
-                <div className="max-w-md w-full bg-zinc-900 rounded-3xl p-8 text-center space-y-6 shadow-2xl border border-zinc-800">
-                  <div className="w-16 h-16 bg-emerald-500/10 rounded-2xl flex items-center justify-center mx-auto mb-2">
-                    <LogIn className="w-8 h-8 text-emerald-500" />
+        {(() => {
+          const isPlayingGame = activeTab === 'play' && (Boolean(activeGame) || Boolean(computerGameDifficulty) || Boolean(isLocalGame));
+          return (
+            <main className={cn(
+              "flex-1 overflow-y-auto pb-24 md:pb-8",
+              isPlayingGame ? "p-1 sm:p-2 lg:p-3" : "p-4 md:p-8"
+            )}>
+              <div className={cn("mx-auto h-full", isPlayingGame ? "w-full max-w-[1700px]" : "max-w-7xl")}>
+                {activeTab === 'play' && (
+                  activeGame ? (
+                    <ErrorBoundary fallbackTitle="Erro ao carregar partida" onReset={() => setActiveGame(null)}>
+                      <Game 
+                        game={activeGame} 
+                        currentUser={userData || {
+                          uid: user?.uid || 'guest',
+                          displayName: user?.displayName || 'Jogador',
+                          elo: 1200,
+                          gamesPlayed: 0,
+                          coins: 0
+                        }} 
+                        onExit={() => setActiveGame(null)} 
+                      />
+                    </ErrorBoundary>
+                  ) : computerGameDifficulty ? (
+                    <ErrorBoundary fallbackTitle="Erro no jogo contra computador" onReset={() => setComputerGameDifficulty(null)}>
+                      <ComputerGame 
+                        difficulty={computerGameDifficulty} 
+                        currentUser={userData} 
+                        onExit={() => setComputerGameDifficulty(null)} 
+                      />
+                    </ErrorBoundary>
+                  ) : isLocalGame ? (
+                    <LocalGame onExit={() => setIsLocalGame(false)} />
+                  ) : (
+                    <Lobby currentUser={userData} onPlayComputer={(diff) => setComputerGameDifficulty(diff)} onPlayLocal={() => setIsLocalGame(true)} onLoginRequest={handleLogin} />
+                  )
+                )}
+                {activeTab === 'rules' && <Rules />}
+                {activeTab === 'ranking' && <Leaderboard />}
+                {activeTab === 'about' && <About />}
+                
+                {/* Protected Routes */}
+                {!userData && ['tournaments', 'chat', 'training', 'friends', 'store', 'profile'].includes(activeTab) && (
+                  <div className="flex-1 flex items-center justify-center h-[60vh]">
+                    <div className="max-w-md w-full bg-[#262421] rounded-3xl p-8 text-center space-y-6 shadow-2xl border border-[#3d3a34]">
+                      <div className="w-16 h-16 bg-[#81b64c]/10 rounded-2xl flex items-center justify-center mx-auto mb-2 border border-[#81b64c]/20">
+                        <LogIn className="w-8 h-8 text-[#81b64c]" />
+                      </div>
+                      <div>
+                        <h2 className="text-2xl font-bold text-white mb-1">Acesse sua Conta</h2>
+                        <p className="text-zinc-400 text-sm">Você precisa estar conectado para acessar esta área do jogo.</p>
+                      </div>
+                      <div className="space-y-3">
+                        <button
+                          onClick={() => handleLogin('register')}
+                          className="w-full bg-[#81b64c] hover:bg-[#76a843] active:bg-[#6c9a3c] text-white font-bold py-3.5 px-6 rounded-xl transition-all shadow-[0_4px_0_#5c8734] active:translate-y-1 active:shadow-none flex items-center justify-center gap-2"
+                        >
+                          <Sparkles className="w-5 h-5" />
+                          Criar Conta no Chess
+                        </button>
+                        <button
+                          onClick={() => handleLogin('login')}
+                          className="w-full bg-[#363430] hover:bg-[#423f3a] text-neutral-100 font-bold py-3.5 px-6 rounded-xl transition-all border border-[#48443e] flex items-center justify-center gap-2"
+                        >
+                          <LogIn className="w-5 h-5" />
+                          Já tenho uma conta (Entrar)
+                        </button>
+                      </div>
+                      <p className="text-xs text-zinc-500 font-medium flex items-center justify-center gap-1.5 mt-4">
+                        <ShieldCheck className="w-4 h-4 text-emerald-500/80" />
+                        Conexão segura (Criptografia AES-256)
+                      </p>
+                    </div>
                   </div>
-                  <h2 className="text-2xl font-bold text-white">Faça Login</h2>
-                  <p className="text-zinc-400">Você precisa estar conectado para acessar esta área do jogo.</p>
-                  <button
-                    onClick={handleLogin}
-                    className="w-full bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-bold py-4 px-6 rounded-2xl transition-colors flex items-center justify-center gap-2"
-                  >
-                                        <LogIn className="w-5 h-5" />
-                    Entrar com Google
-                  </button>
-                  <p className="text-xs text-zinc-500 font-medium flex items-center justify-center gap-1.5 mt-4">
-                    <ShieldCheck className="w-4 h-4 text-emerald-500/80" />
-                    Conexão segura (Criptografia AES-256)
-                  </p>
-                </div>
+                )}
+                {userData && (
+                  <>
+                    {activeTab === 'tournaments' && <Tournaments currentUser={userData} />}
+                    {activeTab === 'chat' && <Chat currentUser={userData} />}
+                    {activeTab === 'training' && <Training onPlayComputer={(diff) => setComputerGameDifficulty(diff)} />}
+                    {activeTab === 'friends' && <Friends currentUser={userData} />}
+                    {activeTab === 'store' && <Store currentUser={userData} />}
+                    {activeTab === 'profile' && <Profile currentUser={userData} />}
+                  </>
+                )}
               </div>
-            )}
-            {userData && (
-              <>
-                {activeTab === 'tournaments' && <Tournaments currentUser={userData} />}
-                {activeTab === 'chat' && <Chat currentUser={userData} />}
-                {activeTab === 'training' && <Training onPlayComputer={(diff) => setComputerGameDifficulty(diff)} />}
-                {activeTab === 'friends' && <Friends currentUser={userData} />}
-                {activeTab === 'store' && <Store currentUser={userData} />}
-                {activeTab === 'profile' && <Profile currentUser={userData} />}
-              </>
-            )}
-          </div>
-        </main>
+            </main>
+          );
+        })()}
       </div>
 
       {/* Mobile Bottom Navigation */}
@@ -721,7 +734,7 @@ export default function App() {
                 ) : (
                   <div className="text-xs text-zinc-400 flex items-center justify-between pt-1">
                     <span>Faça login para salvar e alterar seu apelido.</span>
-                    <button onClick={handleLogin} className="text-emerald-400 hover:underline font-bold">Entrar</button>
+                    <button onClick={() => handleLogin('login')} className="text-emerald-400 hover:underline font-bold">Entrar</button>
                   </div>
                 )}
               </div>
@@ -889,6 +902,13 @@ export default function App() {
           </div>
         </div>
       )}
+
+      {/* Chess.com Style Auth Modal */}
+      <AuthModal 
+        isOpen={showAuthModal} 
+        onClose={() => setShowAuthModal(false)} 
+        defaultMode={authModalMode} 
+      />
     </div>
   );
 }

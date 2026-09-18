@@ -304,16 +304,8 @@ export default function Training({ onPlayComputer }: TrainingProps) {
           <p className="text-neutral-400">{puzzle.description}</p>
         </div>
 
-        <div className="w-full max-w-[600px] mx-auto aspect-square order-1 xl:order-2 shadow-[0_30px_60px_-15px_rgba(0,0,0,0.7)] relative rounded-md bg-[#181512] p-[5%] pt-[4%] border-b-[45px] border-[#0a0908] border-x-[12px] border-x-[#14120f] border-t-[12px] border-t-[#1c1815]">
-          <div className="absolute inset-[3%] border border-[#b57a3e]/40 pointer-events-none z-10" />
-          <div className="absolute inset-[3.5%] border-2 border-[#b57a3e]/60 pointer-events-none z-10" />
-          
-          <div className="absolute bottom-[-45px] left-0 right-0 h-[45px] bg-gradient-to-b from-[#111] to-[#0a0a0a] pointer-events-none rounded-b-md flex items-center justify-center">
-            <div className="w-[80%] h-[2px] bg-black/80 absolute top-0" />
-            <div className="w-[16px] h-[16px] rounded-full bg-gradient-to-br from-[#e5c158] to-[#6a4f15] shadow-md border border-[#3a2a0d]" />
-          </div>
-
-          <div className="relative w-full aspect-square overflow-hidden shadow-inner bg-black">
+        <div className="w-full max-w-[600px] mx-auto aspect-square order-1 xl:order-2 relative rounded-2xl bg-gradient-to-br from-[#2a170e] via-[#1a0c06] to-[#0f0703] p-2 sm:p-3 border-2 sm:border-4 border-[#613318] shadow-[0_20px_50px_rgba(0,0,0,0.8)] flex flex-col justify-between overflow-hidden">
+          <div className="w-full h-full relative rounded-lg overflow-hidden shadow-inner bg-black">
           {/* @ts-ignore react-chessboard types are broken in v5 */}
           <Chessboard 
             options={{
@@ -331,7 +323,7 @@ export default function Training({ onPlayComputer }: TrainingProps) {
             }}
           />
           {solved && (
-            <div className="absolute inset-0 z-10 bg-black/60 flex flex-col items-center justify-center p-6 text-center backdrop-blur-sm">
+            <div className="absolute inset-0 z-10 bg-black/70 flex flex-col items-center justify-center p-6 text-center backdrop-blur-sm">
               <CheckCircle2 className="w-16 h-16 text-emerald-400 mb-4" />
               <h2 className="text-3xl font-bold text-white mb-6">Correto!</h2>
               {currentPuzzleIdx < PUZZLES.length - 1 && (
@@ -345,6 +337,12 @@ export default function Training({ onPlayComputer }: TrainingProps) {
               )}
             </div>
           )}
+          </div>
+
+          <div className="w-full pt-1.5 flex items-center justify-center gap-2 opacity-50 select-none pointer-events-none">
+            <div className="h-[1px] w-8 sm:w-12 bg-amber-600/40" />
+            <span className="text-[9px] sm:text-[10px] font-serif tracking-[0.25em] text-amber-200/80 font-bold uppercase">Vanguard Chess</span>
+            <div className="h-[1px] w-8 sm:w-12 bg-amber-600/40" />
           </div>
         </div>
 

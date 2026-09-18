@@ -44,13 +44,24 @@ export interface GameData {
   whiteElo: number;
   blackElo: number;
   status: 'playing' | 'draw' | 'white_won' | 'black_won' | 'abandoned' | 'waiting_friend';
+  endedReason?: 'checkmate' | 'timeout' | 'resignation' | 'inactivity' | 'abandonment' | 'stalemate' | 'draw_agreement';
+  resignedBy?: string;
+  abandonedBy?: string;
   fen: string;
   pgn: string;
-  lastMoveAt: number;  timeControl?: number;  whiteTime?: number;  blackTime?: number;
+  lastMoveAt: number;
+  timeControl?: number;
+  whiteTime?: number;
+  blackTime?: number;
   turn: 'w' | 'b';
   spectatorsAllowedWhite?: boolean;
   spectatorsAllowedBlack?: boolean;
   whiteThemeId?: string;
+  whiteOnline?: boolean;
+  blackOnline?: boolean;
+  whiteHeartbeat?: number;
+  blackHeartbeat?: number;
+  drawOffer?: 'w' | 'b' | null;
 }
 
 export interface Message {

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { collection, doc, getDocs, setDoc, deleteDoc, runTransaction, onSnapshot, query, orderBy, limit, where, addDoc } from 'firebase/firestore';
 import { getDb } from '../lib/firebase';
 import { UserData, QueueEntry, GameData } from '../types';
-import { Loader2, Swords, UserCircle, Bot, ChevronDown, ChevronUp, Link as LinkIcon, Copy, Target, CheckCircle2, X, Users, MessageCircle } from 'lucide-react';
+import { Loader2, Swords, UserCircle, Bot, ChevronDown, ChevronUp, Link as LinkIcon, Copy, Target, CheckCircle2, X, Users, MessageCircle, Sparkles, LogIn, Mail } from 'lucide-react';
 import { cn } from '../lib/utils';
 
 interface LobbyProps {
@@ -10,7 +10,7 @@ interface LobbyProps {
   onPlayComputer: (difficulty: string) => void;
   onPlayLocal?: () => void;
   onSpectate?: (gameId: string) => void;
-  onLoginRequest?: () => void;
+  onLoginRequest?: (mode?: 'register' | 'login') => void;
 }
 
 export default function Lobby({ currentUser, onPlayComputer, onPlayLocal, onSpectate, onLoginRequest }: LobbyProps) {
@@ -275,6 +275,36 @@ export default function Lobby({ currentUser, onPlayComputer, onPlayLocal, onSpec
       {/* Left Column - Main Actions (Bento Grid) */}
       <div className="flex-1 flex flex-col gap-6">
         
+        {/* Unauthenticated Quick Banner */}
+        {!currentUser && (
+          <div className="bg-gradient-to-r from-[#2a2824] to-[#211f1c] border border-[#3d3a34] rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xl">
+            <div className="flex items-center gap-3.5">
+              <div className="w-11 h-11 bg-[#81b64c]/15 border border-[#81b64c]/30 rounded-xl flex items-center justify-center flex-shrink-0">
+                <Sparkles className="w-6 h-6 text-[#81b64c]" />
+              </div>
+              <div>
+                <h4 className="font-bold text-white text-sm sm:text-base">Jogue Online com ELO & Ranking</h4>
+                <p className="text-xs text-neutral-400">Crie sua conta grátis para salvar partidas, subir no ranking e jogar com amigos.</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2.5 w-full sm:w-auto">
+              <button
+                onClick={() => onLoginRequest?.('register')}
+                className="flex-1 sm:flex-initial bg-[#81b64c] hover:bg-[#76a843] active:bg-[#6c9a3c] text-white font-bold text-xs sm:text-sm px-4 py-2.5 rounded-xl transition-all shadow-[0_3px_0_#5c8734] active:translate-y-0.5 active:shadow-none flex items-center justify-center gap-1.5 whitespace-nowrap"
+              >
+                Cadastre-se
+              </button>
+              <button
+                onClick={() => onLoginRequest?.('login')}
+                className="flex-1 sm:flex-initial bg-[#363430] hover:bg-[#423f3a] text-neutral-200 font-bold text-xs sm:text-sm px-4 py-2.5 rounded-xl border border-[#48443e] transition-all flex items-center justify-center gap-1.5 whitespace-nowrap"
+              >
+                <LogIn className="w-3.5 h-3.5" />
+                Entrar
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Play Now Hero Card */}
         <div className="bg-gradient-to-br from-zinc-900 to-zinc-900/50 rounded-[2rem] p-6 sm:p-8 border border-zinc-800/50 shadow-2xl relative overflow-hidden group">
           <div className="absolute -top-32 -right-32 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl group-hover:bg-emerald-500/20 transition-colors duration-700" />
@@ -357,7 +387,7 @@ export default function Lobby({ currentUser, onPlayComputer, onPlayLocal, onSpec
                 
                 <div className="flex flex-col justify-end gap-3 mt-4 sm:mt-0">
                   <button
-                    onClick={currentUser ? createInvite : onLoginRequest}
+                    onClick={currentUser ? createInvite : () => onLoginRequest?.('login')}
                     className="w-full bg-indigo-600/10 hover:bg-indigo-600/20 border border-indigo-500/20 text-indigo-400 font-bold py-4 px-4 rounded-2xl transition-all active:scale-95 flex items-center justify-center gap-2 group"
                   >
                     <Users className="w-5 h-5 group-hover:scale-110 transition-transform" />
@@ -365,7 +395,7 @@ export default function Lobby({ currentUser, onPlayComputer, onPlayLocal, onSpec
                   </button>
                   <button
                     id="tutorial-play-ai"
-                    onClick={() => currentUser ? setShowBotMenu(true) : onLoginRequest?.()}
+                    onClick={() => currentUser ? setShowBotMenu(true) : onLoginRequest?.('login')}
                     className="w-full bg-zinc-800 hover:bg-zinc-700 text-white font-bold py-4 px-4 rounded-2xl transition-all active:scale-95 flex items-center justify-center gap-2 group"
                   >
                     <Bot className="w-5 h-5 text-zinc-400 group-hover:text-emerald-400 transition-colors" />
