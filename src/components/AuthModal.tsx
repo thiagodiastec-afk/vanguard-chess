@@ -12,7 +12,9 @@ import {
   RecaptchaVerifier,
   signInWithPhoneNumber,
   ConfirmationResult,
-  browserPopupRedirectResolver
+  browserPopupRedirectResolver,
+  setPersistence,
+  browserSessionPersistence
 } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { initFirebase } from '../lib/firebase';
@@ -175,10 +177,10 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'register' }:
         return 'Muitas tentativas em pouco tempo. Aguarde alguns instantes.';
       case 'auth/operation-not-allowed':
       case 'auth/admin-restricted-operation':
-        return 'O provedor de SMS não está habilitado no painel do Firebase ou atingiu a cota. Recomendamos entrar ou cadastrar-se com E-mail ou Google!';
+        return 'O login por E-mail/Senha precisa ser ativado no Console do Firebase (Authentication > Sign-in method > Ativar Email/Password). Você também pode clicar no botão "Continue com Google" abaixo para entrar instantaneamente!';
       case 'auth/captcha-check-failed':
       case 'auth/invalid-app-credential':
-        return 'Falha na verificação de segurança reCAPTCHA do SMS. Por favor, utilize o cadastro com E-mail ou conta Google.';
+        return 'Falha na verificação de segurança reCAPTCHA. Recomendamos utilizar a conta Google ou E-mail.';
       case 'auth/unauthorized-domain':
         return 'Domínio não autorizado para autenticação no Firebase. Utilize o cadastro com E-mail e Senha.';
       default:
@@ -192,6 +194,7 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'register' }:
     setError(null);
     try {
       const { auth } = await initFirebase();
+      await setPersistence(auth, browserSessionPersistence);
       const provider = new GoogleAuthProvider();
       provider.setCustomParameters({ prompt: 'select_account' });
       
@@ -205,6 +208,7 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'register' }:
       if (err.code === 'auth/popup-blocked' || err.message?.toLowerCase().includes('popup')) {
         try {
           const { auth } = await initFirebase();
+          await setPersistence(auth, browserSessionPersistence);
           const provider = new GoogleAuthProvider();
           await signInWithRedirect(auth, provider);
         } catch (redirectErr: any) {
@@ -224,6 +228,7 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'register' }:
     setError(null);
     try {
       const { auth } = await initFirebase();
+      await setPersistence(auth, browserSessionPersistence);
       const provider = new OAuthProvider('apple.com');
       provider.addScope('email');
       provider.addScope('name');
@@ -238,6 +243,7 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'register' }:
       if (err.code === 'auth/popup-blocked') {
         try {
           const { auth } = await initFirebase();
+          await setPersistence(auth, browserSessionPersistence);
           const provider = new OAuthProvider('apple.com');
           await signInWithRedirect(auth, provider);
         } catch (redirectErr: any) {
@@ -269,6 +275,7 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'register' }:
 
     try {
       const { auth } = await initFirebase();
+      await setPersistence(auth, browserSessionPersistence);
       
       if (mode === 'register') {
         const userCredential = await createUserWithEmailAndPassword(auth, email.trim(), password);
@@ -398,6 +405,8 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'register' }:
     setError(null);
 
     try {
+      const { auth } = await initFirebase();
+      await setPersistence(auth, browserSessionPersistence);
       const result = await confirmationResult.confirm(verificationCode);
       if (result.user) {
         await ensureUserInFirestore(result.user);
@@ -417,6 +426,7 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'register' }:
     setError(null);
     try {
       const { auth } = await initFirebase();
+      await setPersistence(auth, browserSessionPersistence);
       const result = await signInAnonymously(auth);
       if (result.user) {
         const guestName = `Convidado_${Math.floor(1000 + Math.random() * 9000)}`;
