@@ -66,13 +66,22 @@ export default function Lobby({ currentUser, onPlayComputer, onPlayLocal, onSpec
     );
     
     const unsubscribeUsers = onSnapshot(usersQuery, (snapshot) => {
+      const now = Date.now();
       const users: UserData[] = [];
       snapshot.forEach(doc => {
         const data = doc.data() as UserData;
         if (!data.uid) data.uid = doc.id;
-        if (data.uid !== currentUser?.uid) { // Optional: exclude self, or keep it. Let's keep it but mark it.
-           users.push(data);
+        // Only consider online if heartbeat is active within 90 seconds or is current user
+        const isFresh = !data.lastSeen || (now - data.lastSeen < 90000) || data.uid === currentUser?.uid;
+        if (isFresh) {
+          users.push(data);
         }
+      });
+      // Sort: current user first, then by ELO descending
+      users.sort((a, b) => {
+        if (a.uid === currentUser?.uid) return -1;
+        if (b.uid === currentUser?.uid) return 1;
+        return (b.elo || 1200) - (a.elo || 1200);
       });
       setOnlineUsers(users);
     });

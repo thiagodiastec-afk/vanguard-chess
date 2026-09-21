@@ -320,24 +320,36 @@ export default function App() {
           
           unsubs.push(onSnapshot(q, (snapshot) => {
             const games = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as GameData));
-            // Prioritize the newest playing game
-            const playingGames = games
-              .filter(g => g.status === 'playing')
-              .sort((a, b) => (b.lastMoveAt || 0) - (a.lastMoveAt || 0));
-            const active = playingGames[0] || null;
             
             setActiveGame(prev => {
+              // 1. If currently playing a specific match, always prioritize syncing that exact match
+              if (prev) {
+                const current = games.find(g => g.id === prev.id);
+                if (current) {
+                  return current;
+                }
+              }
+
+              // 2. Otherwise find the newest match with 'playing' status
+              const playingGames = games
+                .filter(g => g.status === 'playing')
+                .sort((a, b) => (b.lastMoveAt || 0) - (a.lastMoveAt || 0));
+              const active = playingGames[0] || null;
+              
               if (active) {
                 if (!prev) setActiveTab('play');
-                setComputerGameDifficulty(null); // Leave computer game if online match found
+                setComputerGameDifficulty(null);
                 return active;
               }
+
+              // 3. Check for recently finished game if we had one
               if (prev) {
                 const finishedGame = games.find(g => g.id === prev.id);
-                if (finishedGame && finishedGame.status !== 'playing') {
+                if (finishedGame) {
                   return finishedGame;
                 }
               }
+
               return null;
             });
             setLoading(false);
@@ -573,6 +585,7 @@ export default function App() {
                   activeGame ? (
                     <ErrorBoundary fallbackTitle="Erro ao carregar partida" onReset={() => setActiveGame(null)}>
                       <Game 
+                        key={activeGame.id}
                         game={activeGame} 
                         currentUser={userData || {
                           uid: user?.uid || 'guest',

@@ -124,27 +124,44 @@ export default function Game({ game, currentUser, onExit }: GameProps) {
 
   // Sync FEN/PGN from Firebase
   useEffect(() => {
-    if (game.fen !== chess.fen()) {
-      try {
-        const oldPieces = chess.board().flat().filter(p => p !== null).length;
-        if (game.pgn) {
-          chess.loadPgn(game.pgn);
-        } else {
-          chess.load(game.fen);
+    if (game.fen) {
+      if (game.fen !== chess.fen()) {
+        try {
+          const oldPieces = chess.board().flat().filter(p => p !== null).length;
+          
+          let loaded = false;
+          if (game.pgn) {
+            try {
+              chess.loadPgn(game.pgn);
+              loaded = true;
+            } catch (pgnErr) {
+              // fallback to load FEN directly
+            }
+          }
+          if (!loaded) {
+            chess.load(game.fen);
+          }
+
+          const newPieces = chess.board().flat().filter(p => p !== null).length;
+          
+          if (!isInitialMount.current) {
+            sounds.playMove(newPieces < oldPieces, chess.inCheck());
+          }
+          
+          setFen(chess.fen());
+        } catch (e) {
+          console.error("Invalid FEN from server", e);
+          try {
+            chess.load(game.fen);
+            setFen(chess.fen());
+          } catch (inner) {
+            console.error("Could not load FEN", inner);
+          }
         }
-        const newPieces = chess.board().flat().filter(p => p !== null).length;
-        
-        if (!isInitialMount.current) {
-          sounds.playMove(newPieces < oldPieces, chess.inCheck());
-        }
-        
-        setFen(game.fen);
-      } catch (e) {
-        console.error("Invalid FEN from server", e);
       }
     }
     isInitialMount.current = false;
-  }, [game.fen, chess]);
+  }, [game.fen, game.pgn, chess]);
 
   // Sync clocks
   useEffect(() => {
@@ -486,16 +503,22 @@ export default function Game({ game, currentUser, onExit }: GameProps) {
           }
         }
 
-        updateDoc(gameRef, {
+        const updateData: Record<string, any> = {
           fen: chess.fen(),
-          pgn: chess.pgn(),
+          pgn: chess.pgn() || '',
           turn: chess.turn(),
           lastMoveAt: Date.now(),
           status: newStatus,
-          endedReason: endedReason,
           whiteTime: newWhiteTime,
           blackTime: newBlackTime,
           drawOffer: null
+        };
+        if (endedReason) {
+          updateData.endedReason = endedReason;
+        }
+
+        updateDoc(gameRef, updateData).catch(err => {
+          console.error("Error updating online game move:", err);
         });
 
         return;
@@ -567,16 +590,22 @@ export default function Game({ game, currentUser, onExit }: GameProps) {
           }
         }
 
-        updateDoc(gameRef, {
+        const updateData: Record<string, any> = {
           fen: chess.fen(),
-          pgn: chess.pgn(),
+          pgn: chess.pgn() || '',
           turn: chess.turn(),
           lastMoveAt: Date.now(),
           status: newStatus,
-          endedReason: endedReason,
           whiteTime: newWhiteTime,
           blackTime: newBlackTime,
           drawOffer: null
+        };
+        if (endedReason) {
+          updateData.endedReason = endedReason;
+        }
+
+        updateDoc(gameRef, updateData).catch(err => {
+          console.error("Error updating online game move:", err);
         });
 
         return true;
@@ -787,8 +816,8 @@ export default function Game({ game, currentUser, onExit }: GameProps) {
                 {/* @ts-ignore react-chessboard types in v5 */}
                 <Chessboard
                   options={{
-                    id: "OnlineGame",
-                    position: chess.fen(),
+                    id: `OnlineGame-${game.id}`,
+                    position: fen,
                     onPieceDrop: onDrop as any,
                     onSquareClick: onSquareClick as any,
                     onPieceClick: onPieceClick as any,

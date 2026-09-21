@@ -25,7 +25,7 @@ service cloud.firestore {
     match /queue/{queueId} {
       allow read: if true;
       allow create: if isSignedIn() && incoming().uid == request.auth.uid;
-      allow delete: if isSignedIn() && queueId == request.auth.uid;
+      allow delete: if isSignedIn();
       allow update: if false;
     }
 
@@ -45,7 +45,7 @@ service cloud.firestore {
           (existing().status == 'waiting_friend' && existing().blackId == '' && incoming().blackId == request.auth.uid)
         );
            
-      allow delete: if false;
+      allow delete: if isSignedIn() && (existing().whiteId == request.auth.uid || existing().blackId == request.auth.uid);
     }
 
     // Global Chat (read-only for clients, server writes)
