@@ -317,7 +317,7 @@ export default function Training({ onPlayComputer }: TrainingProps) {
               boardOrientation: "white",
               darkSquareStyle: theme.darkSquareStyle,
               lightSquareStyle: theme.lightSquareStyle,
-              pieces: getCustomPieces(theme.pieceSet || '3d_staunton'),
+              pieces: getCustomPieces(theme.pieceSet || 'wood'),
               squareStyles: optionSquares,
               animationDurationInMs: 300
             }}

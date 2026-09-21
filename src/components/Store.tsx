@@ -1,6 +1,6 @@
 import { Store as StoreIcon, Lock, Unlock, Check, Crown, Palette, Coins, Eye, X, CreditCard, Gift, ShieldCheck, Star, Image as ImageIcon } from 'lucide-react';
-import { CHESS_THEMES } from '../lib/themes';
-import { APP_BACKGROUNDS } from '../lib/backgrounds';
+import { CHESS_THEMES, themeManager } from '../lib/themes';
+import { APP_BACKGROUNDS, backgroundManager } from '../lib/backgrounds';
 import { UserData } from '../types';
 import { doc, updateDoc, arrayUnion } from 'firebase/firestore';
 import { getDb } from '../lib/firebase';
@@ -61,10 +61,15 @@ export default function Store({ currentUser }: StoreProps) {
     if (coins < price || unlockedThemes.includes(themeId)) return;
     setBuying(themeId);
     try {
+      themeManager.setTheme(themeId);
+      localStorage.setItem('chess-theme', themeId);
+      window.dispatchEvent(new Event('storage'));
+
       const db = getDb();
       await updateDoc(doc(db, 'users', currentUser.uid), {
         coins: coins - price,
-        unlockedThemes: arrayUnion(themeId)
+        unlockedThemes: arrayUnion(themeId),
+        activeTheme: themeId
       });
     } catch (err) {
       console.error('Error buying theme:', err);
@@ -77,12 +82,14 @@ export default function Store({ currentUser }: StoreProps) {
     const theme = CHESS_THEMES.find(t => t.id === themeId);
     if (!unlockedThemes.includes(themeId) && theme?.price !== 0) return;
     try {
+      themeManager.setTheme(themeId);
+      localStorage.setItem('chess-theme', themeId);
+      window.dispatchEvent(new Event('storage'));
+
       const db = getDb();
       await updateDoc(doc(db, 'users', currentUser.uid), {
         activeTheme: themeId
       });
-      localStorage.setItem('chess-theme', themeId);
-      window.dispatchEvent(new Event('storage'));
     } catch (err) {
       console.error('Error equipping theme:', err);
     }
@@ -92,10 +99,15 @@ export default function Store({ currentUser }: StoreProps) {
     if (coins < price || unlockedBackgrounds.includes(bgId)) return;
     setBuying(bgId);
     try {
+      backgroundManager.setBackground(bgId);
+      localStorage.setItem('chess-background', bgId);
+      window.dispatchEvent(new Event('storage'));
+
       const db = getDb();
       await updateDoc(doc(db, 'users', currentUser.uid), {
         coins: coins - price,
-        unlockedBackgrounds: arrayUnion(bgId)
+        unlockedBackgrounds: arrayUnion(bgId),
+        activeBackground: bgId
       });
     } catch (err) {
       console.error('Error buying background:', err);
@@ -108,12 +120,14 @@ export default function Store({ currentUser }: StoreProps) {
     const bg = APP_BACKGROUNDS.find(b => b.id === bgId);
     if (!unlockedBackgrounds.includes(bgId) && bg?.price !== 0) return;
     try {
+      backgroundManager.setBackground(bgId);
+      localStorage.setItem('chess-background', bgId);
+      window.dispatchEvent(new Event('storage'));
+
       const db = getDb();
       await updateDoc(doc(db, 'users', currentUser.uid), {
         activeBackground: bgId
       });
-      localStorage.setItem('chess-background', bgId);
-      window.dispatchEvent(new Event('storage'));
     } catch (err) {
       console.error('Error equipping background:', err);
     }
@@ -554,7 +568,7 @@ export default function Store({ currentUser }: StoreProps) {
                   boardOrientation: "white",
                   darkSquareStyle: previewTheme.darkSquareStyle,
                   lightSquareStyle: previewTheme.lightSquareStyle,
-                  pieces: getCustomPieces(previewTheme?.pieceSet || '3d_staunton'),
+                  pieces: getCustomPieces(previewTheme?.pieceSet || 'wood'),
                   animationDurationInMs: 300
                 }}
               />

@@ -2,22 +2,28 @@ import React from 'react';
 
 const pieceNames = ['wP', 'wN', 'wB', 'wR', 'wQ', 'wK', 'bP', 'bN', 'bB', 'bR', 'bQ', 'bK'];
 
-export const getCustomPieces = (pieceSet: string = '3d_staunton') => {
-  if (pieceSet === 'default' || pieceSet === 'classic') return undefined;
+export const getCustomPieces = (pieceSet: string = 'wood') => {
+  if (pieceSet === 'default') return undefined;
   
+  // Normalise piece set: 3d_staunton is replaced by centered wooden Staunton pieces
+  const actualSet = (!pieceSet || pieceSet === '3d_staunton') ? 'wood' : pieceSet;
+
   return pieceNames.reduce((acc, piece) => {
     acc[piece] = ({ squareWidth }: { squareWidth?: number } = {}) => (
       <div 
-        className="w-full h-full flex items-center justify-center pointer-events-none select-none relative p-[3%]"
+        className="w-full h-full flex items-center justify-center pointer-events-none select-none relative box-border"
         style={{
           width: squareWidth ? `${squareWidth}px` : '100%',
           height: squareWidth ? `${squareWidth}px` : '100%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
         }}
       >
         <img 
-          src={`https://images.chesscomfiles.com/chess-themes/pieces/${pieceSet}/150/${piece.toLowerCase()}.png`} 
+          src={`https://images.chesscomfiles.com/chess-themes/pieces/${actualSet}/150/${piece.toLowerCase()}.png`} 
           alt={piece}
-          className="max-w-[90%] max-h-[90%] w-auto h-auto object-contain pointer-events-none drop-shadow-[0_4px_6px_rgba(0,0,0,0.45)] transition-transform"
+          className="w-[85%] h-[85%] max-w-full max-h-full object-contain pointer-events-none drop-shadow-[0_2px_4px_rgba(0,0,0,0.3)] transition-transform select-none"
           draggable={false}
           loading="eager"
         />
@@ -27,7 +33,7 @@ export const getCustomPieces = (pieceSet: string = '3d_staunton') => {
   }, {} as Record<string, any>);
 };
 
-export const customPieces = getCustomPieces('3d_staunton');
+export const customPieces = getCustomPieces('wood');
 
 export const boardStyles = {
   darkSquareStyle: { backgroundColor: '#703816' },

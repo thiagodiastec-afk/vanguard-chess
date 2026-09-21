@@ -14,7 +14,7 @@ export const CHESS_THEMES: Theme[] = [
     {
     id: 'luxury',
     name: 'Madeira Clássica',
-    pieceSet: '3d_staunton',
+    pieceSet: 'wood',
     darkSquareStyle: { backgroundColor: '#422410' },
     lightSquareStyle: { backgroundColor: '#dca46c' },
     boardWrapperClass: 'border-[12px] border-[#5e3219] ring-2 ring-[#3b1d0d] shadow-[0_15px_30px_rgba(0,0,0,0.5)]',
@@ -25,7 +25,7 @@ export const CHESS_THEMES: Theme[] = [
   {
     id: 'classic',
     name: 'Clássico (Verde)',
-    pieceSet: 'classic',
+    pieceSet: 'neo',
     darkSquareStyle: { backgroundColor: '#779556' },
     lightSquareStyle: { backgroundColor: '#ebecd0' },
     price: 0,
@@ -151,10 +151,17 @@ class ThemeManager {
 
   constructor() {
     this.currentTheme = CHESS_THEMES.find(t => t.id === 'luxury') || CHESS_THEMES[0];
-    const saved = localStorage.getItem('chess-theme');
-    if (saved) {
-      const theme = CHESS_THEMES.find(t => t.id === saved);
-      if (theme) this.currentTheme = theme;
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('chess-theme');
+      if (saved) {
+        const theme = CHESS_THEMES.find(t => t.id === saved);
+        if (theme) this.currentTheme = theme;
+      }
+      window.addEventListener('storage', (e) => {
+        if (e.key === 'chess-theme' && e.newValue) {
+          this.setTheme(e.newValue);
+        }
+      });
     }
   }
 
@@ -166,7 +173,9 @@ class ThemeManager {
     const theme = CHESS_THEMES.find(t => t.id === id);
     if (theme) {
       this.currentTheme = theme;
-      localStorage.setItem('chess-theme', id);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('chess-theme', id);
+      }
       this.notify();
     }
   }

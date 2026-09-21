@@ -54,7 +54,7 @@ export default function Game({ game: initialGame, currentUser, onExit }: GamePro
     return () => unsubscribe();
   }, [initialGame.id]);
 
-  const theme = React.useMemo(() => CHESS_THEMES.find(t => t.id === liveGame.whiteThemeId) || localTheme, [liveGame.whiteThemeId, localTheme]);
+  const theme = localTheme;
   const [chess, setChess] = useState(() => {
     const c = new Chess();
     if (initialGame.fen) {
@@ -868,7 +868,7 @@ export default function Game({ game: initialGame, currentUser, onExit }: GamePro
                     boardOrientation: isSpectator ? "white" : (isWhite ? "white" : "black"),
                     darkSquareStyle: theme.darkSquareStyle,
                     lightSquareStyle: theme.lightSquareStyle,
-                    pieces: getCustomPieces(theme.pieceSet || '3d_staunton'),
+                    pieces: getCustomPieces(theme.pieceSet || 'wood'),
                     squareStyles: { ...moveHighlights, ...optionSquares },
                     animationDurationInMs: 200
                   }}

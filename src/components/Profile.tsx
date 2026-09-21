@@ -1,9 +1,11 @@
 import { UserData } from '../types';
-import { User, Swords, Activity, Edit2 } from 'lucide-react';
+import { User, Swords, Activity, Edit2, Palette, Check } from 'lucide-react';
 import { useState } from 'react';
 import { updateDoc, doc } from 'firebase/firestore';
 import { getDb } from '../lib/firebase';
 import { ACHIEVEMENTS } from '../lib/achievements';
+import { CHESS_THEMES, themeManager, useTheme } from '../lib/themes';
+import { cn } from '../lib/utils';
 import { Award, Trophy, Zap, Shield, Bot, Star, Target } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
@@ -12,9 +14,24 @@ interface ProfileProps {
 }
 
 export default function Profile({ currentUser }: ProfileProps) {
+  const currentTheme = useTheme();
   const [isEditingName, setIsEditingName] = useState(false);
   const [newName, setNewName] = useState(currentUser.displayName);
   const [isSaving, setIsSaving] = useState(false);
+
+  const handleEquipTheme = async (themeId: string) => {
+    themeManager.setTheme(themeId);
+    localStorage.setItem('chess-theme', themeId);
+    window.dispatchEvent(new Event('storage'));
+    try {
+      const db = getDb();
+      await updateDoc(doc(db, 'users', currentUser.uid), {
+        activeTheme: themeId
+      });
+    } catch (e) {
+      console.error("Error saving theme:", e);
+    }
+  };
 
   const handleSaveName = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -144,6 +161,68 @@ export default function Profile({ currentUser }: ProfileProps) {
       </div>
 
       
+      {/* Themes and Customization */}
+      <div className="bg-neutral-800 p-6 rounded-2xl border border-neutral-700/50 shadow-xl">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-xl font-bold text-white flex items-center gap-2">
+            <Palette className="w-6 h-6 text-emerald-500" />
+            Tema Equipado para Jogar
+          </h3>
+          <span className="text-sm font-semibold text-emerald-400 bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20">
+            {currentTheme.name}
+          </span>
+        </div>
+        <p className="text-sm text-neutral-400 mb-6">
+          Escolha qualquer um dos seus temas desbloqueados. O tema selecionado será usado automaticamente em todas as suas partidas.
+        </p>
+
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+          {CHESS_THEMES.map(theme => {
+            const isUnlocked = currentUser.unlockedThemes?.includes(theme.id) || theme.price === 0;
+            const isEquipped = currentTheme.id === theme.id;
+
+            return (
+              <button
+                key={theme.id}
+                onClick={() => {
+                  if (isUnlocked) handleEquipTheme(theme.id);
+                }}
+                disabled={!isUnlocked}
+                className={cn(
+                  "p-3 rounded-xl border flex flex-col items-center text-center transition-all relative overflow-hidden group",
+                  isEquipped 
+                    ? "border-emerald-500 bg-emerald-500/10 shadow-[0_0_15px_rgba(16,185,129,0.15)] ring-2 ring-emerald-500/30" 
+                    : isUnlocked 
+                      ? "border-neutral-700 bg-neutral-900/60 hover:border-neutral-500 hover:bg-neutral-900" 
+                      : "border-neutral-800 bg-neutral-900/30 opacity-40 cursor-not-allowed"
+                )}
+              >
+                <div className="w-full aspect-video rounded-lg mb-2 overflow-hidden flex border border-neutral-700/60 shadow-inner">
+                  <div className="flex-1 flex flex-col">
+                    <div className="flex-1" style={theme.lightSquareStyle} />
+                    <div className="flex-1" style={theme.darkSquareStyle} />
+                  </div>
+                  <div className="flex-1 flex flex-col">
+                    <div className="flex-1" style={theme.darkSquareStyle} />
+                    <div className="flex-1" style={theme.lightSquareStyle} />
+                  </div>
+                </div>
+                <span className="text-xs font-bold text-white truncate w-full mb-1">{theme.name}</span>
+                {isEquipped ? (
+                  <span className="text-[10px] font-bold text-emerald-400 flex items-center gap-1">
+                    <Check className="w-3 h-3" /> Ativo
+                  </span>
+                ) : isUnlocked ? (
+                  <span className="text-[10px] text-neutral-400 group-hover:text-white">Equipar</span>
+                ) : (
+                  <span className="text-[10px] text-yellow-500 font-semibold">{theme.price} Moedas</span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
       {/* Achievements Section */}
       <div className="bg-neutral-800 p-6 rounded-2xl border border-neutral-700/50 shadow-xl">
         <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2">

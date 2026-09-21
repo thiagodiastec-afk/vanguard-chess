@@ -799,7 +799,7 @@ export default function ComputerGame({ difficulty, currentUser, onExit }: Comput
                     boardOrientation: playerColor === 'w' ? 'white' : 'black',
                     darkSquareStyle: theme.darkSquareStyle,
                     lightSquareStyle: theme.lightSquareStyle,
-                    pieces: getCustomPieces(theme.pieceSet || '3d_staunton'),
+                    pieces: getCustomPieces(theme.pieceSet || 'wood'),
                     squareStyles: { ...moveHighlights, ...optionSquares },
                     arrows: hintArrow ? [{ startSquare: hintArrow[0], endSquare: hintArrow[1], color: 'rgba(245, 158, 11, 0.8)' }] : [],
                     dropSquareStyle: { boxShadow: 'inset 0 0 1px 6px rgba(255,255,255,0.75)' },

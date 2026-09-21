@@ -811,20 +811,45 @@ export default function App() {
                   <span className="font-medium text-zinc-200">Tema do Tabuleiro</span>
                 </div>
                 <div className="grid grid-cols-5 gap-2">
-                  {CHESS_THEMES.map(t => (
-                    <button
-                      key={t.id}
-                      onClick={() => themeManager.setTheme(t.id)}
-                      title={t.name}
-                      className={cn(
-                        "aspect-square rounded-xl border-2 overflow-hidden flex flex-col transition-all hover:scale-105 active:scale-95",
-                        currentTheme.id === t.id ? "border-emerald-500 shadow-md shadow-emerald-500/20" : "border-zinc-700 hover:border-zinc-500"
-                      )}
-                    >
-                      <div className="flex-1 w-full" style={t.lightSquareStyle} />
-                      <div className="flex-1 w-full" style={t.darkSquareStyle} />
-                    </button>
-                  ))}
+                  {CHESS_THEMES.map(t => {
+                    const isUnlocked = !userData || (userData.unlockedThemes?.includes(t.id)) || t.price === 0;
+                    const isSelected = currentTheme.id === t.id;
+                    return (
+                      <button
+                        key={t.id}
+                        onClick={async () => {
+                          if (!isUnlocked) {
+                            setShowSettings(false);
+                            setActiveTab('store');
+                            return;
+                          }
+                          themeManager.setTheme(t.id);
+                          if (userData?.uid) {
+                            try {
+                              const db = getDb();
+                              await updateDoc(doc(db, 'users', userData.uid), { activeTheme: t.id });
+                            } catch (e) {
+                              console.error("Error saving activeTheme to user doc:", e);
+                            }
+                          }
+                        }}
+                        title={isUnlocked ? t.name : `${t.name} (Bloqueado - Loja)`}
+                        className={cn(
+                          "aspect-square rounded-xl border-2 overflow-hidden flex flex-col transition-all hover:scale-105 active:scale-95 relative",
+                          isSelected ? "border-emerald-500 shadow-md shadow-emerald-500/20 ring-2 ring-emerald-500/30" : "border-zinc-700 hover:border-zinc-500",
+                          !isUnlocked && "opacity-60 cursor-pointer"
+                        )}
+                      >
+                        <div className="flex-1 w-full" style={t.lightSquareStyle} />
+                        <div className="flex-1 w-full" style={t.darkSquareStyle} />
+                        {!isUnlocked && (
+                          <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                            <span className="text-[9px] font-bold text-yellow-400">Loja</span>
+                          </div>
+                        )}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             </div>
