@@ -4,7 +4,7 @@ import { useTheme, CHESS_THEMES } from '../lib/themes';
 import { sounds } from '../lib/sounds';
 import { Chessboard } from 'react-chessboard';
 import confetti from 'canvas-confetti';
-import { doc, updateDoc, increment, arrayUnion } from 'firebase/firestore';
+import { doc, updateDoc, increment, arrayUnion, onSnapshot } from 'firebase/firestore';
 import { getDb } from '../lib/firebase';
 import { GameData, UserData } from '../types';
 import { 
@@ -29,12 +29,49 @@ interface GameProps {
   onExit: () => void;
 }
 
-export default function Game({ game, currentUser, onExit }: GameProps) {
+export default function Game({ game: initialGame, currentUser, onExit }: GameProps) {
   const localTheme = useTheme();
-  const theme = React.useMemo(() => CHESS_THEMES.find(t => t.id === game.whiteThemeId) || localTheme, [game.whiteThemeId, localTheme]);
-  const [chess] = useState(new Chess());
+  const [liveGame, setLiveGame] = useState<GameData>(initialGame);
+
+  // Sync prop changes into liveGame
+  useEffect(() => {
+    setLiveGame(initialGame);
+  }, [initialGame]);
+
+  // Real-time direct Firestore document listener for instantaneous sync between players
+  useEffect(() => {
+    if (!initialGame.id) return;
+    const db = getDb();
+    const gameDocRef = doc(db, 'games', initialGame.id);
+    const unsubscribe = onSnapshot(gameDocRef, (docSnap) => {
+      if (docSnap.exists()) {
+        const data = { id: docSnap.id, ...docSnap.data() } as GameData;
+        setLiveGame(data);
+      }
+    }, (err) => {
+      console.error("Direct game doc listener error:", err);
+    });
+    return () => unsubscribe();
+  }, [initialGame.id]);
+
+  const theme = React.useMemo(() => CHESS_THEMES.find(t => t.id === liveGame.whiteThemeId) || localTheme, [liveGame.whiteThemeId, localTheme]);
+  const [chess, setChess] = useState(() => {
+    const c = new Chess();
+    if (initialGame.fen) {
+      try {
+        if (initialGame.pgn) {
+          c.loadPgn(initialGame.pgn);
+        } else {
+          c.load(initialGame.fen);
+        }
+      } catch {
+        try { c.load(initialGame.fen); } catch {}
+      }
+    }
+    return c;
+  });
   const isInitialMount = useRef(true);
-  const [fen, setFen] = useState(game.fen || 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1');
+  const [fen, setFen] = useState(initialGame.fen || 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1');
   const [cheatWarnings, setCheatWarnings] = useState(0);
   const [showCheatAlert, setShowCheatAlert] = useState(false);
   const [showReview, setShowReview] = useState(false);
@@ -42,8 +79,8 @@ export default function Game({ game, currentUser, onExit }: GameProps) {
   const [drawOfferFeedback, setDrawOfferFeedback] = useState<string | null>(null);
 
   // Time management
-  const [whiteDisplayTime, setWhiteDisplayTime] = useState<number>(game.whiteTime ?? game.timeControl ?? 300);
-  const [blackDisplayTime, setBlackDisplayTime] = useState<number>(game.blackTime ?? game.timeControl ?? 300);
+  const [whiteDisplayTime, setWhiteDisplayTime] = useState<number>(liveGame.whiteTime ?? liveGame.timeControl ?? 300);
+  const [blackDisplayTime, setBlackDisplayTime] = useState<number>(liveGame.blackTime ?? liveGame.timeControl ?? 300);
   const [currentTime, setCurrentTime] = useState<number>(Date.now());
 
   const safeUser = currentUser || {
@@ -54,20 +91,20 @@ export default function Game({ game, currentUser, onExit }: GameProps) {
     coins: 0
   };
 
-  const isWhite = safeUser.uid === game.whiteId;
-  const isBlack = safeUser.uid === game.blackId;
+  const isWhite = safeUser.uid === liveGame.whiteId;
+  const isBlack = safeUser.uid === liveGame.blackId;
   const isSpectator = !isWhite && !isBlack;
   
-  const bottomName = isSpectator ? (game.whiteName || 'Brancas') : (safeUser.displayName || 'Jogador');
-  const bottomElo = isSpectator ? (game.whiteElo || 1200) : (safeUser.elo || 1200);
+  const bottomName = isSpectator ? (liveGame.whiteName || 'Brancas') : (safeUser.displayName || 'Jogador');
+  const bottomElo = isSpectator ? (liveGame.whiteElo || 1200) : (safeUser.elo || 1200);
   const bottomLabel = isSpectator ? '(Brancas)' : '(Você)';
   
   const opponentName = isSpectator 
-    ? (game.blackName || 'Pretas') 
-    : (isWhite ? (game.blackName || 'Oponente') : (game.whiteName || 'Oponente'));
+    ? (liveGame.blackName || 'Pretas') 
+    : (isWhite ? (liveGame.blackName || 'Oponente') : (liveGame.whiteName || 'Oponente'));
   const opponentElo = isSpectator 
-    ? (game.blackElo || 1200) 
-    : (isWhite ? (game.blackElo || 1200) : (game.whiteElo || 1200));
+    ? (liveGame.blackElo || 1200) 
+    : (isWhite ? (liveGame.blackElo || 1200) : (liveGame.whiteElo || 1200));
   const topLabel = isSpectator ? '(Pretas)' : '';
 
   const [moveFrom, setMoveFrom] = useState<string | null>(null);
@@ -81,9 +118,9 @@ export default function Game({ game, currentUser, onExit }: GameProps) {
 
   // Presence Heartbeat: updates presence every 4s and cleanup on unmount
   useEffect(() => {
-    if (!safeUser.uid || safeUser.uid === 'guest' || isSpectator || game.status !== 'playing') return;
+    if (!safeUser.uid || safeUser.uid === 'guest' || isSpectator || liveGame.status !== 'playing') return;
     const db = getDb();
-    const gameRef = doc(db, 'games', game.id);
+    const gameRef = doc(db, 'games', liveGame.id);
 
     const updatePresence = (online: boolean) => {
       const fieldHeartbeat = isWhite ? 'whiteHeartbeat' : 'blackHeartbeat';
@@ -105,93 +142,96 @@ export default function Game({ game, currentUser, onExit }: GameProps) {
       window.removeEventListener('beforeunload', handleBeforeUnload);
       updatePresence(false);
     };
-  }, [game.id, safeUser.uid, isWhite, isSpectator, game.status]);
+  }, [liveGame.id, safeUser.uid, isWhite, isSpectator, liveGame.status]);
 
   // Check opponent presence & disconnection
-  const opponentHeartbeat = isWhite ? game.blackHeartbeat : game.whiteHeartbeat;
-  const opponentOnline = isWhite ? game.blackOnline : game.whiteOnline;
-  const isOpponentDisconnected = game.status === 'playing' && !isSpectator && (
+  const opponentHeartbeat = isWhite ? liveGame.blackHeartbeat : liveGame.whiteHeartbeat;
+  const opponentOnline = isWhite ? liveGame.blackOnline : liveGame.whiteOnline;
+  const isOpponentDisconnected = liveGame.status === 'playing' && !isSpectator && (
     opponentOnline === false || (opponentHeartbeat ? (currentTime - opponentHeartbeat > 20000) : false)
   );
 
   // Inactivity calculation (2 minutes = 120s idle on opponent's turn -> 20s warning countdown)
-  const isOpponentsTurn = game.status === 'playing' && !isSpectator && ((game.turn === 'w' && !isWhite) || (game.turn === 'b' && isWhite));
-  const timeSinceLastMove = Math.max(0, (currentTime - (game.lastMoveAt || currentTime)) / 1000);
+  const isOpponentsTurn = liveGame.status === 'playing' && !isSpectator && ((liveGame.turn === 'w' && !isWhite) || (liveGame.turn === 'b' && isWhite));
+  const timeSinceLastMove = Math.max(0, (currentTime - (liveGame.lastMoveAt || currentTime)) / 1000);
   
   const isOpponentInactive = isOpponentsTurn && timeSinceLastMove >= 120;
   // Countdown 20s (from 120s to 140s)
   const inactivityCountdown = Math.max(0, Math.ceil(140 - timeSinceLastMove));
 
-  // Sync FEN/PGN from Firebase
+  // Sync FEN/PGN from real-time liveGame
   useEffect(() => {
-    if (game.fen) {
-      if (game.fen !== chess.fen()) {
-        try {
-          const oldPieces = chess.board().flat().filter(p => p !== null).length;
-          
-          let loaded = false;
-          if (game.pgn) {
-            try {
-              chess.loadPgn(game.pgn);
-              loaded = true;
-            } catch (pgnErr) {
-              // fallback to load FEN directly
-            }
-          }
-          if (!loaded) {
-            chess.load(game.fen);
-          }
-
-          const newPieces = chess.board().flat().filter(p => p !== null).length;
-          
-          if (!isInitialMount.current) {
-            sounds.playMove(newPieces < oldPieces, chess.inCheck());
-          }
-          
-          setFen(chess.fen());
-        } catch (e) {
-          console.error("Invalid FEN from server", e);
+    if (liveGame.fen && liveGame.fen !== chess.fen()) {
+      try {
+        const nextChess = new Chess();
+        let loaded = false;
+        if (liveGame.pgn) {
           try {
-            chess.load(game.fen);
-            setFen(chess.fen());
-          } catch (inner) {
-            console.error("Could not load FEN", inner);
+            nextChess.loadPgn(liveGame.pgn);
+            if (nextChess.fen() === liveGame.fen) {
+              loaded = true;
+            }
+          } catch {
+            // fallback
           }
+        }
+        if (!loaded) {
+          nextChess.load(liveGame.fen);
+        }
+
+        const oldPieces = chess.board().flat().filter(p => p !== null).length;
+        const newPieces = nextChess.board().flat().filter(p => p !== null).length;
+        
+        if (!isInitialMount.current) {
+          sounds.playMove(newPieces < oldPieces, nextChess.inCheck());
+        }
+        
+        setChess(nextChess);
+        setFen(nextChess.fen());
+      } catch (e) {
+        console.error("Invalid FEN from server", e);
+        try {
+          const fallbackChess = new Chess();
+          fallbackChess.load(liveGame.fen);
+          setChess(fallbackChess);
+          setFen(fallbackChess.fen());
+        } catch (inner) {
+          console.error("Could not load FEN", inner);
         }
       }
     }
     isInitialMount.current = false;
-  }, [game.fen, game.pgn, chess]);
+  }, [liveGame.fen, liveGame.pgn]);
 
   // Sync clocks
   useEffect(() => {
-    setWhiteDisplayTime(game.whiteTime ?? game.timeControl ?? 0);
-    setBlackDisplayTime(game.blackTime ?? game.timeControl ?? 0);
-  }, [game.whiteTime, game.blackTime, game.timeControl, game.lastMoveAt]);
+    setWhiteDisplayTime(liveGame.whiteTime ?? liveGame.timeControl ?? 0);
+    setBlackDisplayTime(liveGame.blackTime ?? liveGame.timeControl ?? 0);
+  }, [liveGame.whiteTime, liveGame.blackTime, liveGame.timeControl, liveGame.lastMoveAt]);
 
   // Game clock countdown loop
   useEffect(() => {
-    if (game.status !== 'playing' || !game.timeControl) return;
+    if (liveGame.status !== 'playing' || !liveGame.timeControl) return;
 
     const intervalId = setInterval(() => {
       const now = Date.now();
-      const lastMove = game.lastMoveAt || now;
+      const lastMove = liveGame.lastMoveAt || now;
       const timeSpent = Math.max(0, (now - lastMove) / 1000);
-      if (game.turn === 'w') {
-        const remaining = Math.max(0, (game.whiteTime ?? game.timeControl) - timeSpent);
+      if (liveGame.turn === 'w') {
+        const remaining = Math.max(0, (liveGame.whiteTime ?? liveGame.timeControl) - timeSpent);
         setWhiteDisplayTime(remaining);
         if (remaining <= 0 && !isSpectator) {
-          updateDoc(doc(getDb(), 'games', game.id), { 
+          updateDoc(doc(getDb(), 'games', liveGame.id), { 
             status: 'black_won',
             endedReason: 'timeout',
             lastMoveAt: Date.now()
           }).catch(console.error);
         }
       } else {
-        const remaining = Math.max(0, (game.blackTime ?? game.timeControl) - timeSpent);
+        const remaining = Math.max(0, (liveGame.blackTime ?? liveGame.timeControl) - timeSpent);
         setBlackDisplayTime(remaining);
         if (remaining <= 0 && !isSpectator) {
-          updateDoc(doc(getDb(), 'games', game.id), { 
+          updateDoc(doc(getDb(), 'games', liveGame.id), { 
             status: 'white_won',
             endedReason: 'timeout',
             lastMoveAt: Date.now()
@@ -201,19 +241,19 @@ export default function Game({ game, currentUser, onExit }: GameProps) {
     }, 100);
 
     return () => clearInterval(intervalId);
-  }, [game.status, game.turn, game.lastMoveAt, game.whiteTime, game.blackTime, game.timeControl, isSpectator, game.id]);
+  }, [liveGame.status, liveGame.turn, liveGame.lastMoveAt, liveGame.whiteTime, liveGame.blackTime, liveGame.timeControl, isSpectator, liveGame.id]);
 
   // Notification on player turn
   useEffect(() => {
-    if (game.status === 'playing') {
-      const isMyTurn = !isSpectator && ((game.turn === 'w' && isWhite) || (game.turn === 'b' && isBlack));
-      if (isMyTurn && !isInitialMount.current && game.lastMoveAt > Date.now() - 5000) {
+    if (liveGame.status === 'playing') {
+      const isMyTurn = !isSpectator && ((liveGame.turn === 'w' && isWhite) || (liveGame.turn === 'b' && isBlack));
+      if (isMyTurn && !isInitialMount.current && liveGame.lastMoveAt > Date.now() - 5000) {
         sendNotification('Sua vez de jogar!', {
           body: `É a sua vez de jogar contra ${opponentName}.`
         });
       }
     }
-  }, [game.turn, game.status, isWhite, opponentName, game.lastMoveAt, isSpectator]);
+  }, [liveGame.turn, liveGame.status, isWhite, opponentName, liveGame.lastMoveAt, isSpectator]);
 
   const calculateEloChange = (myElo: number, opponentEloVal: number, result: 1 | 0.5 | 0) => {
     const K = 32;
@@ -223,10 +263,10 @@ export default function Game({ game, currentUser, onExit }: GameProps) {
 
   // Fair Play Heuristics (Anti-Cheat)
   useEffect(() => {
-    if (isSpectator || game.status !== 'playing') return;
+    if (isSpectator || liveGame.status !== 'playing') return;
 
     const handleVisibilityChange = () => {
-      const isMyTurn = (game.turn === 'w' && isWhite) || (game.turn === 'b' && isBlack);
+      const isMyTurn = (liveGame.turn === 'w' && isWhite) || (liveGame.turn === 'b' && isBlack);
       if (document.visibilityState === 'hidden' && isMyTurn) {
         setCheatWarnings(prev => {
           const newCount = prev + 1;
@@ -241,21 +281,21 @@ export default function Game({ game, currentUser, onExit }: GameProps) {
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-  }, [game.status, game.turn, isWhite, isBlack, isSpectator]);
+  }, [liveGame.status, liveGame.turn, isWhite, isBlack, isSpectator]);
 
   const statsUpdated = useRef(false);
 
   // Update user stats & trophies upon game conclusion
   useEffect(() => {
-    if (game.status !== 'playing' && !statsUpdated.current) {
+    if (liveGame.status !== 'playing' && !statsUpdated.current) {
       statsUpdated.current = true;
       const updateStats = async () => {
         try {
           if (!safeUser.uid || safeUser.uid === 'guest') return;
           const db = getDb();
           let numericResult: 1 | 0.5 | 0 = 0;
-          if (game.status === 'draw') numericResult = 0.5;
-          else if ((game.status === 'white_won' && isWhite) || (game.status === 'black_won' && !isWhite)) numericResult = 1;
+          if (liveGame.status === 'draw') numericResult = 0.5;
+          else if ((liveGame.status === 'white_won' && isWhite) || (liveGame.status === 'black_won' && !isWhite)) numericResult = 1;
           const userElo = Number(safeUser.elo) || 1200;
           const oppElo = Number(opponentElo) || 1200;
           const eloChange = calculateEloChange(userElo, oppElo, numericResult);
@@ -303,26 +343,26 @@ export default function Game({ game, currentUser, onExit }: GameProps) {
       
       updateStats();
     }
-  }, [game.status, isWhite, safeUser, opponentElo]);
+  }, [liveGame.status, isWhite, safeUser, opponentElo]);
 
   // Action: Claim Victory by Inactivity / Abandonment
   const claimVictoryByInactivity = async () => {
-    if (game.status !== 'playing' || isSpectator) return;
+    if (liveGame.status !== 'playing' || isSpectator) return;
     const db = getDb();
     const winningStatus = isWhite ? 'white_won' : 'black_won';
-    await updateDoc(doc(db, 'games', game.id), {
+    await updateDoc(doc(db, 'games', liveGame.id), {
       status: winningStatus,
       endedReason: 'inactivity',
-      abandonedBy: isWhite ? game.blackId : game.whiteId,
+      abandonedBy: isWhite ? liveGame.blackId : liveGame.whiteId,
       lastMoveAt: Date.now()
     });
   };
 
   // Action: Declare / Agree Draw
   const claimDraw = async () => {
-    if (game.status !== 'playing' || isSpectator) return;
+    if (liveGame.status !== 'playing' || isSpectator) return;
     const db = getDb();
-    await updateDoc(doc(db, 'games', game.id), {
+    await updateDoc(doc(db, 'games', liveGame.id), {
       status: 'draw',
       endedReason: 'draw_agreement',
       drawOffer: null,
@@ -332,9 +372,9 @@ export default function Game({ game, currentUser, onExit }: GameProps) {
 
   // Action: Offer Draw
   const offerDraw = async () => {
-    if (game.status !== 'playing' || isSpectator) return;
+    if (liveGame.status !== 'playing' || isSpectator) return;
     const db = getDb();
-    await updateDoc(doc(db, 'games', game.id), {
+    await updateDoc(doc(db, 'games', liveGame.id), {
       drawOffer: isWhite ? 'w' : 'b'
     });
     setDrawOfferFeedback('Proposta de empate enviada!');
@@ -344,17 +384,17 @@ export default function Game({ game, currentUser, onExit }: GameProps) {
   // Action: Decline Draw Offer
   const declineDraw = async () => {
     const db = getDb();
-    await updateDoc(doc(db, 'games', game.id), {
+    await updateDoc(doc(db, 'games', liveGame.id), {
       drawOffer: null
     });
   };
 
   // Action: Resign Game
   const confirmResign = async () => {
-    if (game.status !== 'playing' || isSpectator) return;
+    if (liveGame.status !== 'playing' || isSpectator) return;
     const db = getDb();
     const winningStatus = isWhite ? 'black_won' : 'white_won';
-    await updateDoc(doc(db, 'games', game.id), {
+    await updateDoc(doc(db, 'games', liveGame.id), {
       status: winningStatus,
       endedReason: 'resignation',
       resignedBy: safeUser.uid,
@@ -449,7 +489,7 @@ export default function Game({ game, currentUser, onExit }: GameProps) {
     const square = typeof args === 'string' ? args : args?.square;
     if (!square) return;
     const isMyTurn = !isSpectator && ((chess.turn() === 'w' && isWhite) || (chess.turn() === 'b' && isBlack));
-    if (!isMyTurn || game.status !== 'playing') return;
+    if (!isMyTurn || liveGame.status !== 'playing') return;
 
     function resetFirstMove(sq: string) {
       setMoveFrom(sq);
@@ -465,38 +505,40 @@ export default function Game({ game, currentUser, onExit }: GameProps) {
     }
 
     try {
-      const move = chess.move({
+      const nextChess = new Chess(chess.fen());
+      const move = nextChess.move({
         from: moveFrom,
         to: square,
         promotion: 'q',
       });
 
       if (move) {
-        sounds.playMove(move.captured != null, chess.inCheck());
-        setFen(chess.fen());
+        sounds.playMove(move.captured != null, nextChess.inCheck());
+        setChess(nextChess);
+        setFen(nextChess.fen());
         setMoveFrom(null);
         setOptionSquares({});
         
         const db = getDb();
-        const gameRef = doc(db, 'games', game.id);
+        const gameRef = doc(db, 'games', liveGame.id);
         
-        let newStatus: GameData['status'] = game.status;
+        let newStatus: GameData['status'] = liveGame.status;
         let endedReason: GameData['endedReason'] = undefined;
 
-        if (chess.isCheckmate()) {
+        if (nextChess.isCheckmate()) {
           newStatus = isWhite ? 'white_won' : 'black_won';
           endedReason = 'checkmate';
-        } else if (chess.isDraw() || chess.isStalemate() || chess.isThreefoldRepetition()) {
+        } else if (nextChess.isDraw() || nextChess.isStalemate() || nextChess.isThreefoldRepetition()) {
           newStatus = 'draw';
           endedReason = 'stalemate';
         }
 
-        const timeSpent = (Date.now() - (game.lastMoveAt || Date.now())) / 1000;
-        let newWhiteTime = game.whiteTime ?? game.timeControl ?? 0;
-        let newBlackTime = game.blackTime ?? game.timeControl ?? 0;
+        const timeSpent = (Date.now() - (liveGame.lastMoveAt || Date.now())) / 1000;
+        let newWhiteTime = liveGame.whiteTime ?? liveGame.timeControl ?? 0;
+        let newBlackTime = liveGame.blackTime ?? liveGame.timeControl ?? 0;
 
-        if (game.timeControl) {
-          if (chess.turn() === 'b') {
+        if (liveGame.timeControl) {
+          if (nextChess.turn() === 'b') {
             newWhiteTime = Math.max(0, newWhiteTime - timeSpent);
           } else {
             newBlackTime = Math.max(0, newBlackTime - timeSpent);
@@ -504,9 +546,9 @@ export default function Game({ game, currentUser, onExit }: GameProps) {
         }
 
         const updateData: Record<string, any> = {
-          fen: chess.fen(),
-          pgn: chess.pgn() || '',
-          turn: chess.turn(),
+          fen: nextChess.fen(),
+          pgn: nextChess.pgn() || '',
+          turn: nextChess.turn(),
           lastMoveAt: Date.now(),
           status: newStatus,
           whiteTime: newWhiteTime,
@@ -549,41 +591,43 @@ export default function Game({ game, currentUser, onExit }: GameProps) {
     }
 
     const isMyTurn = !isSpectator && ((chess.turn() === 'w' && isWhite) || (chess.turn() === 'b' && isBlack));
-    if (!isMyTurn || game.status !== 'playing') return false;
+    if (!isMyTurn || liveGame.status !== 'playing') return false;
 
     try {
-      const move = chess.move({
+      const nextChess = new Chess(chess.fen());
+      const move = nextChess.move({
         from: sourceSquare,
         to: targetSquare,
         promotion: 'q',
       });
 
       if (move) {
-        sounds.playMove(move.captured != null, chess.inCheck());
-        setFen(chess.fen());
+        sounds.playMove(move.captured != null, nextChess.inCheck());
+        setChess(nextChess);
+        setFen(nextChess.fen());
         setMoveFrom(null);
         setOptionSquares({});
         
         const db = getDb();
-        const gameRef = doc(db, 'games', game.id);
+        const gameRef = doc(db, 'games', liveGame.id);
         
-        let newStatus: GameData['status'] = game.status;
+        let newStatus: GameData['status'] = liveGame.status;
         let endedReason: GameData['endedReason'] = undefined;
 
-        if (chess.isCheckmate()) {
+        if (nextChess.isCheckmate()) {
           newStatus = isWhite ? 'white_won' : 'black_won';
           endedReason = 'checkmate';
-        } else if (chess.isDraw() || chess.isStalemate() || chess.isThreefoldRepetition()) {
+        } else if (nextChess.isDraw() || nextChess.isStalemate() || nextChess.isThreefoldRepetition()) {
           newStatus = 'draw';
           endedReason = 'stalemate';
         }
 
-        const timeSpent = (Date.now() - (game.lastMoveAt || Date.now())) / 1000;
-        let newWhiteTime = game.whiteTime ?? game.timeControl ?? 0;
-        let newBlackTime = game.blackTime ?? game.timeControl ?? 0;
+        const timeSpent = (Date.now() - (liveGame.lastMoveAt || Date.now())) / 1000;
+        let newWhiteTime = liveGame.whiteTime ?? liveGame.timeControl ?? 0;
+        let newBlackTime = liveGame.blackTime ?? liveGame.timeControl ?? 0;
 
-        if (game.timeControl) {
-          if (chess.turn() === 'b') {
+        if (liveGame.timeControl) {
+          if (nextChess.turn() === 'b') {
             newWhiteTime = Math.max(0, newWhiteTime - timeSpent);
           } else {
             newBlackTime = Math.max(0, newBlackTime - timeSpent);
@@ -591,9 +635,9 @@ export default function Game({ game, currentUser, onExit }: GameProps) {
         }
 
         const updateData: Record<string, any> = {
-          fen: chess.fen(),
-          pgn: chess.pgn() || '',
-          turn: chess.turn(),
+          fen: nextChess.fen(),
+          pgn: nextChess.pgn() || '',
+          turn: nextChess.turn(),
           lastMoveAt: Date.now(),
           status: newStatus,
           whiteTime: newWhiteTime,
@@ -623,9 +667,9 @@ export default function Game({ game, currentUser, onExit }: GameProps) {
   const toggleSpectatorAccess = async () => {
     if (isSpectator) return;
     const db = getDb();
-    const gameRef = doc(db, 'games', game.id);
+    const gameRef = doc(db, 'games', liveGame.id);
     const field = isWhite ? 'spectatorsAllowedWhite' : 'spectatorsAllowedBlack';
-    const currentValue = isWhite ? game.spectatorsAllowedWhite : game.spectatorsAllowedBlack;
+    const currentValue = isWhite ? liveGame.spectatorsAllowedWhite : liveGame.spectatorsAllowedBlack;
     try {
       await updateDoc(gameRef, {
         [field]: !currentValue
@@ -643,22 +687,22 @@ export default function Game({ game, currentUser, onExit }: GameProps) {
   };
 
   const getEndReasonDescription = () => {
-    if (game.endedReason === 'checkmate') return 'Xeque-mate!';
-    if (game.endedReason === 'timeout') return 'Vitória por tempo esgotado.';
-    if (game.endedReason === 'inactivity') return 'Oponente ausente / inativo por mais de 2 minutos.';
-    if (game.endedReason === 'resignation') {
-      const isMyResignation = game.resignedBy === safeUser.uid;
+    if (liveGame.endedReason === 'checkmate') return 'Xeque-mate!';
+    if (liveGame.endedReason === 'timeout') return 'Vitória por tempo esgotado.';
+    if (liveGame.endedReason === 'inactivity') return 'Oponente ausente / inativo por mais de 2 minutos.';
+    if (liveGame.endedReason === 'resignation') {
+      const isMyResignation = liveGame.resignedBy === safeUser.uid;
       return isMyResignation ? 'Você desistiu da partida.' : 'Seu oponente desistiu da partida!';
     }
-    if (game.endedReason === 'abandonment') return 'Partida cancelada por abandono.';
-    if (game.endedReason === 'draw_agreement') return 'Empate aceito por mútuo acordo.';
-    if (game.endedReason === 'stalemate') return 'Empate por afogamento ou repetição.';
-    if (game.status === 'abandoned') return 'Partida encerrada.';
-    if (game.status === 'draw') return 'Partida empatada.';
+    if (liveGame.endedReason === 'abandonment') return 'Partida cancelada por abandono.';
+    if (liveGame.endedReason === 'draw_agreement') return 'Empate aceito por mútuo acordo.';
+    if (liveGame.endedReason === 'stalemate') return 'Empate por afogamento ou repetição.';
+    if (liveGame.status === 'abandoned') return 'Partida encerrada.';
+    if (liveGame.status === 'draw') return 'Partida empatada.';
     return 'Fim de jogo.';
   };
 
-  const hasOpponentOfferedDraw = game.drawOffer && ((game.drawOffer === 'w' && !isWhite) || (game.drawOffer === 'b' && isWhite));
+  const hasOpponentOfferedDraw = liveGame.drawOffer && ((liveGame.drawOffer === 'w' && !isWhite) || (liveGame.drawOffer === 'b' && isWhite));
 
   return (
     <div className="flex-1 w-full max-w-[1600px] mx-auto p-1.5 sm:p-3 lg:p-4 flex flex-col xl:flex-row gap-3 lg:gap-5 items-center xl:items-start justify-center relative">
@@ -672,7 +716,7 @@ export default function Game({ game, currentUser, onExit }: GameProps) {
       )}
 
       {/* Opponent Inactivity Banner / Action Bar (2 minutes idle -> 20s countdown) */}
-      {isOpponentInactive && game.status === 'playing' && (
+      {isOpponentInactive && liveGame.status === 'playing' && (
         <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 w-full max-w-lg px-4 animate-in fade-in slide-in-from-top-4 duration-300">
           <div className="bg-zinc-900/95 border-2 border-amber-500/80 rounded-3xl p-5 shadow-2xl backdrop-blur-xl text-white">
             <div className="flex items-center justify-between mb-3">
@@ -727,7 +771,7 @@ export default function Game({ game, currentUser, onExit }: GameProps) {
       )}
 
       {/* Opponent Disconnected Banner */}
-      {isOpponentDisconnected && !isOpponentInactive && game.status === 'playing' && (
+      {isOpponentDisconnected && !isOpponentInactive && liveGame.status === 'playing' && (
         <div className="fixed top-20 left-1/2 -translate-x-1/2 z-40 bg-zinc-900/90 border border-amber-500/40 text-amber-300 px-5 py-2.5 rounded-2xl text-xs font-semibold shadow-xl flex items-center gap-3 backdrop-blur-md">
           <WifiOff className="w-4 h-4 text-amber-400 animate-pulse" />
           <span>Oponente desconectou ou fechou a página.</span>
@@ -741,7 +785,7 @@ export default function Game({ game, currentUser, onExit }: GameProps) {
       )}
 
       {/* Incoming Draw Offer Modal / Banner */}
-      {hasOpponentOfferedDraw && game.status === 'playing' && (
+      {hasOpponentOfferedDraw && liveGame.status === 'playing' && (
         <div className="fixed top-24 left-1/2 -translate-x-1/2 z-50 bg-zinc-900 border-2 border-emerald-500 rounded-2xl p-4 shadow-2xl backdrop-blur-md text-white flex items-center gap-4 animate-bounce">
           <Handshake className="w-6 h-6 text-emerald-400 flex-shrink-0" />
           <div>
@@ -788,10 +832,10 @@ export default function Game({ game, currentUser, onExit }: GameProps) {
               <span className="text-[11px] sm:text-xs text-emerald-400 font-bold">{opponentElo} Elo</span>
             </div>
             <div className="ml-2 hidden sm:block">
-              <CapturedPieces id="opponent-captured-pieces" fen={chess.fen()} color={isWhite ? 'b' : 'w'} />
+              <CapturedPieces id="opponent-captured-pieces" fen={fen} color={isWhite ? 'b' : 'w'} />
             </div>
           </div>
-          {game.timeControl && (
+          {liveGame.timeControl && (
             <div className={cn(
               "px-3 py-1 sm:px-3.5 sm:py-1.5 rounded-xl border font-mono text-base sm:text-xl font-bold shadow-xl min-w-[75px] sm:min-w-[85px] text-center transition-all",
               (isWhite ? blackDisplayTime : whiteDisplayTime) < 30 ? "bg-red-950/80 border-red-600 text-red-400 animate-pulse" : "bg-zinc-900 border-zinc-800 text-white"
@@ -816,7 +860,7 @@ export default function Game({ game, currentUser, onExit }: GameProps) {
                 {/* @ts-ignore react-chessboard types in v5 */}
                 <Chessboard
                   options={{
-                    id: `OnlineGame-${game.id}`,
+                    id: `OnlineGame-${liveGame.id}`,
                     position: fen,
                     onPieceDrop: onDrop as any,
                     onSquareClick: onSquareClick as any,
@@ -840,11 +884,11 @@ export default function Game({ game, currentUser, onExit }: GameProps) {
             </div>
 
             {/* Game Over Overlay */}
-            {(game.status === 'white_won' || game.status === 'black_won' || game.status === 'draw' || game.status === 'abandoned') && (
+            {(liveGame.status === 'white_won' || liveGame.status === 'black_won' || liveGame.status === 'draw' || liveGame.status === 'abandoned') && (
               <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-md rounded-2xl p-4">
                 <div className="bg-zinc-900 border-2 border-emerald-500/60 p-6 sm:p-8 rounded-3xl shadow-2xl text-center max-w-md w-full transform animate-in zoom-in duration-300">
                   <div className="w-16 h-16 bg-emerald-500/10 border-2 border-emerald-500/40 rounded-full flex items-center justify-center mx-auto mb-4">
-                    {game.status === 'draw' ? (
+                    {liveGame.status === 'draw' ? (
                       <Handshake className="w-8 h-8 text-emerald-400" />
                     ) : (
                       <Award className="w-8 h-8 text-emerald-400" />
@@ -852,15 +896,15 @@ export default function Game({ game, currentUser, onExit }: GameProps) {
                   </div>
                   
                   <h2 className="text-2xl sm:text-3xl font-black text-white mb-1">
-                    {game.status === 'draw' ? 'Empate' : 
-                     (game.status === 'white_won' && isWhite) || (game.status === 'black_won' && !isWhite) 
+                    {liveGame.status === 'draw' ? 'Empate' : 
+                     (liveGame.status === 'white_won' && isWhite) || (liveGame.status === 'black_won' && !isWhite) 
                        ? 'Vitória!' 
                        : 'Derrota'}
                   </h2>
 
                   <p className="text-sm font-semibold text-emerald-400 mb-2 uppercase tracking-wider">
-                    {game.status === 'white_won' ? 'Vitória das Brancas' : 
-                     game.status === 'black_won' ? 'Vitória das Pretas' : 
+                    {liveGame.status === 'white_won' ? 'Vitória das Brancas' : 
+                     liveGame.status === 'black_won' ? 'Vitória das Pretas' : 
                      'Partida Empatada'}
                   </p>
 
@@ -909,14 +953,14 @@ export default function Game({ game, currentUser, onExit }: GameProps) {
               <span className="text-[11px] sm:text-xs text-emerald-400 font-bold">{bottomElo} Elo</span>
             </div>
             <div className="ml-2 hidden sm:block">
-              <CapturedPieces id="my-captured-pieces" fen={chess.fen()} color={isWhite ? 'w' : 'b'} />
+              <CapturedPieces id="my-captured-pieces" fen={fen} color={isWhite ? 'w' : 'b'} />
             </div>
           </div>
           
           <div className="flex items-center gap-2 sm:gap-3">
             {/* In-game action controls */}
             <div className="flex gap-1.5 sm:gap-2">
-              {!isSpectator && game.status === 'playing' && (
+              {!isSpectator && liveGame.status === 'playing' && (
                 <>
                   <button
                     onClick={offerDraw}
@@ -939,7 +983,7 @@ export default function Game({ game, currentUser, onExit }: GameProps) {
               )}
 
               {/* Exit button when game is over or spectator */}
-              {(isSpectator || game.status !== 'playing') && (
+              {(isSpectator || liveGame.status !== 'playing') && (
                 <button
                   onClick={onExit}
                   className="bg-zinc-800 hover:bg-zinc-700 text-white font-bold py-1.5 px-3 sm:py-2 sm:px-4 rounded-xl flex items-center gap-1.5 transition-colors text-xs border border-zinc-700"
@@ -954,7 +998,7 @@ export default function Game({ game, currentUser, onExit }: GameProps) {
                   onClick={toggleSpectatorAccess}
                   className={cn(
                     "font-bold py-1.5 px-2.5 sm:py-2 sm:px-3 rounded-xl flex items-center justify-center gap-1.5 transition-colors text-xs border",
-                    (isWhite ? game.spectatorsAllowedWhite : game.spectatorsAllowedBlack)
+                    (isWhite ? liveGame.spectatorsAllowedWhite : liveGame.spectatorsAllowedBlack)
                       ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30"
                       : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700 border-zinc-700"
                   )}
@@ -965,7 +1009,7 @@ export default function Game({ game, currentUser, onExit }: GameProps) {
               )}
             </div>
 
-            {game.timeControl && (
+            {liveGame.timeControl && (
               <div className={cn(
                 "px-3 py-1 sm:px-3.5 sm:py-1.5 rounded-xl border font-mono text-base sm:text-xl font-bold shadow-xl min-w-[75px] sm:min-w-[85px] text-center transition-all",
                 (isWhite ? whiteDisplayTime : blackDisplayTime) < 30 ? "bg-red-950/80 border-red-600 text-red-400 animate-pulse" : "bg-zinc-900 border-zinc-800 text-emerald-400"
@@ -988,7 +1032,7 @@ export default function Game({ game, currentUser, onExit }: GameProps) {
         </div>
         <div className="flex flex-col bg-zinc-900 border border-zinc-800 rounded-2xl shadow-xl overflow-hidden h-[250px] xl:h-[60%] flex-1 min-h-0">
           <ChatBox 
-            roomId={`game_${game.id}`} 
+            roomId={`game_${liveGame.id}`} 
             currentUser={currentUser} 
             title="Chat da Partida"
             className="flex-1 h-full"
@@ -1028,9 +1072,9 @@ export default function Game({ game, currentUser, onExit }: GameProps) {
       {/* Game Review with AI Modal */}
       {showReview && (
         <GameReview 
-          pgn={game.pgn} 
-          playerWhiteName={game.whiteName}
-          playerBlackName={game.blackName}
+          pgn={liveGame.pgn} 
+          playerWhiteName={liveGame.whiteName}
+          playerBlackName={liveGame.blackName}
           onClose={() => setShowReview(false)} 
         />
       )}
