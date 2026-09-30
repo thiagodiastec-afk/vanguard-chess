@@ -234,8 +234,8 @@ export default function Lobby({ currentUser, onPlayComputer, onPlayLocal, onSpec
     { id: 'iniciante', name: 'Iniciante (Aleatório)', color: 'text-neutral-400' },
     { id: 'facil', name: 'Fácil (Profundidade 1)', color: 'text-emerald-400' },
     { id: 'medio', name: 'Médio (Profundidade 2)', color: 'text-yellow-400' },
-    { id: 'dificil', name: 'Difícil (Profundidade 5)', color: 'text-orange-400' },
-    { id: 'profissional', name: 'Profissional (Profundidade 6)', color: 'text-red-400' }
+    { id: 'dificil', name: 'Difícil (Profundidade 4)', color: 'text-orange-400' },
+    { id: 'profissional', name: 'Profissional (Profundidade 5)', color: 'text-red-400' }
   ];
 
   return (

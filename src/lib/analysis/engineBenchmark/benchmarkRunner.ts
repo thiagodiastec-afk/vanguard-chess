@@ -381,7 +381,7 @@ export function runFullBenchmark(): FullBenchmarkRunResult {
         perfGame.reset();
       }
       const st = performance.now();
-      const m = calculateBestMove(perfGame, 'dificil'); // depth 3
+      const m = calculateBestMove(perfGame, 'dificil'); // current hard difficulty target: depth 4
       const dur = performance.now() - st;
       times.push(dur);
       if (m) {
