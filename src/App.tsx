@@ -33,6 +33,7 @@ export default function App() {
   const [firebaseReady, setFirebaseReady] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [userData, setUserData] = useState<UserData | null>(null);
+  const [profileLoadError, setProfileLoadError] = useState(false);
   const [activeGame, setActiveGame] = useState<GameData | null>(null);
   const [spectatingGameId, setSpectatingGameId] = useState<string | null>(null);
   const [spectatingGame, setSpectatingGame] = useState<GameData | null>(null);
@@ -128,8 +129,20 @@ export default function App() {
         unsubs = [];
 
         setUser(firebaseUser);
-        setUserData(null);
+        setProfileLoadError(false);
+        // Authentication and profile loading are separate operations. Keep a
+        // minimal signed-in profile while Firestore is being hydrated so a
+        // profile read failure cannot make an authenticated user look logged out.
+        setUserData(firebaseUser ? {
+          uid: firebaseUser.uid,
+          displayName: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'Jogador',
+          elo: 1200,
+          gamesPlayed: 0,
+          coins: 0,
+          activeBackground: 'default'
+        } : null);
         if (firebaseUser) {
+          try {
           // Online Status Management
           const setOnlineStatus = async (online: boolean) => {
             try {
@@ -356,7 +369,11 @@ export default function App() {
             console.error("Games listener error:", err);
             setLoading(false);
           }));
-
+          } catch (error) {
+            console.error('Authenticated, but failed to load the user profile:', error);
+            setProfileLoadError(true);
+            setLoading(false);
+          }
         } else {
           setUserData(null);
           setLoading(false);
@@ -517,6 +534,12 @@ export default function App() {
           )}
         </div>
       </aside>
+
+      {profileLoadError && user && (
+        <div role="alert" className="fixed top-4 left-1/2 -translate-x-1/2 z-[100] max-w-[calc(100vw-2rem)] rounded-xl border border-amber-500/40 bg-[#262421] px-4 py-3 text-sm text-amber-100 shadow-xl">
+          Sua conta está conectada, mas o perfil não carregou. Atualize a página; se o problema continuar, fale com o suporte.
+        </div>
+      )}
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-h-screen relative w-full overflow-hidden">
