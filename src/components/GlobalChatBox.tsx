@@ -5,6 +5,7 @@ import { UserData } from '../types';
 import { Send, Globe2 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { sendNotification } from '../lib/notifications';
+import { authenticatedApiFetch } from '../lib/api';
 
 interface GlobalMessage {
   id: string;
@@ -51,7 +52,7 @@ export default function GlobalChatBox({ currentUser, className }: GlobalChatBoxP
           }
         }
       });
-      
+
       const msgs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as GlobalMessage));
       setMessages(msgs);
       setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
@@ -63,13 +64,13 @@ export default function GlobalChatBox({ currentUser, className }: GlobalChatBoxP
   const sendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!inputText.trim() || isSending) return;
-    
+
     const text = inputText.trim();
     setInputText('');
     setIsSending(true);
-    
+
     try {
-      await fetch('/api/chat/send', {
+      const response = await authenticatedApiFetch('/api/chat/send', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -80,6 +81,7 @@ export default function GlobalChatBox({ currentUser, className }: GlobalChatBoxP
           userName: currentUser.displayName
         })
       });
+      if (!response.ok) throw new Error('Não foi possível enviar a mensagem.');
     } catch (error) {
       console.error('Failed to send global chat message:', error);
       // Put text back if failed
@@ -96,11 +98,11 @@ export default function GlobalChatBox({ currentUser, className }: GlobalChatBoxP
           <Globe2 className="w-5 h-5 text-emerald-500" />
           <h3 className="font-semibold text-white">Chat Mundial</h3>
         </div>
-        
+
         <div className="flex items-center gap-2">
           <span className="text-xs text-neutral-400">Seu Idioma:</span>
-          <select 
-            value={localLang} 
+          <select
+            value={localLang}
             onChange={(e) => setLocalLang(e.target.value as any)}
             className="bg-neutral-800 border border-neutral-700 text-sm text-white rounded-md px-2 py-1 outline-none focus:border-emerald-500"
           >
@@ -110,7 +112,7 @@ export default function GlobalChatBox({ currentUser, className }: GlobalChatBoxP
           </select>
         </div>
       </div>
-      
+
       <div className="flex-1 p-4 overflow-y-auto space-y-3 min-h-[200px] max-h-[400px]">
         {messages.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center text-neutral-500 text-sm gap-2">
@@ -123,7 +125,7 @@ export default function GlobalChatBox({ currentUser, className }: GlobalChatBoxP
             const isMe = msg.userId === currentUser.uid;
             // Fallback to original text if translation is missing
             const displayText = msg.translations?.[localLang] || msg.originalText;
-            
+
             return (
               <div key={msg.id} className={cn("flex flex-col", isMe ? "items-end" : "items-start")}>
                 <span className="text-xs text-neutral-400 mb-1 px-1">{isMe ? 'Você' : msg.userName}</span>

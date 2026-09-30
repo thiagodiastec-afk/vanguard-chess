@@ -1,5 +1,6 @@
 export interface UserData {
   uid: string;
+  profileSchemaVersion?: number;
   displayName: string;
   hasSetNickname?: boolean;
   elo: number;
@@ -23,7 +24,10 @@ export interface UserData {
   unlockedBackgrounds?: string[];
   activeBackground?: string;
   activeTheme?: string;
-  isPremium?: boolean;  isGuest?: boolean;
+  isPremium?: boolean;
+  premiumUntil?: number;
+  hasPremiumBadge?: boolean;
+  isGuest?: boolean;
 }
 
 export interface QueueEntry {
@@ -77,6 +81,7 @@ export interface Message {
 
 export interface Tournament {
   id: string;
+  managedByServer: boolean;
   name: string;
   format: 'elimination' | 'round-robin';
   minElo: number;

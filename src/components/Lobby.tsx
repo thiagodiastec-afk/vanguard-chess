@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
-import { collection, doc, getDocs, setDoc, deleteDoc, runTransaction, onSnapshot, query, orderBy, limit, where, addDoc } from 'firebase/firestore';
+import { collection, doc, getDocs, setDoc, deleteDoc, onSnapshot, query, orderBy, limit, where } from 'firebase/firestore';
 import { getDb } from '../lib/firebase';
+import { authenticatedApiFetch } from '../lib/api';
 import { UserData, QueueEntry, GameData } from '../types';
 import { Loader2, Swords, UserCircle, Bot, ChevronDown, ChevronUp, Link as LinkIcon, Copy, Target, CheckCircle2, X, Users, MessageCircle, Sparkles, LogIn, Mail } from 'lucide-react';
 import { cn } from '../lib/utils';
@@ -32,15 +33,11 @@ export default function Lobby({ currentUser, onPlayComputer, onPlayLocal, onSpec
     }
     try {
       setChallengingUserId(user.uid);
-      const db = getDb();
-      await addDoc(collection(db, 'challenges'), {
-        challengerId: currentUser.uid,
-        challengedId: user.uid,
-        challengerName: currentUser.displayName || 'Jogador',
-        challengerElo: currentUser.elo || 1200,
-        status: 'pending',
-        createdAt: Date.now()
+      const response = await authenticatedApiFetch('/api/challenge/create', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ challengedId: user.uid })
       });
+      if (!response.ok) throw new Error('Não foi possível enviar o convite.');
       setTimeout(() => setChallengingUserId(null), 2000);
     } catch(e) {
       console.error("Error challenging user:", e);
@@ -57,14 +54,15 @@ export default function Lobby({ currentUser, onPlayComputer, onPlayLocal, onSpec
 
   useEffect(() => {
     const db = getDb();
-    
+
     // Listen to online users
     const usersQuery = query(
       collection(db, 'users'),
+      where('profileSchemaVersion', '==', 2),
       where('isOnline', '==', true),
       limit(50) // Removed orderBy to avoid requiring composite index without manual creation
     );
-    
+
     const unsubscribeUsers = onSnapshot(usersQuery, (snapshot) => {
       const now = Date.now();
       const users: UserData[] = [];
@@ -85,7 +83,7 @@ export default function Lobby({ currentUser, onPlayComputer, onPlayLocal, onSpec
       });
       setOnlineUsers(users);
     });
-    
+
     return unsubscribeUsers;
   }, [currentUser]);
 
@@ -98,12 +96,12 @@ export default function Lobby({ currentUser, onPlayComputer, onPlayLocal, onSpec
       where('spectatorsAllowedBlack', '==', true),
       limit(10)
     );
-    
+
     const unsubscribe = onSnapshot(gamesQuery, (snapshot) => {
       const games = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as GameData));
       setLiveGames(games);
     });
-    
+
     return unsubscribe;
   }, []);
 
@@ -112,10 +110,10 @@ export default function Lobby({ currentUser, onPlayComputer, onPlayLocal, onSpec
     if (!currentUser) return;
     const db = getDb();
     const queueRef = doc(db, 'queue', currentUser.uid);
-    
+
     // Clear any stale queue document when lobby mounts to avoid auto-searching
     deleteDoc(queueRef).catch(console.error);
-    
+
   }, [currentUser?.uid]);
 
 
@@ -126,34 +124,15 @@ export default function Lobby({ currentUser, onPlayComputer, onPlayLocal, onSpec
     }
     setError(null);
     try {
-      const db = getDb();
-      const newGameRef = doc(collection(db, 'games'));
-      
-      const newGame: any = {
-        whiteId: currentUser.uid,
-        whiteName: currentUser.displayName || 'Jogador',
-        whiteElo: currentUser.elo || 1200,
-        blackId: '',
-        blackName: '',
-        blackElo: 1200,
-        status: 'waiting_friend',
-        fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
-        pgn: '',
-        turn: 'w',
-        whiteThemeId: currentUser.activeTheme || 'luxury',
-        lastMoveAt: Date.now(),
-        timeControl,
-        whiteTime: timeControl,
-        blackTime: timeControl,
-        
-        spectatorsAllowedWhite: true,
-        spectatorsAllowedBlack: true,
-      };
+      const response = await authenticatedApiFetch('/api/game/invite/create', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ timeControl })
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Erro ao criar convite');
+      setInviteGameId(result.gameId);
 
-      await setDoc(newGameRef, newGame);
-      setInviteGameId(newGameRef.id);
-      
-      const link = `${window.location.origin}${window.location.pathname}?invite=${newGameRef.id}`;
+      const link = `${window.location.origin}${window.location.pathname}?invite=${result.gameId}`;
       setInviteLink(link);
       try {
         await navigator.clipboard.writeText(link);
@@ -168,8 +147,11 @@ export default function Lobby({ currentUser, onPlayComputer, onPlayLocal, onSpec
   const cancelInvite = async () => {
     if (!inviteGameId) return;
     try {
-      const db = getDb();
-      await deleteDoc(doc(db, 'games', inviteGameId));
+      const response = await authenticatedApiFetch('/api/game/action', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ gameId: inviteGameId, action: 'cancel_invite' })
+      });
+      if (!response.ok) throw new Error('Não foi possível cancelar o convite.');
       setInviteLink(null);
       setInviteGameId(null);
     } catch (e: any) {
@@ -185,11 +167,20 @@ export default function Lobby({ currentUser, onPlayComputer, onPlayLocal, onSpec
     setError(null);
     setIsSearching(true);
     const db = getDb();
-    
+
     try {
+      const myQueueRef = doc(db, 'queue', currentUser.uid);
+      await setDoc(myQueueRef, {
+        uid: currentUser.uid,
+        displayName: currentUser.displayName,
+        elo: currentUser.elo,
+        createdAt: Date.now(),
+        timeControl,
+        activeTheme: currentUser.activeTheme || 'luxury'
+      });
       const queueQuery = query(collection(db, 'queue'), where('timeControl', '==', timeControl), orderBy('createdAt', 'asc'), limit(5));
       const queueSnapshot = await getDocs(queueQuery);
-      
+
       let matchedOpponent: QueueEntry | null = null;
       for (const docSnap of queueSnapshot.docs) {
         if (docSnap.id !== currentUser.uid) {
@@ -199,49 +190,18 @@ export default function Lobby({ currentUser, onPlayComputer, onPlayLocal, onSpec
       }
 
       if (matchedOpponent) {
-        const opponentRef = doc(db, 'queue', matchedOpponent.uid);
-        const newGameRef = doc(collection(db, 'games'));
-        
         try {
-          await runTransaction(db, async (transaction) => {
-            const opponentDoc = await transaction.get(opponentRef);
-            if (!opponentDoc.exists()) {
-              throw new Error("Opponent already matched");
-            }
-            
-            const isWhite = Math.random() > 0.5;
-            const whitePlayer = isWhite ? currentUser : matchedOpponent;
-            const blackPlayer = isWhite ? matchedOpponent : currentUser;
-
-            transaction.set(newGameRef, {
-              id: newGameRef.id,
-              whiteId: whitePlayer!.uid,
-              blackId: blackPlayer!.uid,
-              whiteName: whitePlayer!.displayName,
-              blackName: blackPlayer!.displayName,
-              whiteElo: whitePlayer!.elo,
-              blackElo: blackPlayer!.elo,
-              status: 'playing',
-              fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
-              pgn: '',
-              lastMoveAt: Date.now(),
-              timeControl,
-              whiteTime: timeControl,
-              blackTime: timeControl,
-              turn: 'w',
-              whiteThemeId: whitePlayer!.activeTheme || 'luxury'
-            });
-
-            transaction.delete(opponentRef);
+          const response = await authenticatedApiFetch('/api/game/match', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ opponentId: matchedOpponent.uid, timeControl })
           });
-          
-          return;
+          if (response.ok) return;
+          if (response.status !== 409) throw new Error('Não foi possível criar a partida.');
         } catch (e) {
           console.log("Transaction failed, trying to enter queue instead...", e);
         }
       }
 
-      const myQueueRef = doc(db, 'queue', currentUser.uid);
       await setDoc(myQueueRef, {
         uid: currentUser.uid,
         displayName: currentUser.displayName,
@@ -280,10 +240,10 @@ export default function Lobby({ currentUser, onPlayComputer, onPlayLocal, onSpec
 
   return (
     <div className="w-full flex flex-col md:flex-row gap-6 lg:gap-8 max-w-[1400px] mx-auto">
-      
+
       {/* Left Column - Main Actions (Bento Grid) */}
       <div className="flex-1 flex flex-col gap-6">
-        
+
         {/* Unauthenticated Quick Banner */}
         {!currentUser && (
           <div className="bg-gradient-to-r from-[#2a2824] to-[#211f1c] border border-[#3d3a34] rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xl">
@@ -317,11 +277,11 @@ export default function Lobby({ currentUser, onPlayComputer, onPlayLocal, onSpec
         {/* Play Now Hero Card */}
         <div className="bg-gradient-to-br from-zinc-900 to-zinc-900/50 rounded-[2rem] p-6 sm:p-8 border border-zinc-800/50 shadow-2xl relative overflow-hidden group">
           <div className="absolute -top-32 -right-32 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl group-hover:bg-emerald-500/20 transition-colors duration-700" />
-          
+
           <div className="relative z-10">
             <h2 className="text-3xl sm:text-4xl font-black text-white mb-2 tracking-tight">Jogar Xadrez</h2>
             <p className="text-zinc-400 mb-8 max-w-sm">Jogue contra milhões de jogadores do mundo inteiro ou desafie um amigo.</p>
-            
+
             {isSearching ? (
               <div className="bg-zinc-950/50 border border-emerald-500/30 rounded-2xl p-6 flex flex-col items-center gap-4 animate-in fade-in zoom-in-95">
                 <Loader2 className="w-12 h-12 text-emerald-500 animate-spin" />
@@ -345,7 +305,7 @@ export default function Lobby({ currentUser, onPlayComputer, onPlayLocal, onSpec
                   <p className="text-sm font-bold text-indigo-300 mb-2">Envie este link para seu amigo</p>
                   <div className="flex w-full items-center gap-2 bg-zinc-950 rounded-xl p-2 border border-indigo-500/20">
                     <code className="text-xs text-zinc-400 truncate flex-1 pl-2">{inviteLink}</code>
-                    <button 
+                    <button
                       onClick={() => navigator.clipboard.writeText(inviteLink)}
                       className="p-3 bg-indigo-600 hover:bg-indigo-500 rounded-lg transition-colors text-white"
                       title="Copiar link"
@@ -393,7 +353,7 @@ export default function Lobby({ currentUser, onPlayComputer, onPlayLocal, onSpec
                     ))}
                   </div>
                 </div>
-                
+
                 <div className="flex flex-col justify-end gap-3 mt-4 sm:mt-0">
                   <button
                     onClick={currentUser ? createInvite : () => onLoginRequest?.('login')}
@@ -413,7 +373,7 @@ export default function Lobby({ currentUser, onPlayComputer, onPlayLocal, onSpec
                 </div>
               </div>
             )}
-            
+
             {error && (
               <div className="mt-6 bg-red-500/10 border border-red-500/20 text-red-400 p-4 rounded-xl text-sm font-medium">
                 {error}
@@ -429,7 +389,7 @@ export default function Lobby({ currentUser, onPlayComputer, onPlayLocal, onSpec
               <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse shadow-[0_0_10px_rgba(239,68,68,0.6)]" />
               TV Xadrez Ao Vivo
             </h3>
-            
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 flex-1">
               {liveGames.length === 0 ? (
                 <div className="col-span-1 sm:col-span-2 text-center py-12 border border-zinc-800/50 border-dashed rounded-2xl bg-zinc-900/50 flex items-center justify-center">
@@ -453,7 +413,7 @@ export default function Lobby({ currentUser, onPlayComputer, onPlayLocal, onSpec
                       </div>
                     </div>
                     {onSpectate && (
-                      <button 
+                      <button
                         onClick={() => onSpectate(game.id)}
                         className="mt-2 w-full bg-zinc-800 group-hover:bg-emerald-500 group-hover:text-zinc-950 text-zinc-300 font-bold py-2.5 rounded-xl transition-all"
                       >
@@ -516,7 +476,7 @@ export default function Lobby({ currentUser, onPlayComputer, onPlayLocal, onSpec
 
 
       <div className="mt-8 mb-4">
-        <button 
+        <button
           id="tutorial-pass-play"
           onClick={onPlayLocal}
           className="w-full bg-zinc-900 border border-zinc-800 hover:border-indigo-500/30 rounded-3xl p-6 sm:p-8 flex flex-col items-center justify-center text-center transition-all group"
@@ -536,7 +496,7 @@ export default function Lobby({ currentUser, onPlayComputer, onPlayLocal, onSpec
             <button onClick={() => setShowBotMenu(false)} className="absolute top-5 right-5 text-zinc-500 hover:text-white transition-colors">
               <X className="w-5 h-5" />
             </button>
-            
+
             <div className="flex items-center gap-4 mb-6">
               <div className="w-12 h-12 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl flex items-center justify-center flex-shrink-0">
                 <Bot className="w-6 h-6 text-emerald-500" />
@@ -546,7 +506,7 @@ export default function Lobby({ currentUser, onPlayComputer, onPlayLocal, onSpec
                 <p className="text-zinc-400 text-xs">Escolha o nível do motor</p>
               </div>
             </div>
-            
+
             <div className="flex flex-col gap-2">
               {hasSavedBotGame && (
                 <button
@@ -557,7 +517,7 @@ export default function Lobby({ currentUser, onPlayComputer, onPlayLocal, onSpec
                   <span className="text-[10px] uppercase tracking-wider font-black opacity-80 group-hover:opacity-100 transition-opacity">Continuar</span>
                 </button>
               )}
-              
+
               {difficulties.map(diff => (
                 <button
                   key={diff.id}

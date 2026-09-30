@@ -1,0 +1,66 @@
+{
+  "timestamp": "2026-09-29T16:18:39.697Z",
+  "iterations": 10000,
+  "speedupFactor": 2.56,
+  "speedupPercent": 61,
+  "oracleOverheadPercent": 276.4,
+  "evaluationsPerSecond": {
+    "chessJsOnly": 8305,
+    "bitboardOnly": 21294,
+    "dualWithOracle": 5657
+  },
+  "modes": {
+    "CHESSJS_ONLY": {
+      "totalMs": 1204.1170999999867,
+      "meanUs": 120.41170999999868,
+      "medianUs": 106.49999999998272,
+      "p95Us": 205.39999999982683,
+      "p99Us": 316.1000000000058,
+      "minUs": 66.90000000003238,
+      "maxUs": 1205.299999999852,
+      "evalsPerSecond": 8305
+    },
+    "BITBOARD_ONLY": {
+      "totalMs": 469.6133000000118,
+      "meanUs": 46.96133000000118,
+      "medianUs": 20.500000000083674,
+      "p95Us": 130.59999999995853,
+      "p99Us": 183.89999999999418,
+      "minUs": 11.999999999943611,
+      "maxUs": 1137.6999999999953,
+      "evalsPerSecond": 21294
+    },
+    "BITBOARD_WITH_ORACLE": {
+      "totalMs": 1767.6219999999894,
+      "meanUs": 176.76219999999893,
+      "medianUs": 143.7999999998283,
+      "p95Us": 355.90000000001965,
+      "p99Us": 472.0999999999549,
+      "minUs": 100.29999999960637,
+      "maxUs": 1635.0999999999658,
+      "evalsPerSecond": 5657
+    }
+  },
+  "termBreakdownUs": {
+    "materialAndPst": {
+      "chessJsUs": 2.4320999999999913,
+      "bitboardUs": 0.07694999999989705
+    },
+    "mobility": {
+      "chessJsUs": 70.77974999999992,
+      "bitboardUs": 12.836199999999735
+    },
+    "pawnShield": {
+      "chessJsUs": 5.179450000000088,
+      "bitboardUs": 0.1042499999998654
+    },
+    "kingAttackers": {
+      "chessJsUs": 5.574000000000069,
+      "bitboardUs": 1.141149999999925
+    },
+    "kingTropism": {
+      "chessJsUs": 5.214750000000095,
+      "bitboardUs": 0.2084500000000844
+    }
+  }
+}

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { collection, query, orderBy, onSnapshot, doc, updateDoc, arrayUnion, getDocs, setDoc } from 'firebase/firestore';
+import { collection, query, where, orderBy, onSnapshot, doc, updateDoc, arrayUnion } from 'firebase/firestore';
 import { getDb } from '../lib/firebase';
 import { Tournament, UserData } from '../types';
 import { Trophy, Calendar, Users, Target } from 'lucide-react';
@@ -7,64 +7,36 @@ import { Trophy, Calendar, Users, Target } from 'lucide-react';
 export default function Tournaments({ currentUser }: { currentUser: UserData }) {
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
   const [loading, setLoading] = useState(true);
+  const [joinError, setJoinError] = useState<string | null>(null);
 
   useEffect(() => {
     const db = getDb();
-    
-    // Seed initial tournaments if collection is empty
-    const seedIfNeeded = async () => {
-      const snap = await getDocs(collection(db, 'tournaments'));
-      if (snap.empty) {
-        const seedData: Tournament[] = [
-          {
-            id: "blitz-arena",
-            name: "Blitz Arena 3|0",
-            format: "round-robin",
-            minElo: 1000,
-            maxElo: 2000,
-            prize: "500 Coins",
-            startsAt: Date.now() + 1000 * 60 * 60 * 2,
-            status: "scheduled",
-            participants: []
-          },
-          {
-            id: "master-cup",
-            name: "Taça dos Mestres",
-            format: "elimination",
-            minElo: 1500,
-            maxElo: 3000,
-            prize: "5000 Coins",
-            startsAt: Date.now() + 1000 * 60 * 60 * 24,
-            status: "scheduled",
-            participants: []
-          }
-        ];
-        
-        for (const t of seedData) {
-          await setDoc(doc(db, 'tournaments', t.id), t);
-        }
-      }
-    };
-    
-    seedIfNeeded().catch(console.error);
 
-    const q = query(collection(db, 'tournaments'), orderBy('startsAt', 'asc'));
-    
+    const q = query(
+      collection(db, 'tournaments'),
+      where('managedByServer', '==', true),
+      orderBy('startsAt', 'asc')
+    );
+
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Tournament));
       setTournaments(data);
       setLoading(false);
     });
-    
+
     return unsubscribe;
   }, []);
 
   const handleJoin = async (tournamentId: string) => {
     const db = getDb();
     const ref = doc(db, 'tournaments', tournamentId);
-    await updateDoc(ref, {
-      participants: arrayUnion(currentUser.uid)
-    });
+    setJoinError(null);
+    try {
+      await updateDoc(ref, { participants: arrayUnion(currentUser.uid) });
+    } catch (error) {
+      console.error('Tournament signup failed:', error);
+      setJoinError('Não foi possível concluir a inscrição. Confira seu rating e tente novamente.');
+    }
   };
 
   if (loading) {
@@ -91,6 +63,8 @@ export default function Tournaments({ currentUser }: { currentUser: UserData }) 
         <Trophy className="w-8 h-8 text-emerald-500" />
         <h2 className="text-2xl font-bold text-white tracking-tight">Calendário de Torneios</h2>
       </div>
+
+      {joinError && <p className="mb-4 rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-300" role="alert">{joinError}</p>}
 
       <div className="grid gap-6 md:grid-cols-2">
         {tournaments.map(tournament => {
@@ -146,7 +120,7 @@ export default function Tournaments({ currentUser }: { currentUser: UserData }) 
                     Rating Incompatível
                   </button>
                 ) : (
-                  <button 
+                  <button
                     onClick={() => handleJoin(tournament.id)}
                     className="w-full bg-emerald-500 hover:bg-emerald-400 text-neutral-950 font-bold py-3 px-4 rounded-xl transition-all active:scale-95 shadow-[0_0_20px_-5px_rgba(16,185,129,0.4)]"
                   >

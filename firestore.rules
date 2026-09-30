@@ -2,7 +2,7 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    
+
     // Global catch-all deny
     match /{document=**} {
       allow read, write: if false;
@@ -13,39 +13,73 @@ service cloud.firestore {
     function isOwner(userId) { return isSignedIn() && request.auth.uid == userId; }
     function incoming() { return request.resource.data; }
     function existing() { return resource.data; }
+    function changedUserFields() {
+      return request.resource.data.diff(resource.data).affectedKeys();
+    }
 
     // Users
     match /users/{userId} {
-      allow read: if true;
-      allow create: if isOwner(userId);
-      allow update: if isOwner(userId);
+      // Version 2 profiles contain no wallet or subscription fields. Requiring
+      // the marker also prevents queries from returning unmigrated legacy docs.
+      allow read: if isOwner(userId) || resource.data.profileSchemaVersion == 2;
+      allow create: if isOwner(userId)
+        && incoming().uid == userId
+        && incoming().profileSchemaVersion == 2
+        && incoming().keys().hasOnly([
+          'uid', 'profileSchemaVersion', 'displayName', 'hasSetNickname', 'elo', 'gamesPlayed', 'activeBackground', 'activeTheme',
+          'isOnline', 'lastSeen', 'friends'
+        ])
+        && incoming().elo in [1000, 1200]
+        && incoming().gamesPlayed == 0
+        && (!('displayName' in incoming()) || (incoming().displayName is string && incoming().displayName.size() <= 40));
+      // Wallet and paid entitlements are server-owned. Clients cannot grant
+      // themselves coins, premium status, or premium time.
+      allow update: if isOwner(userId)
+        && changedUserFields().hasOnly([
+          'displayName', 'hasSetNickname', 'isOnline', 'lastSeen',
+          'activeTheme', 'activeBackground', 'friends'
+        ])
+        && (!changedUserFields().hasAny(['displayName']) ||
+            (incoming().displayName is string && incoming().displayName.size() <= 40));
+      allow delete: if false;
+    }
+
+    // Wallet, cosmetic inventory, and subscription state are private to their owner.
+    // All changes after the one-time starter grant are server-side only.
+    match /userPrivate/{userId} {
+      allow get: if isOwner(userId);
+      allow list: if false;
+      allow create: if isOwner(userId)
+        && incoming().keys().hasOnly(['coins', 'unlockedThemes', 'unlockedBackgrounds', 'isPremium', 'premiumUntil'])
+        && incoming().coins == 500
+        && incoming().unlockedThemes == ['luxury', 'classic']
+        && incoming().unlockedBackgrounds == ['default']
+        && incoming().isPremium == false
+        && incoming().premiumUntil == 0;
+      allow update, delete: if false;
     }
 
     // Queue
     match /queue/{queueId} {
-      allow read: if true;
-      allow create: if isSignedIn() && incoming().uid == request.auth.uid;
-      allow delete: if isSignedIn();
-      allow update: if false;
+      allow read: if isSignedIn();
+      allow create: if isOwner(queueId)
+        && incoming().uid == request.auth.uid
+        && incoming().keys().hasOnly(['uid', 'displayName', 'elo', 'createdAt', 'timeControl', 'activeTheme']);
+      allow update: if isOwner(queueId)
+        && incoming().uid == request.auth.uid
+        && incoming().keys().hasOnly(['uid', 'displayName', 'elo', 'createdAt', 'timeControl', 'activeTheme']);
+      allow delete: if isOwner(queueId);
     }
 
     // Games
     match /games/{gameId} {
-      allow read: if true;
-      
-      // Players can create a game (from queue or friend invites)
-      allow create: if isSignedIn()
-        && (incoming().whiteId == request.auth.uid || incoming().blackId == request.auth.uid);
-        
-      // Only players in the game can update it, OR a user joining an invite
-      allow update: if isSignedIn()
-        && (
-          existing().whiteId == request.auth.uid || 
-          existing().blackId == request.auth.uid ||
-          (existing().status == 'waiting_friend' && existing().blackId == '' && incoming().blackId == request.auth.uid)
-        );
-           
-      allow delete: if isSignedIn() && (existing().whiteId == request.auth.uid || existing().blackId == request.auth.uid);
+      allow read: if (existing().status == 'playing'
+          && existing().spectatorsAllowedWhite == true
+          && existing().spectatorsAllowedBlack == true)
+        || (isSignedIn()
+          && (existing().whiteId == request.auth.uid || existing().blackId == request.auth.uid));
+      // Game state is created and mutated only by authenticated Admin SDK routes.
+      allow create, update, delete: if false;
     }
 
     // Global Chat (read-only for clients, server writes)
@@ -56,12 +90,44 @@ service cloud.firestore {
 
     // Challenges (Direct Invites)
     match /challenges/{challengeId} {
-      allow read, write, delete: if isSignedIn();
+      allow read: if isSignedIn()
+        && (resource.data.challengerId == request.auth.uid || resource.data.challengedId == request.auth.uid);
+      // Challenge identity fields are populated from trusted profiles by the server.
+      allow create: if false;
+      allow update: if isSignedIn()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
+        && (
+          (existing().challengedId == request.auth.uid
+            && existing().status == 'pending'
+            && request.resource.data.status == 'declined')
+          ||
+          (existing().challengerId == request.auth.uid
+            && existing().status == 'accepted'
+            && request.resource.data.status == 'completed')
+        );
+      allow delete: if isSignedIn()
+        && (existing().challengerId == request.auth.uid || existing().challengedId == request.auth.uid);
     }
 
     // Tournaments
     match /tournaments/{tournamentId} {
-      allow read, write: if isSignedIn();
+      allow read: if true;
+      // Official events and prizes are provisioned by the Admin SDK only.
+      allow create: if false;
+      allow update: if isSignedIn()
+        && existing().managedByServer == true
+        && existing().status == 'scheduled'
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['participants'])
+        && request.resource.data.participants is list
+        && request.resource.data.participants.size() == resource.data.participants.size() + 1
+        && request.resource.data.participants.hasAll(resource.data.participants)
+        && !existing().participants.hasAny([request.auth.uid])
+        && request.resource.data.participants[resource.data.participants.size()] == request.auth.uid
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.profileSchemaVersion == 2
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.elo >= existing().minElo
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.elo <= existing().maxElo;
+      allow delete: if false;
     }
     // Reports (Anti-Cheat)
     match /reports/{reportId} {
@@ -72,7 +138,7 @@ service cloud.firestore {
     // Room Chats (Game Chat)
     match /messages/{messageId} {
       allow read: if true;
-      allow create: if isSignedIn() && incoming().uid == request.auth.uid;
+      allow create: if false; // Server validates membership, rate limits, and message size.
       allow update, delete: if false;
     }
   }

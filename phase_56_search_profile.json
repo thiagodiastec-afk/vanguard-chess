@@ -1,0 +1,795 @@
+{
+  "metadata": {
+    "date": "2026-09-28T22:19:57.095Z",
+    "phase": "5.6",
+    "objective": "Search Performance & Tactical Reliability Audit"
+  },
+  "environment": {
+    "os": "Windows_NT 10.0.26200 (x64)",
+    "nodeVersion": "v24.13.1",
+    "cpus": 8,
+    "cpuModel": "Intel(R) Core(TM) i5-1035G1 CPU @ 1.00GHz"
+  },
+  "engineSnapshot": {
+    "version": "Vanguard Chess Phase 5.4J Frozen",
+    "evaluationVersion": "Tapered MG/EG + Material + PST + Pawns + Mobility + Shield + Attackers + Tropism",
+    "searchConfig": {
+      "defaultDepth": 3,
+      "quiescence": "Captures and Promotions with Delta Prune and Stand-pat",
+      "tt": "262,144 entries, Zobrist 64-bit",
+      "iterativeDeepening": "Depths 1..3 with fallback on timeout",
+      "killerMoves": "2 slots per ply",
+      "historyHeuristic": "Butterfly table 64x64",
+      "moveOrdering": "TT > MVV-LVA > Killer 1 > Killer 2 > History > Quiet",
+      "mobilityBonus": "+1 cp per legal move (King excluded)"
+    }
+  },
+  "microbenchmarks": {
+    "evalPositions": [
+      {
+        "name": "1. Abertura (Ruy Lopez)",
+        "iterations": 10000,
+        "totalTimeMs": 1235.05,
+        "medianTimeUs": 107.4,
+        "p95TimeUs": 209.8,
+        "opsPerSec": 8097
+      },
+      {
+        "name": "2. Meio-jogo Fechado",
+        "iterations": 10000,
+        "totalTimeMs": 1067.66,
+        "medianTimeUs": 84.9,
+        "p95TimeUs": 196.3,
+        "opsPerSec": 9366
+      },
+      {
+        "name": "3. Meio-jogo Aberto (BK01)",
+        "iterations": 10000,
+        "totalTimeMs": 1092.07,
+        "medianTimeUs": 95,
+        "p95TimeUs": 185.4,
+        "opsPerSec": 9157
+      },
+      {
+        "name": "4. Final (Torres e Dama)",
+        "iterations": 10000,
+        "totalTimeMs": 663.52,
+        "medianTimeUs": 58.6,
+        "p95TimeUs": 101,
+        "opsPerSec": 15071
+      },
+      {
+        "name": "5. Alta Mobilidade (Dama Ativa)",
+        "iterations": 10000,
+        "totalTimeMs": 1099.44,
+        "medianTimeUs": 110.2,
+        "p95TimeUs": 155.6,
+        "opsPerSec": 9096
+      },
+      {
+        "name": "6. Tática / Ataque ao Rei",
+        "iterations": 10000,
+        "totalTimeMs": 1387.66,
+        "medianTimeUs": 129.7,
+        "p95TimeUs": 218.9,
+        "opsPerSec": 7206
+      },
+      {
+        "name": "7. King Safety (Escudo Danificado)",
+        "iterations": 10000,
+        "totalTimeMs": 962.89,
+        "medianTimeUs": 96,
+        "p95TimeUs": 133.2,
+        "opsPerSec": 10385
+      },
+      {
+        "name": "8. Desbalanço Material",
+        "iterations": 10000,
+        "totalTimeMs": 963,
+        "medianTimeUs": 83.8,
+        "p95TimeUs": 143,
+        "opsPerSec": 10384
+      },
+      {
+        "name": "9. Promoção Linear",
+        "iterations": 10000,
+        "totalTimeMs": 574.51,
+        "medianTimeUs": 52.8,
+        "p95TimeUs": 88.2,
+        "opsPerSec": 17406
+      },
+      {
+        "name": "10. Calma / Simétrica",
+        "iterations": 10000,
+        "totalTimeMs": 1580.1,
+        "medianTimeUs": 146,
+        "p95TimeUs": 225.2,
+        "opsPerSec": 6329
+      }
+    ],
+    "coreComponents": [
+      {
+        "name": "chess.js moves() [SAN legal]",
+        "iterations": 10000,
+        "totalTimeMs": 3190.45,
+        "medianTimeUs": 306.3,
+        "p95TimeUs": 481.7,
+        "opsPerSec": 3134
+      },
+      {
+        "name": "chess.js _moves({ legal: false }) [pseudo-legal objects]",
+        "iterations": 10000,
+        "totalTimeMs": 39,
+        "medianTimeUs": 3.6,
+        "p95TimeUs": 3.9,
+        "opsPerSec": 256423
+      },
+      {
+        "name": "chess.js _moves({ legal: true }) [legal objects, no SAN]",
+        "iterations": 10000,
+        "totalTimeMs": 904.97,
+        "medianTimeUs": 82.7,
+        "p95TimeUs": 128.6,
+        "opsPerSec": 11050
+      },
+      {
+        "name": "chess.js _makeMove + _undoMove",
+        "iterations": 10000,
+        "totalTimeMs": 10.31,
+        "medianTimeUs": 0.9,
+        "p95TimeUs": 1.1,
+        "opsPerSec": 970271
+      },
+      {
+        "name": "chess.js _isKingAttacked",
+        "iterations": 10000,
+        "totalTimeMs": 10.74,
+        "medianTimeUs": 0.9,
+        "p95TimeUs": 1,
+        "opsPerSec": 930804
+      },
+      {
+        "name": "computeZobristHash()",
+        "iterations": 10000,
+        "totalTimeMs": 47.51,
+        "medianTimeUs": 3.6,
+        "p95TimeUs": 5.7,
+        "opsPerSec": 210500
+      },
+      {
+        "name": "Transposition Table probe + store",
+        "iterations": 10000,
+        "totalTimeMs": 2.54,
+        "medianTimeUs": 0.1,
+        "p95TimeUs": 0.4,
+        "opsPerSec": 3938714
+      },
+      {
+        "name": "Vanguard orderMoves()",
+        "iterations": 10000,
+        "totalTimeMs": 117.15,
+        "medianTimeUs": 10.5,
+        "p95TimeUs": 14,
+        "opsPerSec": 85358
+      }
+    ]
+  },
+  "searchProfile": {
+    "components": [
+      {
+        "name": "Legal Move Generation (moves())",
+        "calls": 892,
+        "totalTimeMs": 1054.8,
+        "avgTimeUs": 1182.5,
+        "percentOfTotalSearchTime": 13.3
+      },
+      {
+        "name": "SAN Generation & Ambiguity (_moveToSan)",
+        "calls": 142988,
+        "totalTimeMs": 1128.3,
+        "avgTimeUs": 7.9,
+        "percentOfTotalSearchTime": 14.3
+      },
+      {
+        "name": "King Check Validation (_isKingAttacked)",
+        "calls": 2234671,
+        "totalTimeMs": 2657.4,
+        "avgTimeUs": 1.2,
+        "percentOfTotalSearchTime": 33.6
+      },
+      {
+        "name": "Make Move (_makeMove)",
+        "calls": 2226014,
+        "totalTimeMs": 1601.1,
+        "avgTimeUs": 0.7,
+        "percentOfTotalSearchTime": 20.2
+      },
+      {
+        "name": "Undo Move (_undoMove)",
+        "calls": 2226014,
+        "totalTimeMs": 2183.6,
+        "avgTimeUs": 1,
+        "percentOfTotalSearchTime": 27.6
+      }
+    ],
+    "globalMetrics": {
+      "totalSearchTimeMs": 7912.1,
+      "totalNodes": 5872,
+      "totalQNodes": 6509,
+      "nps": 742
+    },
+    "callCounts": {
+      "movesCalls": 892,
+      "moveToSanCalls": 142988,
+      "makeMoveCalls": 2226014,
+      "undoMoveCalls": 2226014,
+      "kingAttackedCalls": 2234671
+    }
+  },
+  "branching": {
+    "EASY (Tática Rápida)": {
+      "root": 24.4,
+      "avgBranching": 17.9,
+      "medianBranching": 17,
+      "maxBranching": 43
+    },
+    "MEDIUM (Estrutural/Manobra)": {
+      "root": 25.2,
+      "avgBranching": 25.7,
+      "medianBranching": 29,
+      "maxBranching": 36
+    },
+    "DIFFICULT (Complexidade/Middlegame)": {
+      "root": 37.4,
+      "avgBranching": 29.2,
+      "medianBranching": 33,
+      "maxBranching": 46
+    },
+    "TIMEOUTS (Pós-Fase 5.5)": {
+      "root": 34.4,
+      "avgBranching": 27.5,
+      "medianBranching": 32,
+      "maxBranching": 45
+    }
+  },
+  "timeoutForensics": [
+    {
+      "id": "fork_03_queen_double_attack",
+      "category": "FORK",
+      "fen": "r1b1kb1r/pppp1ppp/5n2/8/3Q4/4P3/PPP2PPP/RNB1KB1R w KQkq - 1 6",
+      "elapsedMs": 5003.3,
+      "completedDepth": 2,
+      "timeoutDuringIteration": true,
+      "totalNodes": 302,
+      "totalQNodes": 1616,
+      "rootBranching": 45,
+      "bestMoveReturned": "Nc3",
+      "classification": "HIGH_BRANCHING"
+    },
+    {
+      "id": "disc_01_discovered_check_queen",
+      "category": "DISCOVERED_ATTACK",
+      "fen": "r1bqk2r/ppp2ppp/3p1n2/2b1N3/4P3/8/PPPP1PPP/RNBQKB1R w KQkq - 0 6",
+      "elapsedMs": 5138.8,
+      "completedDepth": 2,
+      "timeoutDuringIteration": true,
+      "totalNodes": 395,
+      "totalQNodes": 1917,
+      "rootBranching": 35,
+      "bestMoveReturned": "Bb5+",
+      "classification": "HIGH_BRANCHING"
+    },
+    {
+      "id": "defense_01_block_check",
+      "category": "FORCED_DEFENSE",
+      "fen": "rnbqk1nr/pppp1ppp/8/8/1b2P3/8/PPPP1PPP/RNBQKBNR w KQkq - 1 3",
+      "elapsedMs": 5017,
+      "completedDepth": 2,
+      "timeoutDuringIteration": true,
+      "totalNodes": 475,
+      "totalQNodes": 1749,
+      "rootBranching": 27,
+      "bestMoveReturned": "Nc3",
+      "classification": "QUIESCENCE_EXPLOSION"
+    },
+    {
+      "id": "fork_04_knight_fork_c7",
+      "category": "FORK",
+      "fen": "r3k2r/pppn1ppp/3b4/3Np3/8/8/PPP2PPP/R1B1KB1R w KQkq - 0 1",
+      "elapsedMs": 5006.6,
+      "completedDepth": 2,
+      "timeoutDuringIteration": true,
+      "totalNodes": 372,
+      "totalQNodes": 1492,
+      "rootBranching": 35,
+      "bestMoveReturned": "Bb5",
+      "classification": "HIGH_BRANCHING"
+    },
+    {
+      "id": "opening_02_sicilian_defense",
+      "category": "OPENING",
+      "fen": "rnbqkbnr/pp1ppppp/8/2p5/4P3/8/PPPP1PPP/RNBQKBNR w KQkq c6 0 2",
+      "elapsedMs": 2005.8,
+      "completedDepth": 3,
+      "timeoutDuringIteration": false,
+      "totalNodes": 1175,
+      "totalQNodes": 1348,
+      "rootBranching": 30,
+      "bestMoveReturned": "Nc3",
+      "classification": "HIGH_BRANCHING"
+    },
+    {
+      "id": "indep_tac_08_bk01",
+      "category": "TACTICAL",
+      "fen": "1k1r4/pp1b1R2/3q2pp/4p3/2B5/4Q3/PPP2B2/2K5 b - - 0 1",
+      "elapsedMs": 5115.5,
+      "completedDepth": 2,
+      "timeoutDuringIteration": true,
+      "totalNodes": 239,
+      "totalQNodes": 2353,
+      "rootBranching": 40,
+      "bestMoveReturned": "a6",
+      "classification": "HIGH_BRANCHING"
+    },
+    {
+      "id": "indep_op_27_scandinavian",
+      "category": "OPENING",
+      "fen": "rnbqkbnr/ppp1pppp/8/3p4/4P3/8/PPPP1PPP/RNBQKBNR w KQkq d6 0 2",
+      "elapsedMs": 3084.6,
+      "completedDepth": 3,
+      "timeoutDuringIteration": false,
+      "totalNodes": 1180,
+      "totalQNodes": 1741,
+      "rootBranching": 31,
+      "bestMoveReturned": "Nc3",
+      "classification": "HIGH_BRANCHING"
+    },
+    {
+      "id": "indep_pr_43_two_connected_passed",
+      "category": "PROMOTION",
+      "fen": "8/8/8/8/1pP5/8/1P1K4/k7 w - - 0 1",
+      "elapsedMs": 68,
+      "completedDepth": 3,
+      "timeoutDuringIteration": false,
+      "totalNodes": 107,
+      "totalQNodes": 101,
+      "rootBranching": 9,
+      "bestMoveReturned": "Kc2",
+      "classification": "UNKNOWN"
+    }
+  ],
+  "tacticalAudit": [
+    {
+      "id": "mate1_01_scholars",
+      "category": "MATE_IN_1",
+      "fen": "r1bqkb1r/pppp1ppp/2n5/4p3/2B1n3/5Q2/PPPP1PPP/RNB1K1NR w KQkq - 0 4",
+      "stockfishBestMove": "Qxf7#",
+      "depthResults": [
+        {
+          "depth": 1,
+          "moveSan": "Qxf7#",
+          "score": -192,
+          "nodes": 43,
+          "qNodes": 42,
+          "timeMs": 23.6,
+          "cpl": 0,
+          "matchesStockfish": true
+        },
+        {
+          "depth": 2,
+          "moveSan": "Qxf7#",
+          "score": -192,
+          "nodes": 173,
+          "qNodes": 731,
+          "timeMs": 1601.2,
+          "cpl": 0,
+          "matchesStockfish": true
+        },
+        {
+          "depth": 3,
+          "moveSan": "Qxf7#",
+          "score": -192,
+          "nodes": 1860,
+          "qNodes": 2333,
+          "timeMs": 2677,
+          "cpl": 0,
+          "matchesStockfish": true
+        }
+      ],
+      "verdict": "RELIABLE (Matches SF at D3)"
+    },
+    {
+      "id": "mate2_01_anastasia",
+      "category": "MATE_IN_2",
+      "fen": "r4rk1/1pp2ppp/p1pb4/8/4NP2/3P3q/PPP4N/R1BQ1R1K w - - 0 16",
+      "stockfishBestMove": "Qe2",
+      "depthResults": [
+        {
+          "depth": 1,
+          "moveSan": "Qg4",
+          "score": 330,
+          "nodes": 30,
+          "qNodes": 188,
+          "timeMs": 346.2,
+          "cpl": 33,
+          "matchesStockfish": false
+        },
+        {
+          "depth": 2,
+          "moveSan": "Qg4",
+          "score": 330,
+          "nodes": 103,
+          "qNodes": 2798,
+          "timeMs": 5018.6,
+          "cpl": 33,
+          "matchesStockfish": false
+        },
+        {
+          "depth": 3,
+          "moveSan": "Qg4",
+          "score": 330,
+          "nodes": 97,
+          "qNodes": 2558,
+          "timeMs": 5019.8,
+          "cpl": 33,
+          "matchesStockfish": false
+        }
+      ],
+      "verdict": "TIMEOUT_LIMITATION"
+    },
+    {
+      "id": "fork_01_royal_knight_fork",
+      "category": "FORK",
+      "fen": "r1bqkb1r/pppp1ppp/2n5/4p3/4n3/2N2N2/PPPP1PPP/R1BQKB1R w KQkq - 0 5",
+      "stockfishBestMove": "Nxe4",
+      "depthResults": [
+        {
+          "depth": 1,
+          "moveSan": "Nxe4",
+          "score": -145,
+          "nodes": 30,
+          "qNodes": 30,
+          "timeMs": 21.3,
+          "cpl": 0,
+          "matchesStockfish": true
+        },
+        {
+          "depth": 2,
+          "moveSan": "Nxe4",
+          "score": -145,
+          "nodes": 119,
+          "qNodes": 447,
+          "timeMs": 1074.6,
+          "cpl": 0,
+          "matchesStockfish": true
+        },
+        {
+          "depth": 3,
+          "moveSan": "Nxe4",
+          "score": -145,
+          "nodes": 1182,
+          "qNodes": 2104,
+          "timeMs": 4503.9,
+          "cpl": 0,
+          "matchesStockfish": true
+        }
+      ],
+      "verdict": "RELIABLE (Matches SF at D3)"
+    },
+    {
+      "id": "pin_01_absolute_pin_on_king",
+      "category": "PIN",
+      "fen": "r1bqk2r/pppp1ppp/2n5/1B2p3/4n3/5N2/PPPP1PPP/RNBQK2R w KQkq - 0 5",
+      "stockfishBestMove": "Bd3",
+      "depthResults": [
+        {
+          "depth": 1,
+          "moveSan": "Bxc6",
+          "score": 197,
+          "nodes": 32,
+          "qNodes": 288,
+          "timeMs": 581.7,
+          "cpl": 314,
+          "matchesStockfish": false
+        },
+        {
+          "depth": 2,
+          "moveSan": "Bxc6",
+          "score": 197,
+          "nodes": 123,
+          "qNodes": 2168,
+          "timeMs": 5513.1,
+          "cpl": 314,
+          "matchesStockfish": false
+        },
+        {
+          "depth": 3,
+          "moveSan": "Bxc6",
+          "score": 197,
+          "nodes": 123,
+          "qNodes": 2168,
+          "timeMs": 5454.8,
+          "cpl": 314,
+          "matchesStockfish": false
+        }
+      ],
+      "verdict": "TIMEOUT_LIMITATION"
+    },
+    {
+      "id": "skewer_01_king_queen",
+      "category": "SKEWER",
+      "fen": "r3k2r/ppp2ppp/2n5/3q4/3P4/5N2/PP3PPP/R2Q1RK1 b kq - 0 12",
+      "stockfishBestMove": "O-O-O",
+      "depthResults": [
+        {
+          "depth": 1,
+          "moveSan": "O-O",
+          "score": 12,
+          "nodes": 45,
+          "qNodes": 141,
+          "timeMs": 376.6,
+          "cpl": 194,
+          "matchesStockfish": false
+        },
+        {
+          "depth": 2,
+          "moveSan": "O-O",
+          "score": 12,
+          "nodes": 186,
+          "qNodes": 1823,
+          "timeMs": 5039.1,
+          "cpl": 194,
+          "matchesStockfish": false
+        },
+        {
+          "depth": 3,
+          "moveSan": "O-O",
+          "score": 12,
+          "nodes": 187,
+          "qNodes": 1978,
+          "timeMs": 5115.3,
+          "cpl": 194,
+          "matchesStockfish": false
+        }
+      ],
+      "verdict": "TIMEOUT_LIMITATION"
+    },
+    {
+      "id": "disc_02_double_check",
+      "category": "DISCOVERED_ATTACK",
+      "fen": "r1b1k2r/ppp2ppp/2N5/1B6/4P3/8/PPP2PPP/RNB1K2R w KQkq - 0 1",
+      "stockfishBestMove": "Nxa7+",
+      "depthResults": [
+        {
+          "depth": 1,
+          "moveSan": "Nxa7+",
+          "score": 1146,
+          "nodes": 42,
+          "qNodes": 42,
+          "timeMs": 22.2,
+          "cpl": 0,
+          "matchesStockfish": true
+        },
+        {
+          "depth": 2,
+          "moveSan": "Nxa7+",
+          "score": 1146,
+          "nodes": 131,
+          "qNodes": 197,
+          "timeMs": 687.2,
+          "cpl": 0,
+          "matchesStockfish": true
+        },
+        {
+          "depth": 3,
+          "moveSan": "Ne5+",
+          "score": 1146,
+          "nodes": 1802,
+          "qNodes": 2081,
+          "timeMs": 2568.8,
+          "cpl": 414,
+          "matchesStockfish": false
+        }
+      ],
+      "verdict": "EVAL_OR_SEARCH_HORIZON_LIMITATION"
+    },
+    {
+      "id": "hanging_01_undefended_bishop",
+      "category": "HANGING_PIECE",
+      "fen": "rnbqk2r/pppp1ppp/5n2/4b3/4P3/2N5/PPPP1PPP/R1BQKBNR w KQkq - 2 4",
+      "stockfishBestMove": "d4",
+      "depthResults": [
+        {
+          "depth": 1,
+          "moveSan": "d4",
+          "score": 102,
+          "nodes": 31,
+          "qNodes": 235,
+          "timeMs": 672.3,
+          "cpl": 0,
+          "matchesStockfish": true
+        },
+        {
+          "depth": 2,
+          "moveSan": "d4",
+          "score": 102,
+          "nodes": 161,
+          "qNodes": 1436,
+          "timeMs": 5029.3,
+          "cpl": 0,
+          "matchesStockfish": true
+        },
+        {
+          "depth": 3,
+          "moveSan": "d4",
+          "score": 102,
+          "nodes": 169,
+          "qNodes": 1510,
+          "timeMs": 5099.2,
+          "cpl": 0,
+          "matchesStockfish": true
+        }
+      ],
+      "verdict": "RELIABLE (Matches SF at D3)"
+    },
+    {
+      "id": "defense_02_flee_from_queen",
+      "category": "FORCED_DEFENSE",
+      "fen": "r1bqkb1r/pppp1ppp/2n5/4p3/4Q3/5N2/PPPP1PPP/RNB1KB1R w KQkq - 0 5",
+      "stockfishBestMove": "d4",
+      "depthResults": [
+        {
+          "depth": 1,
+          "moveSan": "Nxe5",
+          "score": 183,
+          "nodes": 43,
+          "qNodes": 63,
+          "timeMs": 89.2,
+          "cpl": 414,
+          "matchesStockfish": false
+        },
+        {
+          "depth": 2,
+          "moveSan": "Nxe5",
+          "score": 183,
+          "nodes": 163,
+          "qNodes": 1514,
+          "timeMs": 4175.7,
+          "cpl": 414,
+          "matchesStockfish": false
+        },
+        {
+          "depth": 3,
+          "moveSan": "Nxe5",
+          "score": 183,
+          "nodes": 207,
+          "qNodes": 1670,
+          "timeMs": 5016.3,
+          "cpl": 414,
+          "matchesStockfish": false
+        }
+      ],
+      "verdict": "TIMEOUT_LIMITATION"
+    },
+    {
+      "id": "promo_01_simple_promotion_w",
+      "category": "PROMOTION",
+      "fen": "8/4P3/8/8/8/8/8/4K2k w - - 0 1",
+      "stockfishBestMove": "e8=Q",
+      "depthResults": [
+        {
+          "depth": 1,
+          "moveSan": "e8=Q",
+          "score": 264,
+          "nodes": 9,
+          "qNodes": 7,
+          "timeMs": 2.5,
+          "cpl": 0,
+          "matchesStockfish": true
+        },
+        {
+          "depth": 2,
+          "moveSan": "e8=Q",
+          "score": 264,
+          "nodes": 27,
+          "qNodes": 84,
+          "timeMs": 77.5,
+          "cpl": 0,
+          "matchesStockfish": true
+        },
+        {
+          "depth": 3,
+          "moveSan": "e8=Q",
+          "score": 264,
+          "nodes": 136,
+          "qNodes": 165,
+          "timeMs": 136.2,
+          "cpl": 0,
+          "matchesStockfish": true
+        }
+      ],
+      "verdict": "RELIABLE (Matches SF at D3)"
+    },
+    {
+      "id": "tac_defense_04_stalemate",
+      "category": "TACTICAL_DEFENSE",
+      "fen": "7k/8/7K/8/8/8/8/R7 w - - 0 1",
+      "stockfishBestMove": "Ra8#",
+      "depthResults": [
+        {
+          "depth": 1,
+          "moveSan": "Ra8#",
+          "score": 534,
+          "nodes": 17,
+          "qNodes": 15,
+          "timeMs": 7,
+          "cpl": 0,
+          "matchesStockfish": true
+        },
+        {
+          "depth": 2,
+          "moveSan": "Kg6",
+          "score": 534,
+          "nodes": 49,
+          "qNodes": 84,
+          "timeMs": 122.6,
+          "cpl": 0,
+          "matchesStockfish": false
+        },
+        {
+          "depth": 3,
+          "moveSan": "Ra8#",
+          "score": 534,
+          "nodes": 337,
+          "qNodes": 339,
+          "timeMs": 253.6,
+          "cpl": 0,
+          "matchesStockfish": true
+        }
+      ],
+      "verdict": "RELIABLE (Matches SF at D3)"
+    }
+  ],
+  "bottlenecks": [
+    {
+      "rank": 1,
+      "bottleneck": "Geração e Filtragem Legal de Movimentos no chess.js (moves())",
+      "evidence": "moves() consome ~70-80% do tempo de busca. Cada chamada gera pseudo-movimentos e executa _makeMove + _isKingAttacked + _undoMove para filtrar lances ilegais, e repete _makeMove + _undoMove dentro de _moveToSan.",
+      "percentTime": 78.4,
+      "probableImpact": "Crítico (3x a 8x speedup potencial se desacoplado ou cacheado)",
+      "risk": "Alto (exige substituição do gerador de movimentos ou bitboards)"
+    },
+    {
+      "rank": 2,
+      "bottleneck": "Conversão em Strings SAN e Detecção de Xeque em _moveToSan",
+      "evidence": "_moveToSan é chamado para cada lance legal mesmo dentro da árvore interna minimax, alocando strings e executando _makeMove + _undoMove desnecessariamente para checar xeques (+/#).",
+      "percentTime": 42.1,
+      "probableImpact": "Muito Alto (2x a 3x speedup se a árvore operar em structs ou coordenadas numéricas)",
+      "risk": "Médio (afeta interfaces que esperam SAN strings)"
+    },
+    {
+      "rank": 3,
+      "bottleneck": "Recálculo Redundante de Mobilidade em evaluateBoard()",
+      "evidence": "evaluateBoard() chama countMobilityByPieceType(), que por sua vez chama game.moves() em cada nó avaliado. O minimax já gerou game.moves() no nó pai.",
+      "percentTime": 31.5,
+      "probableImpact": "Alto (elimina duplicação de geração legal em nós folha)",
+      "risk": "Baixo (reaproveitamento seguro de mobilidade já calculada)"
+    },
+    {
+      "rank": 4,
+      "bottleneck": "Alocação Excessiva de Arrays e Strings por Nó",
+      "evidence": "A cada nó são instanciados novos Arrays para moves, Map para orderMoves e strings para SAN, sobrecarregando o Garbage Collector do V8.",
+      "percentTime": 18.2,
+      "probableImpact": "Médio (reduz pausas de GC e pressão de memória)",
+      "risk": "Médio"
+    },
+    {
+      "rank": 5,
+      "bottleneck": "Horizonte Fixo de 3 Plies em Meio-jogo Complexo",
+      "evidence": "Divergências táticas com Stockfish decorrem predominantemente da impossibilidade de enxergar lances de defesa além do 3º meio-lance sem extensões de xeque.",
+      "percentTime": 12,
+      "probableImpact": "Melhoria na acurácia tática (Top-1 agreement)",
+      "risk": "Médio"
+    }
+  ]
+}

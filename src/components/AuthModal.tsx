@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { 
-  signInWithPopup, 
-  signInWithRedirect, 
-  GoogleAuthProvider, 
-  OAuthProvider, 
-  signInWithEmailAndPassword, 
-  createUserWithEmailAndPassword, 
+import {
+  signInWithPopup,
+  signInWithRedirect,
+  GoogleAuthProvider,
+  OAuthProvider,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
   sendPasswordResetEmail,
   updateProfile,
   signInAnonymously,
@@ -19,18 +19,18 @@ import {
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { initFirebase } from '../lib/firebase';
 import { UserData } from '../types';
-import { 
-  X, 
-  Mail, 
-  Lock, 
-  Eye, 
-  EyeOff, 
-  Smartphone, 
-  ArrowLeft, 
-  Check, 
-  AlertCircle, 
-  Loader2, 
-  User as UserIcon, 
+import {
+  X,
+  Mail,
+  Lock,
+  Eye,
+  EyeOff,
+  Smartphone,
+  ArrowLeft,
+  Check,
+  AlertCircle,
+  Loader2,
+  User as UserIcon,
   Sparkles,
   ShieldCheck,
   LogIn,
@@ -49,13 +49,13 @@ type AuthView = 'email' | 'phone' | 'forgot_password' | 'phone_verify';
 export default function AuthModal({ isOpen, onClose, defaultMode = 'register' }: AuthModalProps) {
   const [mode, setMode] = useState<'register' | 'login'>(defaultMode);
   const [currentView, setCurrentView] = useState<AuthView>('email');
-  
+
   // Form states
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  
+
   // Phone form state
   const [phoneNumber, setPhoneNumber] = useState('');
   const [verificationCode, setVerificationCode] = useState('');
@@ -122,18 +122,23 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'register' }:
         const finalName = customName || firebaseUser.displayName || (firebaseUser.email ? firebaseUser.email.split('@')[0] : 'Jogador');
         const initialUserData: UserData = {
           uid: firebaseUser.uid,
+          profileSchemaVersion: 2,
           displayName: finalName,
           hasSetNickname: Boolean(customName || firebaseUser.displayName),
           elo: 1200,
           gamesPlayed: 0,
-          coins: 500,
-          unlockedThemes: ['luxury', 'classic'],
-          unlockedBackgrounds: ['default'],
           activeBackground: 'default',
           isOnline: true,
           lastSeen: Date.now()
         };
         await setDoc(userRef, initialUserData);
+        await setDoc(doc(db, 'userPrivate', firebaseUser.uid), {
+          coins: 500,
+          unlockedThemes: ['luxury', 'classic'],
+          unlockedBackgrounds: ['default'],
+          isPremium: false,
+          premiumUntil: 0
+        });
       }
     } catch (err) {
       console.error("Erro ao sincronizar perfil do usuário:", err);
@@ -197,7 +202,7 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'register' }:
       await setPersistence(auth, browserSessionPersistence);
       const provider = new GoogleAuthProvider();
       provider.setCustomParameters({ prompt: 'select_account' });
-      
+
       const result = await signInWithPopup(auth, provider, browserPopupRedirectResolver);
       if (result.user) {
         await ensureUserInFirestore(result.user);
@@ -232,7 +237,7 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'register' }:
       const provider = new OAuthProvider('apple.com');
       provider.addScope('email');
       provider.addScope('name');
-      
+
       const result = await signInWithPopup(auth, provider, browserPopupRedirectResolver);
       if (result.user) {
         await ensureUserInFirestore(result.user);
@@ -276,7 +281,7 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'register' }:
     try {
       const { auth } = await initFirebase();
       await setPersistence(auth, browserSessionPersistence);
-      
+
       if (mode === 'register') {
         const userCredential = await createUserWithEmailAndPassword(auth, email.trim(), password);
         const finalNickname = displayName.trim() || email.trim().split('@')[0];
@@ -442,11 +447,11 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'register' }:
   };
 
   return (
-    <div 
+    <div
       className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-200"
       onClick={onClose}
     >
-      <div 
+      <div
         className="bg-[#262421] border border-[#3d3a34] rounded-3xl p-5 sm:p-7 max-w-md w-full shadow-2xl relative flex flex-col items-center max-h-[92vh] overflow-y-auto custom-scrollbar"
         onClick={e => e.stopPropagation()}
       >
@@ -456,7 +461,7 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'register' }:
         {/* Top Header Controls */}
         <div className="w-full flex items-center justify-between mb-2">
           {currentView !== 'email' ? (
-            <button 
+            <button
               onClick={() => {
                 setError(null);
                 setSuccessMessage(null);
@@ -471,7 +476,7 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'register' }:
             <div />
           )}
 
-          <button 
+          <button
             onClick={onClose}
             className="p-1.5 text-neutral-400 hover:text-white rounded-lg hover:bg-neutral-800/60 transition-colors ml-auto"
             title="Fechar"
@@ -528,23 +533,23 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'register' }:
 
         {/* Title */}
         <h2 className="text-xl sm:text-2xl font-black text-center text-white tracking-tight leading-snug mb-1">
-          {currentView === 'forgot_password' 
-            ? 'Recuperar Senha' 
+          {currentView === 'forgot_password'
+            ? 'Recuperar Senha'
             : currentView === 'phone' || currentView === 'phone_verify'
             ? 'Entrar com Celular'
-            : mode === 'register' 
-            ? 'Crie a Sua Conta no Chess' 
+            : mode === 'register'
+            ? 'Crie a Sua Conta no Chess'
             : 'Entrar na sua Conta'}
         </h2>
 
         {/* Subtitle */}
         <p className="text-xs text-neutral-400 text-center mb-4 max-w-xs">
-          {currentView === 'forgot_password' 
+          {currentView === 'forgot_password'
             ? 'Informe seu e-mail para enviarmos o link de recuperação.'
             : currentView === 'phone_verify'
             ? 'Digite o código de 6 dígitos enviado por SMS.'
-            : mode === 'register' 
-            ? 'Junte-se a milhares de jogadores online ao redor do mundo.' 
+            : mode === 'register'
+            ? 'Junte-se a milhares de jogadores online ao redor do mundo.'
             : 'Bem-vindo de volta! Acesse suas partidas e progresso.'}
         </p>
 

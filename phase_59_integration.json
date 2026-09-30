@@ -1,0 +1,92 @@
+{
+  "phase": "5.9",
+  "backend": "bitboard",
+  "oracle": "chessjs",
+  "productionEngineChanged": false,
+  "engineSearchUnchanged": true,
+  "engineEvaluationUnchanged": true,
+  "legalEquivalence": {
+    "controlledPositions": {
+      "total": 26,
+      "passed": 26,
+      "rate": 100.0
+    },
+    "phase58ControlledPositions": {
+      "total": 105,
+      "passed": 105,
+      "rate": 100.0
+    }
+  },
+  "makeUndo": {
+    "total": 26,
+    "movesTested": 435,
+    "passed": 26,
+    "rate": 100.0
+  },
+  "stateEquivalence": {
+    "postMoveFenEquivalence": "100.0%",
+    "undoFenRestoration": "100.0%",
+    "epSquareParity": "100.0%",
+    "castlingRightsParity": "100.0%"
+  },
+  "randomValidation": {
+    "positionsTested": 5000,
+    "passed": 5000,
+    "divergences": 0,
+    "rate": 100.0,
+    "timeSec": 1.09
+  },
+  "gameSimulation": {
+    "gamesCompleted": 100,
+    "totalPlies": 11842,
+    "divergences": 0,
+    "rate": 100.0,
+    "timeSec": 3.92
+  },
+  "determinism": {
+    "iterations": 10,
+    "passed": 10,
+    "status": "PASS"
+  },
+  "stateIsolation": {
+    "sequences": ["A->B->C", "B->C->A", "C->A->B"],
+    "status": "PASS"
+  },
+  "rollback": {
+    "cycle": "Bitboard (ON) -> ChessJs (OFF) -> Bitboard (ON)",
+    "identicalMoves": true,
+    "status": "PASS"
+  },
+  "mobilityEquivalence": {
+    "pieces": ["pawn", "knight", "bishop", "rook", "queen", "king", "totalNonKing"],
+    "rate": 100.0,
+    "status": "PASS"
+  },
+  "benchmark68": {
+    "total": 68,
+    "correct": 63,
+    "incorrect": 5,
+    "timeout": 0,
+    "completed": 68,
+    "accuracyCompleted": 92.65,
+    "medianTimeMs": 224.4,
+    "p95TimeMs": 1435.7,
+    "medianNodes": 627,
+    "medianQNodes": 898
+  },
+  "transitionMatrix": {
+    "correctToCorrect": 63,
+    "correctToIncorrect": 0,
+    "correctToTimeout": 0,
+    "incorrectToCorrect": 0,
+    "incorrectToIncorrect": 5,
+    "incorrectToTimeout": 0,
+    "regressionCount": 0
+  },
+  "stockfishSanity": {
+    "positions": 10,
+    "agreementTop1": 6,
+    "agreementRate": 60.0,
+    "status": "PASS"
+  }
+}

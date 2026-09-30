@@ -1,0 +1,1137 @@
+{
+  "label": "BASELINE",
+  "timestamp": "2026-09-28T00:06:49.535Z",
+  "timeUnit": "milliseconds",
+  "totalPositions": 68,
+  "passed": 64,
+  "failed": 4,
+  "passRate": "94.12%",
+  "top1Matches": 64,
+  "top1Agreement": "94.12%",
+  "criticalDisagreements": 0,
+  "criticalDisagreementDetails": [],
+  "timing": {
+    "medianMs": 802.4,
+    "p95Ms": 6948.6,
+    "maxMs": 9183.23,
+    "minMs": 18.19,
+    "totalMs": 127066.09,
+    "count": 68
+  },
+  "categories": [
+    {
+      "category": "MATE_IN_1",
+      "total": 6,
+      "passed": 6,
+      "failed": 0,
+      "passRate": "100.0%"
+    },
+    {
+      "category": "MATE_IN_2",
+      "total": 6,
+      "passed": 6,
+      "failed": 0,
+      "passRate": "100.0%"
+    },
+    {
+      "category": "TACTICAL_CAPTURE",
+      "total": 5,
+      "passed": 4,
+      "failed": 1,
+      "passRate": "80.0%"
+    },
+    {
+      "category": "FORK",
+      "total": 5,
+      "passed": 5,
+      "failed": 0,
+      "passRate": "100.0%"
+    },
+    {
+      "category": "PIN",
+      "total": 4,
+      "passed": 3,
+      "failed": 1,
+      "passRate": "75.0%"
+    },
+    {
+      "category": "SKEWER",
+      "total": 4,
+      "passed": 3,
+      "failed": 1,
+      "passRate": "75.0%"
+    },
+    {
+      "category": "DISCOVERED_ATTACK",
+      "total": 4,
+      "passed": 4,
+      "failed": 0,
+      "passRate": "100.0%"
+    },
+    {
+      "category": "HANGING_PIECE",
+      "total": 4,
+      "passed": 4,
+      "failed": 0,
+      "passRate": "100.0%"
+    },
+    {
+      "category": "FORCED_DEFENSE",
+      "total": 4,
+      "passed": 3,
+      "failed": 1,
+      "passRate": "75.0%"
+    },
+    {
+      "category": "PROMOTION",
+      "total": 4,
+      "passed": 4,
+      "failed": 0,
+      "passRate": "100.0%"
+    },
+    {
+      "category": "MATERIAL_ADVANTAGE",
+      "total": 4,
+      "passed": 4,
+      "failed": 0,
+      "passRate": "100.0%"
+    },
+    {
+      "category": "MATERIAL_DISADVANTAGE",
+      "total": 4,
+      "passed": 4,
+      "failed": 0,
+      "passRate": "100.0%"
+    },
+    {
+      "category": "QUIET_POSITION",
+      "total": 3,
+      "passed": 3,
+      "failed": 0,
+      "passRate": "100.0%"
+    },
+    {
+      "category": "ENDGAME",
+      "total": 4,
+      "passed": 4,
+      "failed": 0,
+      "passRate": "100.0%"
+    },
+    {
+      "category": "OPENING",
+      "total": 3,
+      "passed": 3,
+      "failed": 0,
+      "passRate": "100.0%"
+    },
+    {
+      "category": "TACTICAL_DEFENSE",
+      "total": 4,
+      "passed": 4,
+      "failed": 0,
+      "passRate": "100.0%"
+    }
+  ],
+  "positionResults": [
+    {
+      "id": "mate1_01_scholars",
+      "category": "MATE_IN_1",
+      "fen": "r1bqkb1r/pppp1ppp/2n5/4p3/2B1n3/5Q2/PPPP1PPP/RNB1K1NR w KQkq - 0 4",
+      "sideToMove": "w",
+      "engineMove": "Qxf7#",
+      "expectedMove": "Qxf7#",
+      "isTop1Match": true,
+      "isCriticalDisagreement": false,
+      "score": -200,
+      "isSignMatch": true,
+      "timeMs": 6948.6
+    },
+    {
+      "id": "mate1_02_back_rank_white",
+      "category": "MATE_IN_1",
+      "fen": "6k1/5ppp/8/8/8/8/8/3R2K1 w - - 0 1",
+      "sideToMove": "w",
+      "engineMove": "Rd8#",
+      "expectedMove": "Rd8#",
+      "isTop1Match": true,
+      "isCriticalDisagreement": false,
+      "score": 180,
+      "isSignMatch": true,
+      "timeMs": 784.51
+    },
+    {
+      "id": "mate1_03_back_rank_black",
+      "category": "MATE_IN_1",
+      "fen": "3r2k1/8/8/8/8/8/5PPP/6K1 b - - 0 1",
+      "sideToMove": "b",
+      "engineMove": "Rd1#",
+      "expectedMove": "Rd1#",
+      "isTop1Match": true,
+      "isCriticalDisagreement": false,
+      "score": -180,
+      "isSignMatch": true,
+      "timeMs": 606.86
+    },
+    {
+      "id": "mate1_04_smothered_mate_w",
+      "category": "MATE_IN_1",
+      "fen": "6rk/6pp/3N4/8/8/8/8/4K3 w - - 0 1",
+      "sideToMove": "w",
+      "engineMove": "Nf7#",
+      "expectedMove": "Nf7#",
+      "isTop1Match": true,
+      "isCriticalDisagreement": false,
+      "score": -400,
+      "isSignMatch": true,
+      "timeMs": 266.78
+    },
+    {
+      "id": "mate1_05_queen_helper_black",
+      "category": "MATE_IN_1",
+      "fen": "8/8/8/8/8/1k6/8/K1q5 b - - 0 1",
+      "sideToMove": "b",
+      "engineMove": "Ka3#",
+      "expectedMove": "Qb2#",
+      "alternativeMoves": [
+        "Qxc1#",
+        "Qc2#",
+        "Qb1#"
+      ],
+      "isTop1Match": true,
+      "isCriticalDisagreement": false,
+      "score": -830,
+      "isSignMatch": true,
+      "timeMs": 263.7
+    },
+    {
+      "id": "mate1_06_rook_corridor_white",
+      "category": "MATE_IN_1",
+      "fen": "7k/R7/1R6/8/8/8/8/4K3 w - - 0 1",
+      "sideToMove": "w",
+      "engineMove": "Rb8#",
+      "expectedMove": "Rb8#",
+      "alternativeMoves": [
+        "Ra8#"
+      ],
+      "isTop1Match": true,
+      "isCriticalDisagreement": false,
+      "score": 985,
+      "isSignMatch": true,
+      "timeMs": 814.48
+    },
+    {
+      "id": "mate2_01_anastasia",
+      "category": "MATE_IN_2",
+      "fen": "5rk1/1p3ppp/1N6/8/8/8/1P3PPP/2R3K1 w - - 0 1",
+      "sideToMove": "w",
+      "engineMove": "Rc7",
+      "isTop1Match": true,
+      "isCriticalDisagreement": false,
+      "score": 320,
+      "isSignMatch": true,
+      "timeMs": 550.87
+    },
+    {
+      "id": "mate2_02_arabian_setup",
+      "category": "MATE_IN_2",
+      "fen": "7k/R7/5N2/8/8/8/8/4K3 w - - 0 1",
+      "sideToMove": "w",
+      "engineMove": "Rh7#",
+      "expectedMove": "Rh7#",
+      "isTop1Match": true,
+      "isCriticalDisagreement": false,
+      "score": 815,
+      "isSignMatch": true,
+      "timeMs": 203.57
+    },
+    {
+      "id": "mate2_03_opera_box",
+      "category": "MATE_IN_2",
+      "fen": "4kb1r/p2n1ppp/4p3/4q3/8/8/PP1B1PPP/2R1K2R w Kk - 0 1",
+      "sideToMove": "w",
+      "engineMove": "Be3",
+      "isTop1Match": true,
+      "isCriticalDisagreement": false,
+      "score": -705,
+      "isSignMatch": true,
+      "timeMs": 313.66
+    },
+    {
+      "id": "mate2_04_epaulette_setup",
+      "category": "MATE_IN_2",
+      "fen": "r3k2r/ppp2ppp/8/4Q3/8/8/PPP2PPP/4K2R b Kkq - 0 1",
+      "sideToMove": "b",
+      "engineMove": "Kf8",
+      "expectedMove": "Kf8",
+      "isTop1Match": true,
+      "isCriticalDisagreement": false,
+      "score": 405,
+      "isSignMatch": true,
+      "timeMs": 148.08
+    },
+    {
+      "id": "mate2_05_queen_rook_battery",
+      "category": "MATE_IN_2",
+      "fen": "r4rk1/pp3ppp/8/8/8/1Q6/PP3PPP/4RRK1 w - - 0 1",
+      "sideToMove": "w",
+      "engineMove": "Qxb7",
+      "isTop1Match": true,
+      "isCriticalDisagreement": false,
+      "score": 910,
+      "isSignMatch": true,
+      "timeMs": 2839.76
+    },
+    {
+      "id": "mate2_06_smothered_classic_m2",
+      "category": "MATE_IN_2",
+      "fen": "6k1/5Npp/8/8/8/8/8/4K1Q1 w - - 0 1",
+      "sideToMove": "w",
+      "engineMove": "Ne5",
+      "isTop1Match": true,
+      "isCriticalDisagreement": false,
+      "score": 965,
+      "isSignMatch": true,
+      "timeMs": 861.99
+    },
+    {
+      "id": "capture_01_hanging_queen",
+      "category": "TACTICAL_CAPTURE",
+      "fen": "r1bqkbnr/pppp1ppp/2n5/4p3/3P4/2N5/PPP1PPPP/R1BQKBNR w KQkq - 0 3",
+      "sideToMove": "w",
+      "engineMove": "dxe5",
+      "expectedMove": "dxe5",
+      "alternativeMoves": [
+        "dxe5",
+        "d5"
+      ],
+      "isTop1Match": true,
+      "isCriticalDisagreement": false,
+      "score": 0,
+      "isSignMatch": true,
+      "timeMs": 3140.05
+    },
+    {
+      "id": "capture_02_hanging_rook",
+      "category": "TACTICAL_CAPTURE",
+      "fen": "r1b1k2r/pppp1ppp/8/8/1b1Q4/2N5/PPP1PPPP/R3KB1R w KQkq - 0 8",
+      "sideToMove": "w",
+      "engineMove": "Qxb4",
+      "expectedMove": "Qxb4",
+      "isTop1Match": true,
+      "isCriticalDisagreement": false,
+      "score": 900,
+      "isSignMatch": true,
+      "timeMs": 7963.92
+    },
+    {
+      "id": "capture_03_free_knight",
+      "category": "TACTICAL_CAPTURE",
+      "fen": "r1bqkb1r/pppp1ppp/n7/4p3/3P4/5N2/PPP2PPP/RNBQKB1R w KQkq - 0 4",
+      "sideToMove": "w",
+      "engineMove": "Nxe5",
+      "expectedMove": "Bxa6",
+      "isTop1Match": false,
+      "isCriticalDisagreement": false,
+      "score": 240,
+      "isSignMatch": true,
+      "timeMs": 5359.23
+    },
+    {
+      "id": "capture_04_exchange_sac_trap",
+      "category": "TACTICAL_CAPTURE",
+      "fen": "r1b1k2r/pppp1ppp/8/4q3/1b6/2N5/PPP2PPP/R1BQKB1R w KQkq - 0 8",
+      "sideToMove": "w",
+      "engineMove": "Be3",
+      "expectedMove": "Be2",
+      "alternativeMoves": [
+        "Qe2",
+        "Be3",
+        "Ne2"
+      ],
+      "isTop1Match": true,
+      "isCriticalDisagreement": false,
+      "score": 225,
+      "isSignMatch": true,
+      "timeMs": 1149.72
+    },
+    {
+      "id": "capture_05_black_captures_queen",
+      "category": "TACTICAL_CAPTURE",
+      "fen": "rnb1kbnr/pppp1ppp/8/8/4Q3/8/PPPP1PPP/RNB1KBNR b KQkq - 0 3",
+      "sideToMove": "b",
+      "engineMove": "Ne7",
+      "expectedMove": "Be7",
+      "alternativeMoves": [
+        "Ne7",
+        "Kd8"
+      ],
+      "isTop1Match": true,
+      "isCriticalDisagreement": false,
+      "score": 905,
+      "isSignMatch": true,
+      "timeMs": 227.31
+    },
+    {
+      "id": "fork_01_royal_knight_fork",
+      "category": "FORK",
+      "fen": "r1b1k2r/pp1p1ppp/2n5/4N3/8/8/PPP2PPP/R1B1KB1R w KQkq - 0 1",
+      "sideToMove": "w",
+      "engineMove": "Bf4",
+      "isTop1Match": true,
+      "isCriticalDisagreement": false,
+      "score": 360,
+      "isSignMatch": true,
+      "timeMs": 3915.86
+    },
+    {
+      "id": "fork_02_pawn_fork_white",
+      "category": "FORK",
+      "fen": "r1bqkb1r/pppp1ppp/2n2n2/4p3/4P3/3P1N2/PPP2PPP/RNBQKB1R w KQkq - 1 4",
+      "sideToMove": "w",
+      "engineMove": "Nc3",
+      "isTop1Match": true,
+      "isCriticalDisagreement": false,
+      "score": -30,
+      "isSignMatch": true,
+      "timeMs": 2735.51
+    },
+    {
+      "id": "fork_03_queen_double_attack",
+      "category": "FORK",
+      "fen": "r1b1kb1r/pppp1ppp/5n2/8/3Q4/4P3/PPP2PPP/RNB1KB1R w KQkq - 1 6",
+      "sideToMove": "w",
+      "engineMove": "Qe5+",
+      "isTop1Match": true,
+      "isCriticalDisagreement": false,
+      "score": 875,
+      "isSignMatch": true,
+      "timeMs": 7529.24
+    },
+    {
+      "id": "fork_04_knight_fork_c7",
+      "category": "FORK",
+      "fen": "r3k2r/pppn1ppp/3b4/3Np3/8/8/PPP2PPP/R1B1KB1R w KQkq - 0 1",
+      "sideToMove": "w",
+      "engineMove": "Bb5",
+      "isTop1Match": true,
+      "isCriticalDisagreement": false,
+      "score": 200,
+      "isSignMatch": true,
+      "timeMs": 3532.43
+    },
+    {
+      "id": "fork_05_black_knight_fork_f2",
+      "category": "FORK",
+      "fen": "r1b1kb1r/pppp1ppp/8/8/8/3n4/PPPP1PPP/RNB1K2R b KQkq - 0 1",
+      "sideToMove": "b",
+      "engineMove": "Nxc1",
+      "isTop1Match": true,
+      "isCriticalDisagreement": false,
+      "score": -875,
+      "isSignMatch": true,
+      "timeMs": 910.36
+    },
+    {
+      "id": "pin_01_absolute_pin_on_king",
+      "category": "PIN",
+      "fen": "r1bqk2r/pppp1ppp/2n5/1B2p3/4P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 0 4",
+      "sideToMove": "w",
+      "engineMove": "Nc3",
+      "isTop1Match": true,
+      "isCriticalDisagreement": false,
+      "score": 615,
+      "isSignMatch": true,
+      "timeMs": 3723.85
+    },
+    {
+      "id": "pin_02_relative_pin_on_queen",
+      "category": "PIN",
+      "fen": "rnbqk2r/pppp1ppp/5n2/4p3/1b2P3/2NP1N2/PPP2PPP/R1BQKB1R b KQkq - 0 4",
+      "sideToMove": "b",
+      "engineMove": "Nc6",
+      "isTop1Match": true,
+      "isCriticalDisagreement": false,
+      "score": 55,
+      "isSignMatch": true,
+      "timeMs": 9183.23
+    },
+    {
+      "id": "pin_03_pin_exploitation",
+      "category": "PIN",
+      "fen": "4k3/8/4n3/8/8/4R3/8/4K3 w - - 0 1",
+      "sideToMove": "w",
+      "engineMove": "Rxe6+",
+      "expectedMove": "Kd2",
+      "alternativeMoves": [
+        "Kf2",
+        "Ke2"
+      ],
+      "isTop1Match": false,
+      "isCriticalDisagreement": false,
+      "score": 165,
+      "isSignMatch": true,
+      "timeMs": 333.72
+    },
+    {
+      "id": "pin_04_cross_pin_defense",
+      "category": "PIN",
+      "fen": "4k3/4r3/8/8/8/8/4R3/4K3 w - - 0 1",
+      "sideToMove": "w",
+      "engineMove": "Rxe7+",
+      "isTop1Match": true,
+      "isCriticalDisagreement": false,
+      "score": 0,
+      "isSignMatch": true,
+      "timeMs": 201.07
+    },
+    {
+      "id": "skewer_01_king_queen",
+      "category": "SKEWER",
+      "fen": "8/8/8/8/3k4/8/3q4/3R2K1 b - - 0 1",
+      "sideToMove": "b",
+      "engineMove": "Qxd1+",
+      "expectedMove": "Qxd1+",
+      "isTop1Match": true,
+      "isCriticalDisagreement": false,
+      "score": -315,
+      "isSignMatch": true,
+      "timeMs": 204.44
+    },
+    {
+      "id": "skewer_02_rook_skewer_w",
+      "category": "SKEWER",
+      "fen": "R7/8/8/3k4/8/8/3r4/4K3 w - - 0 1",
+      "sideToMove": "w",
+      "engineMove": "Kxd2",
+      "expectedMove": "Rd8+",
+      "isTop1Match": false,
+      "isCriticalDisagreement": false,
+      "score": 30,
+      "isSignMatch": true,
+      "timeMs": 1685.91
+    },
+    {
+      "id": "skewer_03_bishop_skewer_b",
+      "category": "SKEWER",
+      "fen": "8/8/8/4k3/8/2b5/1R6/1K6 b - - 0 1",
+      "sideToMove": "b",
+      "engineMove": "Bxb2",
+      "expectedMove": "Bxb2",
+      "isTop1Match": true,
+      "isCriticalDisagreement": false,
+      "score": 235,
+      "isSignMatch": true,
+      "timeMs": 479.2
+    },
+    {
+      "id": "skewer_04_queen_skewer_w",
+      "category": "SKEWER",
+      "fen": "8/8/8/8/2k5/8/2r5/Q3K3 w - - 0 1",
+      "sideToMove": "w",
+      "engineMove": "Qa4+",
+      "isTop1Match": true,
+      "isCriticalDisagreement": false,
+      "score": 410,
+      "isSignMatch": true,
+      "timeMs": 1993.27
+    },
+    {
+      "id": "disc_01_discovered_check_queen",
+      "category": "DISCOVERED_ATTACK",
+      "fen": "r1bqk2r/ppp2ppp/3p1n2/2b1N3/4P3/8/PPPP1PPP/RNBQKB1R w KQkq - 0 6",
+      "sideToMove": "w",
+      "engineMove": "Bb5+",
+      "isTop1Match": true,
+      "isCriticalDisagreement": false,
+      "score": 370,
+      "isSignMatch": true,
+      "timeMs": 3575.44
+    },
+    {
+      "id": "disc_02_double_check",
+      "category": "DISCOVERED_ATTACK",
+      "fen": "r1b1k2r/ppp2ppp/2N5/1B6/4P3/8/PPP2PPP/RNB1K2R w KQkq - 0 1",
+      "sideToMove": "w",
+      "engineMove": "Nxa7+",
+      "isTop1Match": true,
+      "isCriticalDisagreement": false,
+      "score": 1065,
+      "isSignMatch": true,
+      "timeMs": 4127.32
+    },
+    {
+      "id": "disc_03_discovered_attack_on_rook",
+      "category": "DISCOVERED_ATTACK",
+      "fen": "r3k2r/ppp2ppp/3b4/3N4/8/8/PPP2PPP/R1B1KB1R w KQkq - 0 1",
+      "sideToMove": "w",
+      "engineMove": "Bb5+",
+      "isTop1Match": true,
+      "isCriticalDisagreement": false,
+      "score": 640,
+      "isSignMatch": true,
+      "timeMs": 3861.19
+    },
+    {
+      "id": "disc_04_black_discovered_check",
+      "category": "DISCOVERED_ATTACK",
+      "fen": "rnbqk2r/pppp1ppp/8/8/1b2n3/3P4/PPP1PPPP/RNBQKBNR b KQkq - 0 4",
+      "sideToMove": "b",
+      "engineMove": "Bxe1",
+      "isTop1Match": true,
+      "isCriticalDisagreement": false,
+      "score": 25,
+      "isSignMatch": true,
+      "timeMs": 3920.67
+    },
+    {
+      "id": "hanging_01_undefended_bishop",
+      "category": "HANGING_PIECE",
+      "fen": "rnbqk1nr/pppp1ppp/8/4b3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 0 3",
+      "sideToMove": "w",
+      "engineMove": "Nxe5",
+      "expectedMove": "Nxe5",
+      "isTop1Match": true,
+      "isCriticalDisagreement": false,
+      "score": 150,
+      "isSignMatch": true,
+      "timeMs": 2626.68
+    },
+    {
+      "id": "hanging_02_undefended_rook",
+      "category": "HANGING_PIECE",
+      "fen": "r3k2r/pppp1ppp/8/8/8/8/PPP2PPP/R1B1KB1R w KQkq - 0 1",
+      "sideToMove": "w",
+      "engineMove": "Bc4",
+      "isTop1Match": true,
+      "isCriticalDisagreement": false,
+      "score": 560,
+      "isSignMatch": true,
+      "timeMs": 2288.46
+    },
+    {
+      "id": "hanging_03_black_takes_hanging_knight",
+      "category": "HANGING_PIECE",
+      "fen": "rnbqkb1r/pppp1ppp/8/4p3/4N3/8/PPPPPPPP/R1BQKBNR b KQkq - 0 2",
+      "sideToMove": "b",
+      "engineMove": "Qh4",
+      "isTop1Match": true,
+      "isCriticalDisagreement": false,
+      "score": 300,
+      "isSignMatch": true,
+      "timeMs": 2997.49
+    },
+    {
+      "id": "hanging_04_hanging_queen_direct",
+      "category": "HANGING_PIECE",
+      "fen": "rnb1kbnr/pppp1ppp/8/8/4q3/4P3/PPPP1PPP/RNBQKBNR w KQkq - 0 3",
+      "sideToMove": "w",
+      "engineMove": "Nc3",
+      "isTop1Match": true,
+      "isCriticalDisagreement": false,
+      "score": 90,
+      "isSignMatch": true,
+      "timeMs": 3471.85
+    },
+    {
+      "id": "defense_01_block_check",
+      "category": "FORCED_DEFENSE",
+      "fen": "rnbqk1nr/pppp1ppp/8/8/1b2P3/8/PPPP1PPP/RNBQKBNR w KQkq - 1 3",
+      "sideToMove": "w",
+      "engineMove": "Bc4",
+      "alternativeMoves": [
+        "Bd2",
+        "Nc3",
+        "c3",
+        "Nd2",
+        "Ke2"
+      ],
+      "isTop1Match": false,
+      "isCriticalDisagreement": false,
+      "score": 105,
+      "isSignMatch": true,
+      "timeMs": 1939.67
+    },
+    {
+      "id": "defense_02_flee_from_queen",
+      "category": "FORCED_DEFENSE",
+      "fen": "rnb1kbnr/pppp1ppp/8/8/4q3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 0 4",
+      "sideToMove": "w",
+      "engineMove": "Qe2",
+      "alternativeMoves": [
+        "Be2",
+        "Qe2",
+        "Ne2"
+      ],
+      "isTop1Match": true,
+      "isCriticalDisagreement": false,
+      "score": 40,
+      "isSignMatch": true,
+      "timeMs": 265.84
+    },
+    {
+      "id": "defense_03_avoid_back_rank_loss",
+      "category": "FORCED_DEFENSE",
+      "fen": "6k1/5ppp/8/8/8/8/5PPP/4R1K1 b - - 0 1",
+      "sideToMove": "b",
+      "engineMove": "Kf8",
+      "alternativeMoves": [
+        "h6",
+        "h5",
+        "g6",
+        "g5",
+        "f6",
+        "f5",
+        "Kf8"
+      ],
+      "isTop1Match": true,
+      "isCriticalDisagreement": false,
+      "score": 505,
+      "isSignMatch": true,
+      "timeMs": 95.74
+    },
+    {
+      "id": "defense_04_stop_passed_pawn",
+      "category": "FORCED_DEFENSE",
+      "fen": "8/4P3/8/8/8/8/8/4K1k1 b - - 0 1",
+      "sideToMove": "b",
+      "engineMove": "Kg2",
+      "expectedMove": "Kh2",
+      "alternativeMoves": [
+        "Kh1",
+        "Kg2"
+      ],
+      "isTop1Match": true,
+      "isCriticalDisagreement": false,
+      "score": 190,
+      "isSignMatch": true,
+      "timeMs": 18.19
+    },
+    {
+      "id": "promo_01_simple_promotion_w",
+      "category": "PROMOTION",
+      "fen": "8/4P3/8/8/8/8/8/k3K3 w - - 0 1",
+      "sideToMove": "w",
+      "engineMove": "e8=Q",
+      "expectedMove": "e8=Q",
+      "isTop1Match": true,
+      "isCriticalDisagreement": false,
+      "score": 180,
+      "isSignMatch": true,
+      "timeMs": 54.26
+    },
+    {
+      "id": "promo_02_promo_with_check_w",
+      "category": "PROMOTION",
+      "fen": "4k3/4P3/8/8/8/8/8/4K3 w - - 0 1",
+      "sideToMove": "w",
+      "engineMove": "Kd2",
+      "isTop1Match": true,
+      "isCriticalDisagreement": false,
+      "score": 150,
+      "isSignMatch": true,
+      "timeMs": 21.71
+    },
+    {
+      "id": "promo_03_black_promotion",
+      "category": "PROMOTION",
+      "fen": "k3K3/8/8/8/8/8/4p3/8 b - - 0 1",
+      "sideToMove": "b",
+      "engineMove": "e1=Q+",
+      "expectedMove": "e1=Q+",
+      "alternativeMoves": [
+        "e1=Q",
+        "e1=Q+"
+      ],
+      "isTop1Match": true,
+      "isCriticalDisagreement": false,
+      "score": -220,
+      "isSignMatch": true,
+      "timeMs": 63.51
+    },
+    {
+      "id": "promo_04_promotion_race",
+      "category": "PROMOTION",
+      "fen": "8/1P6/8/8/8/8/6p1/4K2k w - - 0 1",
+      "sideToMove": "w",
+      "engineMove": "b8=Q",
+      "expectedMove": "b8=Q",
+      "isTop1Match": true,
+      "isCriticalDisagreement": false,
+      "score": 30,
+      "isSignMatch": true,
+      "timeMs": 99.8
+    },
+    {
+      "id": "material_plus_9_queen",
+      "category": "MATERIAL_ADVANTAGE",
+      "fen": "rnb1kbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+      "sideToMove": "w",
+      "engineMove": "Nc3",
+      "isTop1Match": true,
+      "isCriticalDisagreement": false,
+      "score": 895,
+      "expectedScoreSign": "positive",
+      "isSignMatch": true,
+      "timeMs": 733.39
+    },
+    {
+      "id": "material_plus_5_rook",
+      "category": "MATERIAL_ADVANTAGE",
+      "fen": "1nbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+      "sideToMove": "w",
+      "engineMove": "Nc3",
+      "isTop1Match": true,
+      "isCriticalDisagreement": false,
+      "score": 500,
+      "expectedScoreSign": "positive",
+      "isSignMatch": true,
+      "timeMs": 702.95
+    },
+    {
+      "id": "material_plus_3_bishop",
+      "category": "MATERIAL_ADVANTAGE",
+      "fen": "rn1qkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+      "sideToMove": "w",
+      "engineMove": "Nc3",
+      "isTop1Match": true,
+      "isCriticalDisagreement": false,
+      "score": 320,
+      "expectedScoreSign": "positive",
+      "isSignMatch": true,
+      "timeMs": 781.59
+    },
+    {
+      "id": "material_plus_1_pawn",
+      "category": "MATERIAL_ADVANTAGE",
+      "fen": "rnbqkbnr/1ppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+      "sideToMove": "w",
+      "engineMove": "Nc3",
+      "isTop1Match": true,
+      "isCriticalDisagreement": false,
+      "score": 105,
+      "expectedScoreSign": "positive",
+      "isSignMatch": true,
+      "timeMs": 1400.94
+    },
+    {
+      "id": "material_minus_9_queen",
+      "category": "MATERIAL_DISADVANTAGE",
+      "fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNB1KBNR w KQkq - 0 1",
+      "sideToMove": "w",
+      "engineMove": "Nc3",
+      "isTop1Match": true,
+      "isCriticalDisagreement": false,
+      "score": -895,
+      "expectedScoreSign": "negative",
+      "isSignMatch": true,
+      "timeMs": 658.22
+    },
+    {
+      "id": "material_minus_5_rook",
+      "category": "MATERIAL_DISADVANTAGE",
+      "fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/1NBQKBNR w KQkq - 0 1",
+      "sideToMove": "w",
+      "engineMove": "Nc3",
+      "isTop1Match": true,
+      "isCriticalDisagreement": false,
+      "score": -500,
+      "expectedScoreSign": "negative",
+      "isSignMatch": true,
+      "timeMs": 739.75
+    },
+    {
+      "id": "material_minus_3_knight",
+      "category": "MATERIAL_DISADVANTAGE",
+      "fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/R1BQKBNR w KQkq - 0 1",
+      "sideToMove": "w",
+      "engineMove": "d4",
+      "isTop1Match": true,
+      "isCriticalDisagreement": false,
+      "score": -280,
+      "expectedScoreSign": "negative",
+      "isSignMatch": true,
+      "timeMs": 568.9
+    },
+    {
+      "id": "material_minus_1_pawn",
+      "category": "MATERIAL_DISADVANTAGE",
+      "fen": "rnbqkbnr/pppppppp/8/8/8/8/1PPPPPPP/RNBQKBNR w KQkq - 0 1",
+      "sideToMove": "w",
+      "engineMove": "Nc3",
+      "isTop1Match": true,
+      "isCriticalDisagreement": false,
+      "score": -105,
+      "expectedScoreSign": "negative",
+      "isSignMatch": true,
+      "timeMs": 2135.67
+    },
+    {
+      "id": "quiet_01_starting_pos",
+      "category": "QUIET_POSITION",
+      "fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+      "sideToMove": "w",
+      "engineMove": "Nc3",
+      "isTop1Match": true,
+      "isCriticalDisagreement": false,
+      "score": 0,
+      "expectedScoreSign": "neutral",
+      "isSignMatch": true,
+      "timeMs": 790.32
+    },
+    {
+      "id": "quiet_02_symmetrical_pawns",
+      "category": "QUIET_POSITION",
+      "fen": "r1bqkb1r/pppp1ppp/2n2n2/4p3/4P3/2N2N2/PPPP1PPP/R1BQKB1R w KQkq - 4 4",
+      "sideToMove": "w",
+      "engineMove": "Bb5",
+      "isTop1Match": true,
+      "isCriticalDisagreement": false,
+      "score": 0,
+      "expectedScoreSign": "neutral",
+      "isSignMatch": true,
+      "timeMs": 4200.85
+    },
+    {
+      "id": "quiet_03_calm_endgame",
+      "category": "QUIET_POSITION",
+      "fen": "8/5k2/4p3/3pP3/3P4/4K3/8/8 w - - 0 1",
+      "sideToMove": "w",
+      "engineMove": "Kf2",
+      "isTop1Match": true,
+      "isCriticalDisagreement": false,
+      "score": 5,
+      "expectedScoreSign": "neutral",
+      "isSignMatch": true,
+      "timeMs": 57.47
+    },
+    {
+      "id": "endgame_01_kp_vs_k",
+      "category": "ENDGAME",
+      "fen": "8/8/8/3k4/8/3K4/4P3/8 w - - 0 1",
+      "sideToMove": "w",
+      "engineMove": "e4+",
+      "isTop1Match": true,
+      "isCriticalDisagreement": false,
+      "score": 100,
+      "expectedScoreSign": "positive",
+      "isSignMatch": true,
+      "timeMs": 85.55
+    },
+    {
+      "id": "endgame_02_kr_vs_k",
+      "category": "ENDGAME",
+      "fen": "8/8/8/8/8/3k4/R7/4K3 w - - 0 1",
+      "sideToMove": "w",
+      "engineMove": "Kf2",
+      "isTop1Match": true,
+      "isCriticalDisagreement": false,
+      "score": 545,
+      "expectedScoreSign": "positive",
+      "isSignMatch": true,
+      "timeMs": 357.18
+    },
+    {
+      "id": "endgame_03_equal_rook_endgame",
+      "category": "ENDGAME",
+      "fen": "8/5pk1/7p/8/8/7P/5PK1/r7 w - - 0 1",
+      "sideToMove": "w",
+      "engineMove": "h4",
+      "isTop1Match": true,
+      "isCriticalDisagreement": false,
+      "score": -500,
+      "isSignMatch": true,
+      "timeMs": 182.02
+    },
+    {
+      "id": "endgame_04_knight_vs_bishop",
+      "category": "ENDGAME",
+      "fen": "8/8/4k3/4b3/8/4N3/4K3/8 w - - 0 1",
+      "sideToMove": "w",
+      "engineMove": "Kf2",
+      "isTop1Match": true,
+      "isCriticalDisagreement": false,
+      "score": 15,
+      "isSignMatch": true,
+      "timeMs": 721.04
+    },
+    {
+      "id": "opening_01_ruy_lopez",
+      "category": "OPENING",
+      "fen": "r1bqkbnr/pppp1ppp/2n5/1B2p3/4P3/5N2/PPPP1PPP/RNBQK2R b KQkq - 3 3",
+      "sideToMove": "b",
+      "engineMove": "Nf6",
+      "isTop1Match": true,
+      "isCriticalDisagreement": false,
+      "score": 15,
+      "isSignMatch": true,
+      "timeMs": 3358.42
+    },
+    {
+      "id": "opening_02_sicilian_defense",
+      "category": "OPENING",
+      "fen": "rnbqkbnr/pp1ppppp/8/2p5/4P3/8/PPPP1PPP/RNBQKBNR w KQkq c6 0 2",
+      "sideToMove": "w",
+      "engineMove": "Bc4",
+      "isTop1Match": true,
+      "isCriticalDisagreement": false,
+      "score": 50,
+      "isSignMatch": true,
+      "timeMs": 1770.07
+    },
+    {
+      "id": "opening_03_queens_gambit",
+      "category": "OPENING",
+      "fen": "rnbqkbnr/ppp1pppp/8/3p4/2PP4/8/PP2PPPP/RNBQKBNR b KQkq c3 0 2",
+      "sideToMove": "b",
+      "engineMove": "dxc4",
+      "isTop1Match": true,
+      "isCriticalDisagreement": false,
+      "score": -10,
+      "isSignMatch": true,
+      "timeMs": 1901.03
+    },
+    {
+      "id": "tac_defense_01_counter_attack",
+      "category": "TACTICAL_DEFENSE",
+      "fen": "r1bqk2r/pppp1ppp/2n5/4p3/1b2P3/2N2N2/PPPP1PPP/R1BQKB1R w KQkq - 2 4",
+      "sideToMove": "w",
+      "engineMove": "Nd5",
+      "isTop1Match": true,
+      "isCriticalDisagreement": false,
+      "score": 315,
+      "isSignMatch": true,
+      "timeMs": 4531.28
+    },
+    {
+      "id": "tac_defense_02_prevent_smother",
+      "category": "TACTICAL_DEFENSE",
+      "fen": "6k1/5ppp/8/3N4/8/8/5PPP/4R1K1 b - - 0 1",
+      "sideToMove": "b",
+      "engineMove": "Kf8",
+      "alternativeMoves": [
+        "h6",
+        "h5",
+        "g6",
+        "g5",
+        "f6",
+        "f5",
+        "Kf8"
+      ],
+      "isTop1Match": true,
+      "isCriticalDisagreement": false,
+      "score": 845,
+      "isSignMatch": true,
+      "timeMs": 189
+    },
+    {
+      "id": "tac_defense_03_desperado_piece",
+      "category": "TACTICAL_DEFENSE",
+      "fen": "r1b1k2r/pppp1ppp/8/8/1b1n4/2N5/PPP1PPPP/R1B1KBNR w KQkq - 0 1",
+      "sideToMove": "w",
+      "engineMove": "Kd2",
+      "isTop1Match": true,
+      "isCriticalDisagreement": false,
+      "score": 255,
+      "isSignMatch": true,
+      "timeMs": 2697.16
+    },
+    {
+      "id": "tac_defense_04_stalemate_resource",
+      "category": "TACTICAL_DEFENSE",
+      "fen": "k7/8/1K6/8/8/8/8/7R w - - 0 1",
+      "sideToMove": "w",
+      "engineMove": "Rh8#",
+      "expectedMove": "Rh8#",
+      "isTop1Match": true,
+      "isCriticalDisagreement": false,
+      "score": 440,
+      "isSignMatch": true,
+      "timeMs": 204.29
+    }
+  ],
+  "determinism": {
+    "runs": 10,
+    "allSameMove": true,
+    "allSameScore": true,
+    "moves": [
+      "Qxf7#",
+      "Qxf7#",
+      "Qxf7#",
+      "Qxf7#",
+      "Qxf7#",
+      "Qxf7#",
+      "Qxf7#",
+      "Qxf7#",
+      "Qxf7#",
+      "Qxf7#"
+    ],
+    "scores": [
+      -200,
+      -200,
+      -200,
+      -200,
+      -200,
+      -200,
+      -200,
+      -200,
+      -200,
+      -200
+    ]
+  },
+  "perspective": {
+    "tests": [
+      {
+        "name": "Queen advantage (White vs Black mirror)",
+        "whiteEval": 895,
+        "blackEval": -895,
+        "consistent": true
+      },
+      {
+        "name": "Rook advantage (White vs Black mirror)",
+        "whiteEval": 500,
+        "blackEval": -500,
+        "consistent": true
+      },
+      {
+        "name": "Pawn on 7th (White vs Black mirror)",
+        "whiteEval": 180,
+        "blackEval": -220,
+        "consistent": true
+      }
+    ],
+    "allConsistent": true
+  },
+  "materialMonotonicity": {
+    "tests": [
+      {
+        "description": "+Queen (+900)",
+        "score": 895
+      },
+      {
+        "description": "+Rook (+500)",
+        "score": 500
+      },
+      {
+        "description": "+Bishop (+330)",
+        "score": 320
+      },
+      {
+        "description": "Equal (0)",
+        "score": 0
+      },
+      {
+        "description": "-Knight (-320)",
+        "score": -280
+      },
+      {
+        "description": "-Rook (-500)",
+        "score": -500
+      },
+      {
+        "description": "-Queen (-900)",
+        "score": -895
+      }
+    ],
+    "isMonotonic": true
+  }
+}

@@ -8,6 +8,17 @@
     "build": "vite build && esbuild server.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=dist/server.cjs",
     "start": "node dist/server.cjs",
     "preview": "vite preview",
+    "test": "tsx test_all_suites.ts",
+    "test:smoke": "tsx test_project_smoke.ts",
+    "test:rules": "npx --yes firebase-tools@14.23.0 emulators:exec --only firestore --project demo-vanguard-chess \"node test_firestore_rules.mjs && node test_user_private_migration.mjs\"",
+    "test:server": "node test_server_smoke.mjs",
+    "migrate:private-users": "node scripts/migrate_user_private.mjs",
+    "test:full": "npm test && npm run test:phase513 && npm run test:phase513:residual && tsx test_phase59_backend_equivalence.ts && tsx test_phase510_make_undo.ts && tsx test_phase511_evaluation_equivalence.ts",
+    "test:phase513": "tsx test_phase513_zobrist_incremental.ts",
+    "test:phase513:residual": "tsx test_phase513_residual_calls.ts",
+    "benchmark:phase513": "tsx run_phase513_benchmark.ts",
+    "benchmark:quality": "tsx src/lib/analysis/engineBenchmark/runCli.ts",
+    "benchmark:legacy": "tsx run_full_validation.ts",
     "clean": "rm -rf dist server.js",
     "lint": "tsc --noEmit"
   },
@@ -37,6 +48,7 @@
     "vite": "^6.2.3"
   },
   "devDependencies": {
+    "@firebase/rules-unit-testing": "^5.0.2",
     "@types/canvas-confetti": "^1.9.0",
     "@types/express": "^4.17.21",
     "@types/node": "^22.14.0",

@@ -1,0 +1,30 @@
+{
+  "phase": "5.13",
+  "positions": 68,
+  "validatedBoardStates": 1609,
+  "parityChecks": 1609,
+  "repetitionsPerSample": 12,
+  "samplesPerMethod": 7,
+  "fullRecalculationMedianMs": 38.78099999999995,
+  "incrementalReadMedianMs": 0.2721000000000231,
+  "measuredHashReadSpeedup": 142.52480705621704,
+  "checksum": 1056399168,
+  "fullSamplesMs": [
+    40.458099999999945,
+    35.29129999999998,
+    36.164100000000076,
+    45.22919999999999,
+    38.78099999999995,
+    38.92610000000002,
+    37.88869999999997
+  ],
+  "incrementalSamplesMs": [
+    0.205600000000004,
+    0.19880000000000564,
+    0.29139999999995325,
+    0.2904999999999518,
+    0.2721000000000231,
+    0.27330000000006294,
+    0.20310000000006312
+  ]
+}

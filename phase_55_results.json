@@ -1,0 +1,338 @@
+{
+  "metadata": {
+    "date": "2026-09-28T22:04:38.074Z",
+    "vanguardVersion": "Phase 5.4J Frozen",
+    "referenceEngine": "Stockfish.js",
+    "referenceVersion": "10.0.2 (2019-08-15 Multi-Variant)",
+    "protocol": "Depth 3 Parity & Max 5000ms Timeout",
+    "depth": 3,
+    "timeLimitMs": 5000
+  },
+  "summary68": {
+    "name": "68 FEN Benchmark Oficial",
+    "totalPositions": 68,
+    "completed": 54,
+    "timeouts": 14,
+    "top1AgreementPct": 44.12,
+    "top1AgreementCount": 30,
+    "meanAbsEvalDiff": 766,
+    "medianAbsEvalDiff": 184,
+    "p95AbsEvalDiff": 5696,
+    "meanCentipawnLoss": 86.3,
+    "medianCentipawnLoss": 0,
+    "p95CentipawnLoss": 393,
+    "vanguardMedianTimeMs": 1083.8794999999955,
+    "vanguardMedianNodes": 412,
+    "categoryBreakdown": {
+      "MATE_IN_1": {
+        "total": 6,
+        "top1Matches": 5,
+        "agreementPct": 83.3,
+        "meanCpl": 0
+      },
+      "MATE_IN_2": {
+        "total": 6,
+        "top1Matches": 1,
+        "agreementPct": 16.7,
+        "meanCpl": 116.2
+      },
+      "TACTICAL_CAPTURE": {
+        "total": 5,
+        "top1Matches": 3,
+        "agreementPct": 60,
+        "meanCpl": 105.4
+      },
+      "FORK": {
+        "total": 5,
+        "top1Matches": 1,
+        "agreementPct": 20,
+        "meanCpl": 336.6
+      },
+      "PIN": {
+        "total": 4,
+        "top1Matches": 3,
+        "agreementPct": 75,
+        "meanCpl": 8.5
+      },
+      "SKEWER": {
+        "total": 4,
+        "top1Matches": 3,
+        "agreementPct": 75,
+        "meanCpl": 1.3
+      },
+      "DISCOVERED_ATTACK": {
+        "total": 4,
+        "top1Matches": 0,
+        "agreementPct": 0,
+        "meanCpl": 319
+      },
+      "HANGING_PIECE": {
+        "total": 4,
+        "top1Matches": 3,
+        "agreementPct": 75,
+        "meanCpl": 4.5
+      },
+      "FORCED_DEFENSE": {
+        "total": 4,
+        "top1Matches": 2,
+        "agreementPct": 50,
+        "meanCpl": 105.3
+      },
+      "PROMOTION": {
+        "total": 4,
+        "top1Matches": 3,
+        "agreementPct": 75,
+        "meanCpl": 0
+      },
+      "MATERIAL_ADVANTAGE": {
+        "total": 4,
+        "top1Matches": 1,
+        "agreementPct": 25,
+        "meanCpl": 87.3
+      },
+      "MATERIAL_DISADVANTAGE": {
+        "total": 4,
+        "top1Matches": 1,
+        "agreementPct": 25,
+        "meanCpl": 80
+      },
+      "QUIET_POSITION": {
+        "total": 3,
+        "top1Matches": 1,
+        "agreementPct": 33.3,
+        "meanCpl": 62
+      },
+      "ENDGAME": {
+        "total": 4,
+        "top1Matches": 1,
+        "agreementPct": 25,
+        "meanCpl": 7
+      },
+      "OPENING": {
+        "total": 3,
+        "top1Matches": 1,
+        "agreementPct": 33.3,
+        "meanCpl": 45.7
+      },
+      "TACTICAL_DEFENSE": {
+        "total": 4,
+        "top1Matches": 1,
+        "agreementPct": 25,
+        "meanCpl": 46.5
+      }
+    }
+  },
+  "summaryIndependent": {
+    "name": "Dataset Independente (50 FENs)",
+    "totalPositions": 50,
+    "completed": 25,
+    "timeouts": 25,
+    "top1AgreementPct": 32,
+    "top1AgreementCount": 16,
+    "meanAbsEvalDiff": 606,
+    "medianAbsEvalDiff": 96,
+    "p95AbsEvalDiff": 5201,
+    "meanCentipawnLoss": 293.1,
+    "medianCentipawnLoss": 28,
+    "p95CentipawnLoss": 1056,
+    "vanguardMedianTimeMs": 5001.383799999981,
+    "vanguardMedianNodes": 145,
+    "categoryBreakdown": {
+      "TACTICAL": {
+        "total": 10,
+        "top1Matches": 4,
+        "agreementPct": 40,
+        "meanCpl": 116.7
+      },
+      "ENDGAME": {
+        "total": 10,
+        "top1Matches": 4,
+        "agreementPct": 40,
+        "meanCpl": 510.3
+      },
+      "OPENING": {
+        "total": 10,
+        "top1Matches": 1,
+        "agreementPct": 10,
+        "meanCpl": 138.6
+      },
+      "KING_SAFETY": {
+        "total": 5,
+        "top1Matches": 2,
+        "agreementPct": 40,
+        "meanCpl": 75
+      },
+      "PAWN_STRUCTURE": {
+        "total": 5,
+        "top1Matches": 2,
+        "agreementPct": 40,
+        "meanCpl": 87
+      },
+      "PROMOTION": {
+        "total": 5,
+        "top1Matches": 2,
+        "agreementPct": 40,
+        "meanCpl": 982.4
+      },
+      "MATERIAL_IMBALANCE": {
+        "total": 5,
+        "top1Matches": 1,
+        "agreementPct": 20,
+        "meanCpl": 255.4
+      }
+    }
+  },
+  "depthScaling": [
+    {
+      "depthLabel": "Depth 1 (facil)",
+      "targetDepth": 1,
+      "agreementCount": 7,
+      "agreementPct": 70,
+      "medianNodes": 27,
+      "medianTimeMs": 22.1
+    },
+    {
+      "depthLabel": "Depth 2 (medio)",
+      "targetDepth": 2,
+      "agreementCount": 6,
+      "agreementPct": 60,
+      "medianNodes": 70,
+      "medianTimeMs": 265.2
+    },
+    {
+      "depthLabel": "Depth 3 (dificil)",
+      "targetDepth": 3,
+      "agreementCount": 6,
+      "agreementPct": 60,
+      "medianNodes": 480,
+      "medianTimeMs": 747.4
+    },
+    {
+      "depthLabel": "Depth 4 (depth4)",
+      "targetDepth": 4,
+      "agreementCount": 6,
+      "agreementPct": 60,
+      "medianNodes": 1288,
+      "medianTimeMs": 4656.6
+    }
+  ],
+  "top10Divergences": [
+    {
+      "id": "indep_end_13_triangulation",
+      "category": "ENDGAME",
+      "fen": "8/8/8/5p2/4kP2/8/4K3/8 w - - 0 1",
+      "vanguardMove": "Kd2",
+      "stockfishMove": "Kf1",
+      "centipawnLoss": 4844,
+      "evalDifference": 41,
+      "vanguardTime": 48,
+      "stockfishTime": 69
+    },
+    {
+      "id": "indep_pr_42_rook_behind_passed",
+      "category": "PROMOTION",
+      "fen": "R7/8/4k3/8/8/4p3/8/4K3 b - - 0 1",
+      "vanguardMove": "Ke5",
+      "stockfishMove": "Kd5",
+      "centipawnLoss": 4819,
+      "evalDifference": 345,
+      "vanguardTime": 543,
+      "stockfishTime": 76
+    },
+    {
+      "id": "fork_03_queen_double_attack",
+      "category": "FORK",
+      "fen": "r1b1kb1r/pppp1ppp/5n2/8/3Q4/4P3/PPP2PPP/RNB1KB1R w KQkq - 1 6",
+      "vanguardMove": "Nc3",
+      "stockfishMove": "Qc3",
+      "centipawnLoss": 1175,
+      "evalDifference": 480,
+      "vanguardTime": 5001,
+      "stockfishTime": 78
+    },
+    {
+      "id": "indep_imb_46_queen_vs_two_rooks",
+      "category": "MATERIAL_IMBALANCE",
+      "fen": "8/5pk1/4p1p1/7p/7P/4q1P1/5RK1/5R2 w - - 0 35",
+      "vanguardMove": "Rxf7+",
+      "stockfishMove": "Rf3",
+      "centipawnLoss": 1056,
+      "evalDifference": 1171,
+      "vanguardTime": 762,
+      "stockfishTime": 72
+    },
+    {
+      "id": "disc_01_discovered_check_queen",
+      "category": "DISCOVERED_ATTACK",
+      "fen": "r1bqk2r/ppp2ppp/3p1n2/2b1N3/4P3/8/PPPP1PPP/RNBQKB1R w KQkq - 0 6",
+      "vanguardMove": "Bb5+",
+      "stockfishMove": "d4",
+      "centipawnLoss": 491,
+      "evalDifference": 51,
+      "vanguardTime": 5142,
+      "stockfishTime": 112
+    },
+    {
+      "id": "indep_tac_08_bk01",
+      "category": "TACTICAL",
+      "fen": "1k1r4/pp1b1R2/3q2pp/4p3/2B5/4Q3/PPP2B2/2K5 b - - 0 1",
+      "vanguardMove": "a6",
+      "stockfishMove": "Bc6",
+      "centipawnLoss": 439,
+      "evalDifference": 96,
+      "vanguardTime": 5018,
+      "stockfishTime": 75
+    },
+    {
+      "id": "disc_02_double_check",
+      "category": "DISCOVERED_ATTACK",
+      "fen": "r1b1k2r/ppp2ppp/2N5/1B6/4P3/8/PPP2PPP/RNB1K2R w KQkq - 0 1",
+      "vanguardMove": "Ne5+",
+      "stockfishMove": "Nxa7+",
+      "centipawnLoss": 414,
+      "evalDifference": 363,
+      "vanguardTime": 2821,
+      "stockfishTime": 78
+    },
+    {
+      "id": "defense_01_block_check",
+      "category": "FORCED_DEFENSE",
+      "fen": "rnbqk1nr/pppp1ppp/8/8/1b2P3/8/PPPP1PPP/RNBQKBNR w KQkq - 1 3",
+      "vanguardMove": "Nc3",
+      "stockfishMove": "c3",
+      "centipawnLoss": 393,
+      "evalDifference": 508,
+      "vanguardTime": 5000,
+      "stockfishTime": 79
+    },
+    {
+      "id": "fork_04_knight_fork_c7",
+      "category": "FORK",
+      "fen": "r3k2r/pppn1ppp/3b4/3Np3/8/8/PPP2PPP/R1B1KB1R w KQkq - 0 1",
+      "vanguardMove": "Bb5",
+      "stockfishMove": "Ne3",
+      "centipawnLoss": 382,
+      "evalDifference": 79,
+      "vanguardTime": 5016,
+      "stockfishTime": 78
+    },
+    {
+      "id": "mate2_03_opera_box",
+      "category": "MATE_IN_2",
+      "fen": "4kb1r/p2n1ppp/4p3/4q3/8/8/PP1B1PPP/2R1K2R w Kk - 0 1",
+      "vanguardMove": "Kf1",
+      "stockfishMove": "Be3",
+      "centipawnLoss": 381,
+      "evalDifference": 515,
+      "vanguardTime": 1265,
+      "stockfishTime": 68
+    }
+  ],
+  "determinism": {
+    "pass": true,
+    "move": "O-O"
+  },
+  "stateIsolation": {
+    "pass": true
+  }
+}

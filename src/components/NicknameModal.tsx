@@ -23,12 +23,12 @@ export default function NicknameModal({ currentUser }: NicknameModalProps) {
       setError('O apelido não pode ficar em branco.');
       return;
     }
-    
+
     if (nickname.trim().length < 3) {
       setError('O apelido deve ter pelo menos 3 caracteres.');
       return;
     }
-    
+
     if (nickname.trim().length > 15) {
       setError('O apelido deve ter no máximo 15 caracteres.');
       return;
@@ -47,11 +47,11 @@ export default function NicknameModal({ currentUser }: NicknameModalProps) {
       const db = getDb();
       // Check if nickname already exists
       const usersRef = collection(db, 'users');
-      const q = query(usersRef, where('displayName', '==', nickname.trim()));
+      const q = query(usersRef, where('profileSchemaVersion', '==', 2), where('displayName', '==', nickname.trim()));
       const querySnapshot = await getDocs(q);
-      
+
       const exists = querySnapshot.docs.some(doc => doc.id !== currentUser.uid);
-      
+
       if (exists) {
         setError('Este apelido já está em uso por outro jogador.');
         setIsSubmitting(false);
@@ -62,7 +62,7 @@ export default function NicknameModal({ currentUser }: NicknameModalProps) {
         displayName: nickname.trim(),
         hasSetNickname: true
       });
-      
+
     } catch (err) {
       console.error(err);
       setError('Erro ao salvar apelido. Tente novamente.');
@@ -78,7 +78,7 @@ export default function NicknameModal({ currentUser }: NicknameModalProps) {
             <UserIcon className="w-8 h-8 text-emerald-500" />
           </div>
         </div>
-        
+
         <h2 className="text-2xl font-bold text-white text-center mb-2">Bem-vindo ao Vanguard Chess!</h2>
         <p className="text-neutral-400 text-center mb-6 text-sm">
           Como você quer ser chamado(a) nas partidas e torneios?

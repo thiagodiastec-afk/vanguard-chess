@@ -1,0 +1,925 @@
+{
+  "timestamp": "2026-09-29T02:50:14.900Z",
+  "status": "PASS",
+  "decision": "KEEP",
+  "enPassantSuite": {
+    "passed": true
+  },
+  "controlledPositions": {
+    "total": 55,
+    "passed": 55
+  },
+  "randomPositions500": {
+    "total": 500,
+    "passed": 500,
+    "pieceMatches": {
+      "pawn": 500,
+      "knight": 500,
+      "bishop": 500,
+      "rook": 500,
+      "queen": 500,
+      "king": 500,
+      "total": 500
+    }
+  },
+  "symmetry": {
+    "total": 20,
+    "passed": 20
+  },
+  "monotonicity": {
+    "passed": true,
+    "expectedDelta": 6,
+    "actualDelta": 6
+  },
+  "nonDuplication": {
+    "passed": true
+  },
+  "microbenchmark": {
+    "evaluations": 10000,
+    "avgRefMobUs": 144.36249999999998,
+    "avgOptMobUs": 125.85,
+    "avgMobSpeedup": 12.823621092735296,
+    "avgRefEvalUs": 154.92499999999998,
+    "avgOptEvalUs": 136.41250000000002,
+    "avgEvalSpeedup": 11.9493303211231,
+    "results": [
+      {
+        "name": "Initial Position",
+        "refMobUs": 103.1,
+        "optMobUs": 108.7,
+        "refEvalUs": 100.3,
+        "optEvalUs": 105.9,
+        "mobSpeedupPct": -5.5,
+        "evalSpeedupPct": -5.6,
+        "evalsPerSecOpt": 9442
+      },
+      {
+        "name": "Open Middlegame",
+        "refMobUs": 162.8,
+        "optMobUs": 145.8,
+        "refEvalUs": 180.2,
+        "optEvalUs": 163.2,
+        "mobSpeedupPct": 10.4,
+        "evalSpeedupPct": 9.4,
+        "evalsPerSecOpt": 6128
+      },
+      {
+        "name": "Closed Middlegame",
+        "refMobUs": 165.9,
+        "optMobUs": 147.4,
+        "refEvalUs": 192.4,
+        "optEvalUs": 173.8,
+        "mobSpeedupPct": 11.2,
+        "evalSpeedupPct": 9.6,
+        "evalsPerSecOpt": 5752
+      },
+      {
+        "name": "Tactical Position",
+        "refMobUs": 210.3,
+        "optMobUs": 198.9,
+        "refEvalUs": 215,
+        "optEvalUs": 203.7,
+        "mobSpeedupPct": 5.4,
+        "evalSpeedupPct": 5.3,
+        "evalsPerSecOpt": 4910
+      },
+      {
+        "name": "Position with Check",
+        "refMobUs": 81.3,
+        "optMobUs": 39.3,
+        "refEvalUs": 88.6,
+        "optEvalUs": 46.7,
+        "mobSpeedupPct": 51.6,
+        "evalSpeedupPct": 47.3,
+        "evalsPerSecOpt": 21404
+      },
+      {
+        "name": "Position with Multiple Pins",
+        "refMobUs": 158.1,
+        "optMobUs": 139.7,
+        "refEvalUs": 171.1,
+        "optEvalUs": 152.6,
+        "mobSpeedupPct": 11.7,
+        "evalSpeedupPct": 10.8,
+        "evalsPerSecOpt": 6553
+      },
+      {
+        "name": "High Branching Position",
+        "refMobUs": 207.9,
+        "optMobUs": 189.6,
+        "refEvalUs": 221.5,
+        "optEvalUs": 203.2,
+        "mobSpeedupPct": 8.8,
+        "evalSpeedupPct": 8.2,
+        "evalsPerSecOpt": 4920
+      },
+      {
+        "name": "Endgame Position",
+        "refMobUs": 65.5,
+        "optMobUs": 37.4,
+        "refEvalUs": 70.3,
+        "optEvalUs": 42.2,
+        "mobSpeedupPct": 43,
+        "evalSpeedupPct": 40,
+        "evalsPerSecOpt": 23720
+      }
+    ]
+  },
+  "benchmark68": {
+    "total": 68,
+    "correct": 63,
+    "incorrect": 5,
+    "timeout": 0,
+    "completed": 68,
+    "accuracyCompleted": 92.64705882352942,
+    "completionRate": 100,
+    "medianTime": 184.4480999999996,
+    "p95Time": 1348.4879,
+    "medianNodes": 627,
+    "medianQNodes": 898,
+    "summaries": [
+      {
+        "id": "mate1_01_scholars",
+        "category": "MATE_IN_1",
+        "bestMove": "Qxf7#",
+        "expected": "Qxf7#",
+        "isCorrect": true,
+        "isTimeout": false,
+        "timeMs": 728.2382000000007,
+        "nodes": 1861,
+        "qNodes": 2452
+      },
+      {
+        "id": "mate1_02_back_rank_white",
+        "category": "MATE_IN_1",
+        "bestMove": "Rd8#",
+        "expected": "Rd8#",
+        "isCorrect": true,
+        "isTimeout": false,
+        "timeMs": 80.77719999999954,
+        "nodes": 374,
+        "qNodes": 359
+      },
+      {
+        "id": "mate1_03_back_rank_black",
+        "category": "MATE_IN_1",
+        "bestMove": "Rd1#",
+        "expected": "Rd1#",
+        "isCorrect": true,
+        "isTimeout": false,
+        "timeMs": 77.63310000000001,
+        "nodes": 371,
+        "qNodes": 356
+      },
+      {
+        "id": "mate1_04_smothered_mate_w",
+        "category": "MATE_IN_1",
+        "bestMove": "Nf7#",
+        "expected": "Nf7#",
+        "isCorrect": true,
+        "isTimeout": false,
+        "timeMs": 45.5027999999993,
+        "nodes": 179,
+        "qNodes": 158
+      },
+      {
+        "id": "mate1_05_queen_helper_black",
+        "category": "MATE_IN_1",
+        "bestMove": "Ka3#",
+        "expected": "Qb2#",
+        "isCorrect": true,
+        "isTimeout": false,
+        "timeMs": 104.8135000000002,
+        "nodes": 556,
+        "qNodes": 606
+      },
+      {
+        "id": "mate1_06_rook_corridor_white",
+        "category": "MATE_IN_1",
+        "bestMove": "Rb8#",
+        "expected": "Rb8#",
+        "isCorrect": true,
+        "isTimeout": false,
+        "timeMs": 239.54979999999978,
+        "nodes": 1123,
+        "qNodes": 1252
+      },
+      {
+        "id": "mate2_01_anastasia",
+        "category": "MATE_IN_2",
+        "bestMove": "Re1",
+        "isCorrect": true,
+        "isTimeout": false,
+        "timeMs": 173.14109999999982,
+        "nodes": 956,
+        "qNodes": 990
+      },
+      {
+        "id": "mate2_02_arabian_setup",
+        "category": "MATE_IN_2",
+        "bestMove": "Rh7#",
+        "expected": "Rh7#",
+        "isCorrect": true,
+        "isTimeout": false,
+        "timeMs": 96.33390000000054,
+        "nodes": 480,
+        "qNodes": 506
+      },
+      {
+        "id": "mate2_03_opera_box",
+        "category": "MATE_IN_2",
+        "bestMove": "Kf1",
+        "isCorrect": true,
+        "isTimeout": false,
+        "timeMs": 236.70319999999992,
+        "nodes": 254,
+        "qNodes": 1311
+      },
+      {
+        "id": "mate2_04_epaulette_setup",
+        "category": "MATE_IN_2",
+        "bestMove": "Kf8",
+        "expected": "Kf8",
+        "isCorrect": true,
+        "isTimeout": false,
+        "timeMs": 120.15120000000024,
+        "nodes": 202,
+        "qNodes": 856
+      },
+      {
+        "id": "mate2_05_queen_rook_battery",
+        "category": "MATE_IN_2",
+        "bestMove": "Re7",
+        "isCorrect": true,
+        "isTimeout": false,
+        "timeMs": 544.1003000000001,
+        "nodes": 1916,
+        "qNodes": 3049
+      },
+      {
+        "id": "mate2_06_smothered_classic_m2",
+        "category": "MATE_IN_2",
+        "bestMove": "Ne5",
+        "isCorrect": true,
+        "isTimeout": false,
+        "timeMs": 244.21120000000064,
+        "nodes": 836,
+        "qNodes": 1157
+      },
+      {
+        "id": "capture_01_hanging_queen",
+        "category": "TACTICAL_CAPTURE",
+        "bestMove": "Nf3",
+        "expected": "dxe5",
+        "isCorrect": false,
+        "isTimeout": false,
+        "timeMs": 683.9200999999994,
+        "nodes": 1283,
+        "qNodes": 2890
+      },
+      {
+        "id": "capture_02_hanging_rook",
+        "category": "TACTICAL_CAPTURE",
+        "bestMove": "Qxb4",
+        "expected": "Qxb4",
+        "isCorrect": true,
+        "isTimeout": false,
+        "timeMs": 254.4481999999989,
+        "nodes": 806,
+        "qNodes": 1092
+      },
+      {
+        "id": "capture_03_free_knight",
+        "category": "TACTICAL_CAPTURE",
+        "bestMove": "Nxe5",
+        "expected": "Bxa6",
+        "isCorrect": false,
+        "isTimeout": false,
+        "timeMs": 1348.4879,
+        "nodes": 1659,
+        "qNodes": 6329
+      },
+      {
+        "id": "capture_04_exchange_sac_trap",
+        "category": "TACTICAL_CAPTURE",
+        "bestMove": "Qe2",
+        "expected": "Be2",
+        "isCorrect": true,
+        "isTimeout": false,
+        "timeMs": 116.1265000000003,
+        "nodes": 136,
+        "qNodes": 600
+      },
+      {
+        "id": "capture_05_black_captures_queen",
+        "category": "TACTICAL_CAPTURE",
+        "bestMove": "Ne7",
+        "expected": "Be7",
+        "isCorrect": true,
+        "isTimeout": false,
+        "timeMs": 184.4480999999996,
+        "nodes": 271,
+        "qNodes": 915
+      },
+      {
+        "id": "fork_01_royal_knight_fork",
+        "category": "FORK",
+        "bestMove": "Bf4",
+        "isCorrect": true,
+        "isTimeout": false,
+        "timeMs": 546.9593999999997,
+        "nodes": 1519,
+        "qNodes": 2159
+      },
+      {
+        "id": "fork_02_pawn_fork_white",
+        "category": "FORK",
+        "bestMove": "Nc3",
+        "isCorrect": true,
+        "isTimeout": false,
+        "timeMs": 1594.5283999999992,
+        "nodes": 1926,
+        "qNodes": 6334
+      },
+      {
+        "id": "fork_03_queen_double_attack",
+        "category": "FORK",
+        "bestMove": "Qe5+",
+        "isCorrect": true,
+        "isTimeout": false,
+        "timeMs": 1144.0920000000006,
+        "nodes": 2391,
+        "qNodes": 4292
+      },
+      {
+        "id": "fork_04_knight_fork_c7",
+        "category": "FORK",
+        "bestMove": "Be3",
+        "isCorrect": true,
+        "isTimeout": false,
+        "timeMs": 1232.0946999999996,
+        "nodes": 2811,
+        "qNodes": 5144
+      },
+      {
+        "id": "fork_05_black_knight_fork_f2",
+        "category": "FORK",
+        "bestMove": "Nxc1",
+        "isCorrect": true,
+        "isTimeout": false,
+        "timeMs": 379.6485999999986,
+        "nodes": 1280,
+        "qNodes": 1464
+      },
+      {
+        "id": "pin_01_absolute_pin_on_king",
+        "category": "PIN",
+        "bestMove": "Bxc6",
+        "isCorrect": true,
+        "isTimeout": false,
+        "timeMs": 704.044100000001,
+        "nodes": 1253,
+        "qNodes": 3268
+      },
+      {
+        "id": "pin_02_relative_pin_on_queen",
+        "category": "PIN",
+        "bestMove": "Nc6",
+        "isCorrect": true,
+        "isTimeout": false,
+        "timeMs": 1249.6890999999978,
+        "nodes": 1376,
+        "qNodes": 6064
+      },
+      {
+        "id": "pin_03_pin_exploitation",
+        "category": "PIN",
+        "bestMove": "Rxe6+",
+        "expected": "Kd2",
+        "isCorrect": false,
+        "isTimeout": false,
+        "timeMs": 96.72580000000016,
+        "nodes": 379,
+        "qNodes": 414
+      },
+      {
+        "id": "pin_04_cross_pin_defense",
+        "category": "PIN",
+        "bestMove": "Rxe7+",
+        "isCorrect": true,
+        "isTimeout": false,
+        "timeMs": 17.169300000001385,
+        "nodes": 81,
+        "qNodes": 85
+      },
+      {
+        "id": "skewer_01_king_queen",
+        "category": "SKEWER",
+        "bestMove": "Qxd1+",
+        "expected": "Qxd1+",
+        "isCorrect": true,
+        "isTimeout": false,
+        "timeMs": 28.354199999997945,
+        "nodes": 126,
+        "qNodes": 120
+      },
+      {
+        "id": "skewer_02_rook_skewer_w",
+        "category": "SKEWER",
+        "bestMove": "Kxd2",
+        "expected": "Rd8+",
+        "isCorrect": false,
+        "isTimeout": false,
+        "timeMs": 125.39830000000075,
+        "nodes": 419,
+        "qNodes": 513
+      },
+      {
+        "id": "skewer_03_bishop_skewer_b",
+        "category": "SKEWER",
+        "bestMove": "Bxb2",
+        "expected": "Bxb2",
+        "isCorrect": true,
+        "isTimeout": false,
+        "timeMs": 66.76979999999821,
+        "nodes": 267,
+        "qNodes": 225
+      },
+      {
+        "id": "skewer_04_queen_skewer_w",
+        "category": "SKEWER",
+        "bestMove": "Qe5",
+        "isCorrect": true,
+        "isTimeout": false,
+        "timeMs": 214.80319999999847,
+        "nodes": 473,
+        "qNodes": 889
+      },
+      {
+        "id": "disc_01_discovered_check_queen",
+        "category": "DISCOVERED_ATTACK",
+        "bestMove": "Nd3",
+        "isCorrect": true,
+        "isTimeout": false,
+        "timeMs": 969.1947,
+        "nodes": 1330,
+        "qNodes": 3685
+      },
+      {
+        "id": "disc_02_double_check",
+        "category": "DISCOVERED_ATTACK",
+        "bestMove": "Ne5+",
+        "isCorrect": true,
+        "isTimeout": false,
+        "timeMs": 491.1948999999986,
+        "nodes": 1828,
+        "qNodes": 2095
+      },
+      {
+        "id": "disc_03_discovered_attack_on_rook",
+        "category": "DISCOVERED_ATTACK",
+        "bestMove": "Be3",
+        "isCorrect": true,
+        "isTimeout": false,
+        "timeMs": 948.4236999999994,
+        "nodes": 1880,
+        "qNodes": 4244
+      },
+      {
+        "id": "disc_04_black_discovered_check",
+        "category": "DISCOVERED_ATTACK",
+        "bestMove": "Bxe1",
+        "isCorrect": true,
+        "isTimeout": false,
+        "timeMs": 719.2602000000006,
+        "nodes": 1904,
+        "qNodes": 2205
+      },
+      {
+        "id": "hanging_01_undefended_bishop",
+        "category": "HANGING_PIECE",
+        "bestMove": "Nxe5",
+        "expected": "Nxe5",
+        "isCorrect": true,
+        "isTimeout": false,
+        "timeMs": 674.106499999998,
+        "nodes": 1130,
+        "qNodes": 2403
+      },
+      {
+        "id": "hanging_02_undefended_rook",
+        "category": "HANGING_PIECE",
+        "bestMove": "Bf4",
+        "isCorrect": true,
+        "isTimeout": false,
+        "timeMs": 272.8198999999986,
+        "nodes": 1114,
+        "qNodes": 1162
+      },
+      {
+        "id": "hanging_03_black_takes_hanging_knight",
+        "category": "HANGING_PIECE",
+        "bestMove": "d5",
+        "isCorrect": true,
+        "isTimeout": false,
+        "timeMs": 396.9301999999989,
+        "nodes": 974,
+        "qNodes": 1384
+      },
+      {
+        "id": "hanging_04_hanging_queen_direct",
+        "category": "HANGING_PIECE",
+        "bestMove": "Nc3",
+        "isCorrect": true,
+        "isTimeout": false,
+        "timeMs": 740.8894,
+        "nodes": 1228,
+        "qNodes": 2183
+      },
+      {
+        "id": "defense_01_block_check",
+        "category": "FORCED_DEFENSE",
+        "bestMove": "Qg4",
+        "isCorrect": false,
+        "isTimeout": false,
+        "timeMs": 912.0845000000008,
+        "nodes": 1534,
+        "qNodes": 3206
+      },
+      {
+        "id": "defense_02_flee_from_queen",
+        "category": "FORCED_DEFENSE",
+        "bestMove": "Qe2",
+        "isCorrect": true,
+        "isTimeout": false,
+        "timeMs": 64.36429999999746,
+        "nodes": 150,
+        "qNodes": 222
+      },
+      {
+        "id": "defense_03_avoid_back_rank_loss",
+        "category": "FORCED_DEFENSE",
+        "bestMove": "Kf8",
+        "isCorrect": true,
+        "isTimeout": false,
+        "timeMs": 24.072400000000926,
+        "nodes": 189,
+        "qNodes": 252
+      },
+      {
+        "id": "defense_04_stop_passed_pawn",
+        "category": "FORCED_DEFENSE",
+        "bestMove": "Kg2",
+        "expected": "Kh2",
+        "isCorrect": true,
+        "isTimeout": false,
+        "timeMs": 16.330000000001746,
+        "nodes": 49,
+        "qNodes": 116
+      },
+      {
+        "id": "promo_01_simple_promotion_w",
+        "category": "PROMOTION",
+        "bestMove": "e8=Q",
+        "expected": "e8=Q",
+        "isCorrect": true,
+        "isTimeout": false,
+        "timeMs": 25.171699999998964,
+        "nodes": 151,
+        "qNodes": 182
+      },
+      {
+        "id": "promo_02_promo_with_check_w",
+        "category": "PROMOTION",
+        "bestMove": "Kd2",
+        "isCorrect": true,
+        "isTimeout": false,
+        "timeMs": 3.3158999999977823,
+        "nodes": 31,
+        "qNodes": 23
+      },
+      {
+        "id": "promo_03_black_promotion",
+        "category": "PROMOTION",
+        "bestMove": "e1=Q+",
+        "expected": "e1=Q+",
+        "isCorrect": true,
+        "isTimeout": false,
+        "timeMs": 28.521199999999226,
+        "nodes": 135,
+        "qNodes": 207
+      },
+      {
+        "id": "promo_04_promotion_race",
+        "category": "PROMOTION",
+        "bestMove": "b8=Q",
+        "expected": "b8=Q",
+        "isCorrect": true,
+        "isTimeout": false,
+        "timeMs": 39.402900000000955,
+        "nodes": 80,
+        "qNodes": 186
+      },
+      {
+        "id": "material_plus_9_queen",
+        "category": "MATERIAL_ADVANTAGE",
+        "bestMove": "Nc3",
+        "isCorrect": true,
+        "isTimeout": false,
+        "timeMs": 147.4533999999985,
+        "nodes": 627,
+        "qNodes": 559
+      },
+      {
+        "id": "material_plus_5_rook",
+        "category": "MATERIAL_ADVANTAGE",
+        "bestMove": "Nc3",
+        "isCorrect": true,
+        "isTimeout": false,
+        "timeMs": 138.17239999999947,
+        "nodes": 626,
+        "qNodes": 561
+      },
+      {
+        "id": "material_plus_3_bishop",
+        "category": "MATERIAL_ADVANTAGE",
+        "bestMove": "Nc3",
+        "isCorrect": true,
+        "isTimeout": false,
+        "timeMs": 155.66170000000056,
+        "nodes": 628,
+        "qNodes": 562
+      },
+      {
+        "id": "material_plus_1_pawn",
+        "category": "MATERIAL_ADVANTAGE",
+        "bestMove": "Nc3",
+        "isCorrect": true,
+        "isTimeout": false,
+        "timeMs": 217.3966999999975,
+        "nodes": 687,
+        "qNodes": 898
+      },
+      {
+        "id": "material_minus_9_queen",
+        "category": "MATERIAL_DISADVANTAGE",
+        "bestMove": "Nc3",
+        "isCorrect": true,
+        "isTimeout": false,
+        "timeMs": 160.6310999999987,
+        "nodes": 657,
+        "qNodes": 587
+      },
+      {
+        "id": "material_minus_5_rook",
+        "category": "MATERIAL_DISADVANTAGE",
+        "bestMove": "Nf3",
+        "isCorrect": true,
+        "isTimeout": false,
+        "timeMs": 166.98029999999926,
+        "nodes": 617,
+        "qNodes": 546
+      },
+      {
+        "id": "material_minus_3_knight",
+        "category": "MATERIAL_DISADVANTAGE",
+        "bestMove": "Nf3",
+        "isCorrect": true,
+        "isTimeout": false,
+        "timeMs": 138.10039999999935,
+        "nodes": 569,
+        "qNodes": 513
+      },
+      {
+        "id": "material_minus_1_pawn",
+        "category": "MATERIAL_DISADVANTAGE",
+        "bestMove": "Nc3",
+        "isCorrect": true,
+        "isTimeout": false,
+        "timeMs": 221.5554000000011,
+        "nodes": 849,
+        "qNodes": 928
+      },
+      {
+        "id": "quiet_01_starting_pos",
+        "category": "QUIET_POSITION",
+        "bestMove": "Nc3",
+        "isCorrect": true,
+        "isTimeout": false,
+        "timeMs": 141.02170000000115,
+        "nodes": 625,
+        "qNodes": 560
+      },
+      {
+        "id": "quiet_02_symmetrical_pawns",
+        "category": "QUIET_POSITION",
+        "bestMove": "d4",
+        "isCorrect": true,
+        "isTimeout": false,
+        "timeMs": 1647.839,
+        "nodes": 1571,
+        "qNodes": 7951
+      },
+      {
+        "id": "quiet_03_calm_endgame",
+        "category": "QUIET_POSITION",
+        "bestMove": "Kd3",
+        "isCorrect": true,
+        "isTimeout": false,
+        "timeMs": 11.427700000000186,
+        "nodes": 91,
+        "qNodes": 68
+      },
+      {
+        "id": "endgame_01_kp_vs_k",
+        "category": "ENDGAME",
+        "bestMove": "e4+",
+        "isCorrect": true,
+        "isTimeout": false,
+        "timeMs": 16.067699999999604,
+        "nodes": 129,
+        "qNodes": 111
+      },
+      {
+        "id": "endgame_02_kr_vs_k",
+        "category": "ENDGAME",
+        "bestMove": "Ra4",
+        "isCorrect": true,
+        "isTimeout": false,
+        "timeMs": 76.7706999999973,
+        "nodes": 411,
+        "qNodes": 446
+      },
+      {
+        "id": "endgame_03_equal_rook_endgame",
+        "category": "ENDGAME",
+        "bestMove": "Kf3",
+        "isCorrect": true,
+        "isTimeout": false,
+        "timeMs": 86.51850000000195,
+        "nodes": 209,
+        "qNodes": 409
+      },
+      {
+        "id": "endgame_04_knight_vs_bishop",
+        "category": "ENDGAME",
+        "bestMove": "Kd3",
+        "isCorrect": true,
+        "isTimeout": false,
+        "timeMs": 121.30679999999847,
+        "nodes": 402,
+        "qNodes": 415
+      },
+      {
+        "id": "opening_01_ruy_lopez",
+        "category": "OPENING",
+        "bestMove": "Nf6",
+        "isCorrect": true,
+        "isTimeout": false,
+        "timeMs": 1010.7249999999985,
+        "nodes": 1123,
+        "qNodes": 4401
+      },
+      {
+        "id": "opening_02_sicilian_defense",
+        "category": "OPENING",
+        "bestMove": "Nc3",
+        "isCorrect": true,
+        "isTimeout": false,
+        "timeMs": 430.0712999999996,
+        "nodes": 1175,
+        "qNodes": 1346
+      },
+      {
+        "id": "opening_03_queens_gambit",
+        "category": "OPENING",
+        "bestMove": "Nc6",
+        "isCorrect": true,
+        "isTimeout": false,
+        "timeMs": 578.8394999999982,
+        "nodes": 1139,
+        "qNodes": 1900
+      },
+      {
+        "id": "tac_defense_01_counter_attack",
+        "category": "TACTICAL_DEFENSE",
+        "bestMove": "d4",
+        "isCorrect": true,
+        "isTimeout": false,
+        "timeMs": 1626.1244000000006,
+        "nodes": 1569,
+        "qNodes": 6807
+      },
+      {
+        "id": "tac_defense_02_prevent_smother",
+        "category": "TACTICAL_DEFENSE",
+        "bestMove": "h6",
+        "isCorrect": true,
+        "isTimeout": false,
+        "timeMs": 35.034199999998236,
+        "nodes": 189,
+        "qNodes": 261
+      },
+      {
+        "id": "tac_defense_03_desperado_piece",
+        "category": "TACTICAL_DEFENSE",
+        "bestMove": "Kd1",
+        "isCorrect": true,
+        "isTimeout": false,
+        "timeMs": 404.47989999999845,
+        "nodes": 485,
+        "qNodes": 2359
+      },
+      {
+        "id": "tac_defense_04_stalemate_resource",
+        "category": "TACTICAL_DEFENSE",
+        "bestMove": "Rh8#",
+        "expected": "Rh8#",
+        "isCorrect": true,
+        "isTimeout": false,
+        "timeMs": 65.8940999999977,
+        "nodes": 459,
+        "qNodes": 442
+      }
+    ]
+  },
+  "transitionMatrix": {
+    "CORRECT -> CORRECT": 63,
+    "CORRECT -> INCORRECT": 0,
+    "CORRECT -> TIMEOUT": 0,
+    "INCORRECT -> CORRECT": 0,
+    "INCORRECT -> INCORRECT": 5,
+    "INCORRECT -> TIMEOUT": 0,
+    "TIMEOUT -> CORRECT": 0,
+    "TIMEOUT -> INCORRECT": 0,
+    "TIMEOUT -> TIMEOUT": 0
+  },
+  "determinism": {
+    "passed": true
+  },
+  "stateIsolation": {
+    "passed": true
+  },
+  "timings": [
+    {
+      "key": "en passant",
+      "name": "[0/9] Dedicated En Passant tests",
+      "durationMs": 7,
+      "status": "PASS"
+    },
+    {
+      "key": "controlled",
+      "name": "[1/9] Controlled equivalence",
+      "durationMs": 49,
+      "status": "PASS"
+    },
+    {
+      "key": "random equivalence",
+      "name": "[2/9] Random equivalence",
+      "durationMs": 447,
+      "status": "PASS"
+    },
+    {
+      "key": "symmetry",
+      "name": "[3/9] Symmetry",
+      "durationMs": 8,
+      "status": "PASS"
+    },
+    {
+      "key": "monotonicity",
+      "name": "[4/9] Monotonicity",
+      "durationMs": 1,
+      "status": "PASS"
+    },
+    {
+      "key": "non-duplication",
+      "name": "[5/9] Non-duplication",
+      "durationMs": 2,
+      "status": "PASS"
+    },
+    {
+      "key": "microbenchmark",
+      "name": "[6/9] Microbenchmark",
+      "durationMs": 4069,
+      "status": "PASS"
+    },
+    {
+      "key": "68-FEN",
+      "name": "[7/9] Official 68-FEN benchmark",
+      "durationMs": 26610,
+      "status": "PASS"
+    },
+    {
+      "key": "transition",
+      "name": "[8/9] Transition matrix",
+      "durationMs": 1,
+      "status": "PASS"
+    },
+    {
+      "key": "state isolation",
+      "name": "[9/9] State isolation",
+      "durationMs": 16320,
+      "status": "PASS"
+    }
+  ]
+}

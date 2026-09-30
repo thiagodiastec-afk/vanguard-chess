@@ -1,0 +1,62 @@
+{
+  "timestamp": "2026-09-29T15:39:13.208Z",
+  "benchmark": "OFFICIAL_68_FENS",
+  "modes": {
+    "CHESSJS_ONLY": {
+      "totalTimeMs": 29056.7547,
+      "medianTimeMs": 230.0978,
+      "p95TimeMs": 1524.6930000000002,
+      "totalNodes": 56108,
+      "medianNodes": 627,
+      "totalQNodes": 112234,
+      "medianQNodes": 898,
+      "completedDepth": 3,
+      "timeouts": 0,
+      "correct": 63,
+      "accuracy": 92.64705882352942,
+      "moveGenCalls": 32246,
+      "makeUndoCalls": 697419,
+      "evaluatorCalls": 80728,
+      "oracleCalls": 0
+    },
+    "BITBOARD_ONLY": {
+      "totalTimeMs": 27679.647500000003,
+      "medianTimeMs": 222.39839999999822,
+      "p95TimeMs": 1546.6146000000008,
+      "totalNodes": 56663,
+      "medianNodes": 739,
+      "totalQNodes": 123794,
+      "medianQNodes": 1025,
+      "completedDepth": 3,
+      "timeouts": 0,
+      "correct": 63,
+      "accuracy": 92.64705882352942,
+      "moveGenCalls": 35226,
+      "makeUndoCalls": 781884,
+      "evaluatorCalls": 86788,
+      "oracleCalls": 0
+    },
+    "BITBOARD_WITH_ORACLE": {
+      "totalTimeMs": 42981.1627,
+      "medianTimeMs": 349.5566000000035,
+      "p95TimeMs": 2177.220100000006,
+      "totalNodes": 56663,
+      "medianNodes": 739,
+      "totalQNodes": 123794,
+      "medianQNodes": 1025,
+      "completedDepth": 3,
+      "timeouts": 0,
+      "correct": 63,
+      "accuracy": 92.64705882352942,
+      "moveGenCalls": 35226,
+      "makeUndoCalls": 1470390,
+      "evaluatorCalls": 86788,
+      "oracleCalls": 178959
+    }
+  },
+  "speedupBitboardVsChessJs": {
+    "medianTimeReductionPercent": 3.3461423794585556,
+    "totalTimeReductionPercent": 4.739370291755255
+  },
+  "oracleOverheadPercent": 57.175860977419944
+}

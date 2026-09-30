@@ -4,12 +4,12 @@ import { useTheme, CHESS_THEMES } from '../lib/themes';
 import { sounds } from '../lib/sounds';
 import { Chessboard } from 'react-chessboard';
 import confetti from 'canvas-confetti';
-import { doc, updateDoc, increment, arrayUnion, onSnapshot } from 'firebase/firestore';
+import { doc, onSnapshot } from 'firebase/firestore';
 import { getDb } from '../lib/firebase';
 import { GameData, UserData } from '../types';
-import { 
-  Flag, Eye, Handshake, ChevronLeft, MessageSquare, ShieldAlert, 
-  BrainCircuit, AlertTriangle, Clock, RefreshCcw, Home, Swords, 
+import {
+  Flag, Eye, Handshake, ChevronLeft, MessageSquare, ShieldAlert,
+  BrainCircuit, AlertTriangle, Clock, RefreshCcw, Home, Swords,
   UserX, CheckCircle, Wifi, WifiOff, LogOut, Award, Sparkles
 } from 'lucide-react';
 import EvalBar from "./EvalBar";
@@ -19,9 +19,8 @@ import { getCustomPieces } from '../lib/chessPieces';
 import MoveHistory from './MoveHistory';
 import CapturedPieces from './CapturedPieces';
 import { sendNotification } from '../lib/notifications';
-import { calculateAchievements } from '../lib/achievementManager';
-import { ACHIEVEMENTS } from '../lib/achievements';
 import GameReview from './GameReview';
+import { authenticatedApiFetch } from '../lib/api';
 
 interface GameProps {
   game: GameData;
@@ -94,21 +93,56 @@ export default function Game({ game: initialGame, currentUser, onExit }: GamePro
   const isWhite = safeUser.uid === liveGame.whiteId;
   const isBlack = safeUser.uid === liveGame.blackId;
   const isSpectator = !isWhite && !isBlack;
-  
+
   const bottomName = isSpectator ? (liveGame.whiteName || 'Brancas') : (safeUser.displayName || 'Jogador');
   const bottomElo = isSpectator ? (liveGame.whiteElo || 1200) : (safeUser.elo || 1200);
   const bottomLabel = isSpectator ? '(Brancas)' : '(Você)';
-  
-  const opponentName = isSpectator 
-    ? (liveGame.blackName || 'Pretas') 
+
+  const opponentName = isSpectator
+    ? (liveGame.blackName || 'Pretas')
     : (isWhite ? (liveGame.blackName || 'Oponente') : (liveGame.whiteName || 'Oponente'));
-  const opponentElo = isSpectator 
-    ? (liveGame.blackElo || 1200) 
+  const opponentElo = isSpectator
+    ? (liveGame.blackElo || 1200)
     : (isWhite ? (liveGame.blackElo || 1200) : (liveGame.whiteElo || 1200));
   const topLabel = isSpectator ? '(Pretas)' : '';
 
   const [moveFrom, setMoveFrom] = useState<string | null>(null);
   const [optionSquares, setOptionSquares] = useState<Record<string, React.CSSProperties>>({});
+  const movePending = useRef(false);
+
+  const submitOnlineMove = async (source: string, target: string, promotion = 'q') => {
+    if (movePending.current) return false;
+    movePending.current = true;
+    try {
+      const response = await authenticatedApiFetch('/api/move', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ gameId: liveGame.id, source, target, promotion })
+      });
+      const result = await response.json();
+      if (!response.ok || !result.success || typeof result.fen !== 'string') {
+        throw new Error(result.error || 'O servidor recusou o lance.');
+      }
+      const authoritativeChess = new Chess();
+      if (result.pgn) authoritativeChess.loadPgn(result.pgn);
+      else authoritativeChess.load(result.fen);
+      setChess(authoritativeChess);
+      setFen(authoritativeChess.fen());
+      return true;
+    } catch (error) {
+      console.error('Falha ao enviar lance ao servidor:', error);
+      const restoredChess = new Chess();
+      try {
+        if (liveGame.pgn) restoredChess.loadPgn(liveGame.pgn);
+        else restoredChess.load(liveGame.fen);
+      } catch { /* The Firestore snapshot will supply the next authoritative state. */ }
+      setChess(restoredChess);
+      setFen(restoredChess.fen());
+      return false;
+    } finally {
+      movePending.current = false;
+    }
+  };
 
   // Regular clock tick
   useEffect(() => {
@@ -119,15 +153,10 @@ export default function Game({ game: initialGame, currentUser, onExit }: GamePro
   // Presence Heartbeat: updates presence every 4s and cleanup on unmount
   useEffect(() => {
     if (!safeUser.uid || safeUser.uid === 'guest' || isSpectator || liveGame.status !== 'playing') return;
-    const db = getDb();
-    const gameRef = doc(db, 'games', liveGame.id);
-
     const updatePresence = (online: boolean) => {
-      const fieldHeartbeat = isWhite ? 'whiteHeartbeat' : 'blackHeartbeat';
-      const fieldOnline = isWhite ? 'whiteOnline' : 'blackOnline';
-      updateDoc(gameRef, {
-        [fieldHeartbeat]: Date.now(),
-        [fieldOnline]: online
+      void authenticatedApiFetch('/api/game/action', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ gameId: liveGame.id, action: 'presence', online })
       }).catch(() => {});
     };
 
@@ -154,7 +183,7 @@ export default function Game({ game: initialGame, currentUser, onExit }: GamePro
   // Inactivity calculation (2 minutes = 120s idle on opponent's turn -> 20s warning countdown)
   const isOpponentsTurn = liveGame.status === 'playing' && !isSpectator && ((liveGame.turn === 'w' && !isWhite) || (liveGame.turn === 'b' && isWhite));
   const timeSinceLastMove = Math.max(0, (currentTime - (liveGame.lastMoveAt || currentTime)) / 1000);
-  
+
   const isOpponentInactive = isOpponentsTurn && timeSinceLastMove >= 120;
   // Countdown 20s (from 120s to 140s)
   const inactivityCountdown = Math.max(0, Math.ceil(140 - timeSinceLastMove));
@@ -181,11 +210,11 @@ export default function Game({ game: initialGame, currentUser, onExit }: GamePro
 
         const oldPieces = chess.board().flat().filter(p => p !== null).length;
         const newPieces = nextChess.board().flat().filter(p => p !== null).length;
-        
+
         if (!isInitialMount.current) {
           sounds.playMove(newPieces < oldPieces, nextChess.inCheck());
         }
-        
+
         setChess(nextChess);
         setFen(nextChess.fen());
       } catch (e) {
@@ -212,6 +241,7 @@ export default function Game({ game: initialGame, currentUser, onExit }: GamePro
   // Game clock countdown loop
   useEffect(() => {
     if (liveGame.status !== 'playing' || !liveGame.timeControl) return;
+    let timeoutRequested = false;
 
     const intervalId = setInterval(() => {
       const now = Date.now();
@@ -220,22 +250,26 @@ export default function Game({ game: initialGame, currentUser, onExit }: GamePro
       if (liveGame.turn === 'w') {
         const remaining = Math.max(0, (liveGame.whiteTime ?? liveGame.timeControl) - timeSpent);
         setWhiteDisplayTime(remaining);
-        if (remaining <= 0 && !isSpectator) {
-          updateDoc(doc(getDb(), 'games', liveGame.id), { 
-            status: 'black_won',
-            endedReason: 'timeout',
-            lastMoveAt: Date.now()
-          }).catch(console.error);
+        if (remaining <= 0 && !isSpectator && !timeoutRequested) {
+          timeoutRequested = true;
+          void authenticatedApiFetch('/api/game/action', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ gameId: liveGame.id, action: 'claim_timeout' })
+          }).then((response) => {
+            if (!response.ok) window.setTimeout(() => { timeoutRequested = false; }, 500);
+          }).catch(() => { window.setTimeout(() => { timeoutRequested = false; }, 500); });
         }
       } else {
         const remaining = Math.max(0, (liveGame.blackTime ?? liveGame.timeControl) - timeSpent);
         setBlackDisplayTime(remaining);
-        if (remaining <= 0 && !isSpectator) {
-          updateDoc(doc(getDb(), 'games', liveGame.id), { 
-            status: 'white_won',
-            endedReason: 'timeout',
-            lastMoveAt: Date.now()
-          }).catch(console.error);
+        if (remaining <= 0 && !isSpectator && !timeoutRequested) {
+          timeoutRequested = true;
+          void authenticatedApiFetch('/api/game/action', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ gameId: liveGame.id, action: 'claim_timeout' })
+          }).then((response) => {
+            if (!response.ok) window.setTimeout(() => { timeoutRequested = false; }, 500);
+          }).catch(() => { window.setTimeout(() => { timeoutRequested = false; }, 500); });
         }
       }
     }, 100);
@@ -254,12 +288,6 @@ export default function Game({ game: initialGame, currentUser, onExit }: GamePro
       }
     }
   }, [liveGame.turn, liveGame.status, isWhite, opponentName, liveGame.lastMoveAt, isSpectator]);
-
-  const calculateEloChange = (myElo: number, opponentEloVal: number, result: 1 | 0.5 | 0) => {
-    const K = 32;
-    const expectedScore = 1 / (1 + Math.pow(10, (opponentEloVal - myElo) / 400));
-    return Math.round(K * (result - expectedScore));
-  };
 
   // Fair Play Heuristics (Anti-Cheat)
   useEffect(() => {
@@ -283,142 +311,80 @@ export default function Game({ game: initialGame, currentUser, onExit }: GamePro
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, [liveGame.status, liveGame.turn, isWhite, isBlack, isSpectator]);
 
-  const statsUpdated = useRef(false);
-
-  // Update user stats & trophies upon game conclusion
+  // Ratings and results are recorded atomically by the server when it ends a game.
   useEffect(() => {
-    if (liveGame.status !== 'playing' && !statsUpdated.current) {
-      statsUpdated.current = true;
-      const updateStats = async () => {
-        try {
-          if (!safeUser.uid || safeUser.uid === 'guest') return;
-          const db = getDb();
-          let numericResult: 1 | 0.5 | 0 = 0;
-          if (liveGame.status === 'draw') numericResult = 0.5;
-          else if ((liveGame.status === 'white_won' && isWhite) || (liveGame.status === 'black_won' && !isWhite)) numericResult = 1;
-          const userElo = Number(safeUser.elo) || 1200;
-          const oppElo = Number(opponentElo) || 1200;
-          const eloChange = calculateEloChange(userElo, oppElo, numericResult);
-          if (isNaN(eloChange)) return;
-
-          const updateData: any = {
-            elo: increment(eloChange),
-            gamesPlayed: increment(1),
-            eloHistory: arrayUnion({ date: Date.now(), elo: userElo + eloChange })
-          };
-          if (numericResult === 1) { 
-            confetti({
-              particleCount: 100,
-              spread: 70,
-              origin: { y: 0.6 },
-              colors: ['#10b981', '#fbbf24', '#ffffff']
-            });
-            updateData['stats.wins'] = increment(1); 
-            updateData['coins'] = increment(50); 
-          }
-          else if (numericResult === 0) updateData['stats.losses'] = increment(1);
-          else { updateData['stats.draws'] = increment(1); updateData['coins'] = increment(10); }
-
-          const { updates: badgeUpdates, newBadges } = calculateAchievements(
-            safeUser, 
-            numericResult, 
-            chess.history().length, 
-            false
-          );
-          Object.assign(updateData, badgeUpdates);
-
-          await updateDoc(doc(db, 'users', safeUser.uid), updateData);
-          for (const badgeId of newBadges) {
-            const badge = ACHIEVEMENTS[badgeId];
-            if (badge) {
-              sendNotification('Nova Conquista Desbloqueada!', {
-                body: `Você ganhou a insígnia: ${badge.name}`
-              });
-            }
-          }
-        } catch (error) {
-          console.error("Failed to update user stats:", error);
-        }
-      };
-      
-      updateStats();
-    }
-  }, [liveGame.status, isWhite, safeUser, opponentElo]);
+    const won = (liveGame.status === 'white_won' && isWhite) || (liveGame.status === 'black_won' && isBlack);
+    if (won) confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 }, colors: ['#10b981', '#fbbf24', '#ffffff'] });
+  }, [liveGame.status, isWhite, isBlack]);
 
   // Action: Claim Victory by Inactivity / Abandonment
   const claimVictoryByInactivity = async () => {
     if (liveGame.status !== 'playing' || isSpectator) return;
-    const db = getDb();
-    const winningStatus = isWhite ? 'white_won' : 'black_won';
-    await updateDoc(doc(db, 'games', liveGame.id), {
-      status: winningStatus,
-      endedReason: 'inactivity',
-      abandonedBy: isWhite ? liveGame.blackId : liveGame.whiteId,
-      lastMoveAt: Date.now()
+    const response = await authenticatedApiFetch('/api/game/action', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ gameId: liveGame.id, action: 'claim_inactivity' })
     });
+    if (!response.ok) console.error('Inactivity claim rejected:', await response.json());
   };
 
   // Action: Declare / Agree Draw
   const claimDraw = async () => {
     if (liveGame.status !== 'playing' || isSpectator) return;
-    const db = getDb();
-    await updateDoc(doc(db, 'games', liveGame.id), {
-      status: 'draw',
-      endedReason: 'draw_agreement',
-      drawOffer: null,
-      lastMoveAt: Date.now()
+    const response = await authenticatedApiFetch('/api/game/action', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ gameId: liveGame.id, action: 'accept_draw' })
     });
+    if (!response.ok) console.error('Draw acceptance rejected:', await response.json());
   };
 
   // Action: Offer Draw
   const offerDraw = async () => {
     if (liveGame.status !== 'playing' || isSpectator) return;
-    const db = getDb();
-    await updateDoc(doc(db, 'games', liveGame.id), {
-      drawOffer: isWhite ? 'w' : 'b'
+    const response = await authenticatedApiFetch('/api/game/action', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ gameId: liveGame.id, action: 'offer_draw' })
     });
+    if (!response.ok) { console.error('Draw offer rejected:', await response.json()); return; }
     setDrawOfferFeedback('Proposta de empate enviada!');
     setTimeout(() => setDrawOfferFeedback(null), 6000);
   };
 
   // Action: Decline Draw Offer
   const declineDraw = async () => {
-    const db = getDb();
-    await updateDoc(doc(db, 'games', liveGame.id), {
-      drawOffer: null
+    const response = await authenticatedApiFetch('/api/game/action', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ gameId: liveGame.id, action: 'decline_draw' })
     });
+    if (!response.ok) console.error('Draw decline rejected:', await response.json());
   };
 
   // Action: Resign Game
   const confirmResign = async () => {
     if (liveGame.status !== 'playing' || isSpectator) return;
-    const db = getDb();
-    const winningStatus = isWhite ? 'black_won' : 'white_won';
-    await updateDoc(doc(db, 'games', liveGame.id), {
-      status: winningStatus,
-      endedReason: 'resignation',
-      resignedBy: safeUser.uid,
-      lastMoveAt: Date.now()
+    const response = await authenticatedApiFetch('/api/game/action', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ gameId: liveGame.id, action: 'resign' })
     });
+    if (!response.ok) console.error('Resignation rejected:', await response.json());
     setShowResignConfirm(false);
   };
 
   const moveHighlights = useMemo(() => {
     const history = chess.history({ verbose: true });
     const highlights: Record<string, React.CSSProperties> = {};
-    
+
     if (history.length > 0) {
       const lastMove = history[history.length - 1] as any;
       const isCapture = lastMove.captured != null;
       const captureColor = 'rgba(239, 68, 68, 0.5)'; // red-500
       const normalColor = 'rgba(234, 179, 8, 0.4)'; // amber-500
 
-      highlights[lastMove.from] = { 
-        backgroundColor: normalColor, 
-        transition: 'background-color 0.3s ease' 
+      highlights[lastMove.from] = {
+        backgroundColor: normalColor,
+        transition: 'background-color 0.3s ease'
       };
-      highlights[lastMove.to] = { 
-        backgroundColor: isCapture ? captureColor : normalColor, 
+      highlights[lastMove.to] = {
+        backgroundColor: isCapture ? captureColor : normalColor,
         transition: 'background-color 0.3s ease',
         transform: isCapture ? 'scale(1.05)' : 'none',
         boxShadow: isCapture ? 'inset 0 0 15px rgba(239, 68, 68, 0.8)' : 'none'
@@ -471,7 +437,7 @@ export default function Game({ game: initialGame, currentUser, onExit }: GamePro
         borderRadius: '50%'
       };
     });
-    
+
     newSquares[square] = {
       background: 'rgba(234, 179, 8, 0.4)'
     };
@@ -513,54 +479,13 @@ export default function Game({ game: initialGame, currentUser, onExit }: GamePro
       });
 
       if (move) {
-        sounds.playMove(move.captured != null, nextChess.inCheck());
         setChess(nextChess);
         setFen(nextChess.fen());
         setMoveFrom(null);
         setOptionSquares({});
-        
-        const db = getDb();
-        const gameRef = doc(db, 'games', liveGame.id);
-        
-        let newStatus: GameData['status'] = liveGame.status;
-        let endedReason: GameData['endedReason'] = undefined;
 
-        if (nextChess.isCheckmate()) {
-          newStatus = isWhite ? 'white_won' : 'black_won';
-          endedReason = 'checkmate';
-        } else if (nextChess.isDraw() || nextChess.isStalemate() || nextChess.isThreefoldRepetition()) {
-          newStatus = 'draw';
-          endedReason = 'stalemate';
-        }
-
-        const timeSpent = (Date.now() - (liveGame.lastMoveAt || Date.now())) / 1000;
-        let newWhiteTime = liveGame.whiteTime ?? liveGame.timeControl ?? 0;
-        let newBlackTime = liveGame.blackTime ?? liveGame.timeControl ?? 0;
-
-        if (liveGame.timeControl) {
-          if (nextChess.turn() === 'b') {
-            newWhiteTime = Math.max(0, newWhiteTime - timeSpent);
-          } else {
-            newBlackTime = Math.max(0, newBlackTime - timeSpent);
-          }
-        }
-
-        const updateData: Record<string, any> = {
-          fen: nextChess.fen(),
-          pgn: nextChess.pgn() || '',
-          turn: nextChess.turn(),
-          lastMoveAt: Date.now(),
-          status: newStatus,
-          whiteTime: newWhiteTime,
-          blackTime: newBlackTime,
-          drawOffer: null
-        };
-        if (endedReason) {
-          updateData.endedReason = endedReason;
-        }
-
-        updateDoc(gameRef, updateData).catch(err => {
-          console.error("Error updating online game move:", err);
+        void submitOnlineMove(moveFrom, square, move.promotion || 'q').then((accepted) => {
+          if (accepted) sounds.playMove(move.captured != null, nextChess.inCheck());
         });
 
         return;
@@ -602,56 +527,14 @@ export default function Game({ game: initialGame, currentUser, onExit }: GamePro
       });
 
       if (move) {
-        sounds.playMove(move.captured != null, nextChess.inCheck());
         setChess(nextChess);
         setFen(nextChess.fen());
         setMoveFrom(null);
         setOptionSquares({});
-        
-        const db = getDb();
-        const gameRef = doc(db, 'games', liveGame.id);
-        
-        let newStatus: GameData['status'] = liveGame.status;
-        let endedReason: GameData['endedReason'] = undefined;
 
-        if (nextChess.isCheckmate()) {
-          newStatus = isWhite ? 'white_won' : 'black_won';
-          endedReason = 'checkmate';
-        } else if (nextChess.isDraw() || nextChess.isStalemate() || nextChess.isThreefoldRepetition()) {
-          newStatus = 'draw';
-          endedReason = 'stalemate';
-        }
-
-        const timeSpent = (Date.now() - (liveGame.lastMoveAt || Date.now())) / 1000;
-        let newWhiteTime = liveGame.whiteTime ?? liveGame.timeControl ?? 0;
-        let newBlackTime = liveGame.blackTime ?? liveGame.timeControl ?? 0;
-
-        if (liveGame.timeControl) {
-          if (nextChess.turn() === 'b') {
-            newWhiteTime = Math.max(0, newWhiteTime - timeSpent);
-          } else {
-            newBlackTime = Math.max(0, newBlackTime - timeSpent);
-          }
-        }
-
-        const updateData: Record<string, any> = {
-          fen: nextChess.fen(),
-          pgn: nextChess.pgn() || '',
-          turn: nextChess.turn(),
-          lastMoveAt: Date.now(),
-          status: newStatus,
-          whiteTime: newWhiteTime,
-          blackTime: newBlackTime,
-          drawOffer: null
-        };
-        if (endedReason) {
-          updateData.endedReason = endedReason;
-        }
-
-        updateDoc(gameRef, updateData).catch(err => {
-          console.error("Error updating online game move:", err);
+        void submitOnlineMove(sourceSquare, targetSquare, move.promotion || 'q').then((accepted) => {
+          if (accepted) sounds.playMove(move.captured != null, nextChess.inCheck());
         });
-
         return true;
       }
     } catch (e) {
@@ -666,14 +549,13 @@ export default function Game({ game: initialGame, currentUser, onExit }: GamePro
 
   const toggleSpectatorAccess = async () => {
     if (isSpectator) return;
-    const db = getDb();
-    const gameRef = doc(db, 'games', liveGame.id);
-    const field = isWhite ? 'spectatorsAllowedWhite' : 'spectatorsAllowedBlack';
     const currentValue = isWhite ? liveGame.spectatorsAllowedWhite : liveGame.spectatorsAllowedBlack;
     try {
-      await updateDoc(gameRef, {
-        [field]: !currentValue
+      const response = await authenticatedApiFetch('/api/game/action', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ gameId: liveGame.id, action: 'spectators', allowed: !currentValue })
       });
+      if (!response.ok) throw new Error('Could not update spectator access');
     } catch (e) {
       console.error(e);
     }
@@ -706,7 +588,7 @@ export default function Game({ game: initialGame, currentUser, onExit }: GamePro
 
   return (
     <div className="flex-1 w-full max-w-[1600px] mx-auto p-1.5 sm:p-3 lg:p-4 flex flex-col xl:flex-row gap-3 lg:gap-5 items-center xl:items-start justify-center relative">
-      
+
       {/* Fair play alert */}
       {showCheatAlert && (
         <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 bg-amber-500/95 text-zinc-950 px-6 py-3 rounded-2xl font-bold shadow-2xl flex items-center gap-3 backdrop-blur-md animate-bounce border border-amber-300">
@@ -737,7 +619,7 @@ export default function Game({ game: initialGame, currentUser, onExit }: GamePro
             </div>
 
             <div className="w-full bg-zinc-800 rounded-full h-1.5 mb-4 overflow-hidden">
-              <div 
+              <div
                 className="bg-amber-500 h-full transition-all duration-500 rounded-full"
                 style={{ width: `${Math.max(0, Math.min(100, (inactivityCountdown / 20) * 100))}%` }}
               />
@@ -811,7 +693,7 @@ export default function Game({ game: initialGame, currentUser, onExit }: GamePro
 
       {/* Left Side: Board Area (Order 1) */}
       <div className="flex-1 flex flex-col items-center justify-center w-full max-w-[min(100%,calc(100dvh-120px))] xl:max-w-[min(calc(100dvh-120px),740px)] order-1">
-        
+
         {/* Top Player (Opponent) Bar */}
         <div className="w-full flex items-center justify-between mb-1.5 sm:mb-2 px-1">
           <div className="flex items-center gap-2 sm:gap-3">
@@ -850,11 +732,11 @@ export default function Game({ game: initialGame, currentUser, onExit }: GamePro
           <div className="py-1 hidden md:block self-stretch">
              <EvalBar game={chess} isFlipped={!isWhite} />
           </div>
-          
+
           {/* Pure Square Board Container with Unclipped Framing */}
           <div className="flex-1 max-w-[min(calc(100dvh-180px),680px)] w-full relative">
             <div className="w-full aspect-square relative rounded-xl sm:rounded-2xl bg-gradient-to-br from-[#2a170e] via-[#1a0c06] to-[#0f0703] p-1.5 sm:p-2.5 border-2 sm:border-4 border-[#613318] shadow-[0_15px_40px_rgba(0,0,0,0.8)] flex flex-col justify-between overflow-hidden">
-              
+
               {/* Inner 1:1 chessboard */}
               <div className="w-full h-full relative rounded-lg overflow-hidden shadow-inner">
                 {/* @ts-ignore react-chessboard types in v5 */}
@@ -894,17 +776,17 @@ export default function Game({ game: initialGame, currentUser, onExit }: GamePro
                       <Award className="w-8 h-8 text-emerald-400" />
                     )}
                   </div>
-                  
+
                   <h2 className="text-2xl sm:text-3xl font-black text-white mb-1">
-                    {liveGame.status === 'draw' ? 'Empate' : 
-                     (liveGame.status === 'white_won' && isWhite) || (liveGame.status === 'black_won' && !isWhite) 
-                       ? 'Vitória!' 
+                    {liveGame.status === 'draw' ? 'Empate' :
+                     (liveGame.status === 'white_won' && isWhite) || (liveGame.status === 'black_won' && !isWhite)
+                       ? 'Vitória!'
                        : 'Derrota'}
                   </h2>
 
                   <p className="text-sm font-semibold text-emerald-400 mb-2 uppercase tracking-wider">
-                    {liveGame.status === 'white_won' ? 'Vitória das Brancas' : 
-                     liveGame.status === 'black_won' ? 'Vitória das Pretas' : 
+                    {liveGame.status === 'white_won' ? 'Vitória das Brancas' :
+                     liveGame.status === 'black_won' ? 'Vitória das Pretas' :
                      'Partida Empatada'}
                   </p>
 
@@ -956,7 +838,7 @@ export default function Game({ game: initialGame, currentUser, onExit }: GamePro
               <CapturedPieces id="my-captured-pieces" fen={fen} color={isWhite ? 'w' : 'b'} />
             </div>
           </div>
-          
+
           <div className="flex items-center gap-2 sm:gap-3">
             {/* In-game action controls */}
             <div className="flex gap-1.5 sm:gap-2">
@@ -1031,9 +913,9 @@ export default function Game({ game: initialGame, currentUser, onExit }: GamePro
           <MoveHistory history={chess.history()} />
         </div>
         <div className="flex flex-col bg-zinc-900 border border-zinc-800 rounded-2xl shadow-xl overflow-hidden h-[250px] xl:h-[60%] flex-1 min-h-0">
-          <ChatBox 
-            roomId={`game_${liveGame.id}`} 
-            currentUser={currentUser} 
+          <ChatBox
+            roomId={`game_${liveGame.id}`}
+            currentUser={currentUser}
             title="Chat da Partida"
             className="flex-1 h-full"
           />
@@ -1071,11 +953,11 @@ export default function Game({ game: initialGame, currentUser, onExit }: GamePro
 
       {/* Game Review with AI Modal */}
       {showReview && (
-        <GameReview 
-          pgn={liveGame.pgn} 
+        <GameReview
+          pgn={liveGame.pgn}
           playerWhiteName={liveGame.whiteName}
           playerBlackName={liveGame.blackName}
-          onClose={() => setShowReview(false)} 
+          onClose={() => setShowReview(false)}
         />
       )}
     </div>

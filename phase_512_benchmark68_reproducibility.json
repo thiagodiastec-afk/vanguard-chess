@@ -1,0 +1,188 @@
+{
+  "timestamp": "2026-09-29T16:29:24.558Z",
+  "repetitions": 3,
+  "positionsCount": 68,
+  "modes": {
+    "CHESSJS_ONLY": {
+      "runs": [
+        {
+          "totalMs": 27495.2087,
+          "medianMs": 190.58459999999923,
+          "p95Ms": 1365.9658,
+          "correct": 63,
+          "incorrect": 5,
+          "timeout": 0,
+          "totalNodes": 168342,
+          "nps": 6123,
+          "totalMoveGen": 32246,
+          "totalMakeUndo": 697419,
+          "totalEval": 80728,
+          "totalOracle": 0,
+          "correctToIncorrect": 0
+        },
+        {
+          "totalMs": 27770.296500000004,
+          "medianMs": 197.1568999999945,
+          "p95Ms": 1410.0325000000012,
+          "correct": 63,
+          "incorrect": 5,
+          "timeout": 0,
+          "totalNodes": 168342,
+          "nps": 6062,
+          "totalMoveGen": 32246,
+          "totalMakeUndo": 697419,
+          "totalEval": 80728,
+          "totalOracle": 0,
+          "correctToIncorrect": 0
+        },
+        {
+          "totalMs": 27065.5278999999,
+          "medianMs": 193.3119000000006,
+          "p95Ms": 1411.879099999991,
+          "correct": 63,
+          "incorrect": 5,
+          "timeout": 0,
+          "totalNodes": 168342,
+          "nps": 6220,
+          "totalMoveGen": 32246,
+          "totalMakeUndo": 697419,
+          "totalEval": 80728,
+          "totalOracle": 0,
+          "correctToIncorrect": 0
+        }
+      ],
+      "aggregated": {
+        "averageTotalMs": 27443.677699999967,
+        "averageMedianMs": 193.68446666666478,
+        "averageP95Ms": 1395.9591333333308,
+        "averageNps": 6135,
+        "correct": 63,
+        "incorrect": 5,
+        "timeout": 0,
+        "correctToIncorrect": 0
+      }
+    },
+    "BITBOARD_ONLY": {
+      "runs": [
+        {
+          "totalMs": 20708.152399999904,
+          "medianMs": 180.9893000000011,
+          "p95Ms": 1231.7465999999986,
+          "correct": 63,
+          "incorrect": 5,
+          "timeout": 0,
+          "totalNodes": 180457,
+          "nps": 8714,
+          "totalMoveGen": 35226,
+          "totalMakeUndo": 781884,
+          "totalEval": 86788,
+          "totalOracle": 0,
+          "correctToIncorrect": 0
+        },
+        {
+          "totalMs": 20976.670500000066,
+          "medianMs": 174.8512000000046,
+          "p95Ms": 1023.4440000000031,
+          "correct": 63,
+          "incorrect": 5,
+          "timeout": 0,
+          "totalNodes": 180457,
+          "nps": 8603,
+          "totalMoveGen": 35226,
+          "totalMakeUndo": 781884,
+          "totalEval": 86788,
+          "totalOracle": 0,
+          "correctToIncorrect": 0
+        },
+        {
+          "totalMs": 20073.05690000001,
+          "medianMs": 161.05319999999483,
+          "p95Ms": 1042.811000000016,
+          "correct": 63,
+          "incorrect": 5,
+          "timeout": 0,
+          "totalNodes": 180457,
+          "nps": 8990,
+          "totalMoveGen": 35226,
+          "totalMakeUndo": 781884,
+          "totalEval": 86788,
+          "totalOracle": 0,
+          "correctToIncorrect": 0
+        }
+      ],
+      "aggregated": {
+        "averageTotalMs": 20585.959933333328,
+        "averageMedianMs": 172.29790000000017,
+        "averageP95Ms": 1099.3338666666725,
+        "averageNps": 8769,
+        "correct": 63,
+        "incorrect": 5,
+        "timeout": 0,
+        "correctToIncorrect": 0
+      }
+    },
+    "BITBOARD_WITH_ORACLE": {
+      "runs": [
+        {
+          "totalMs": 50629.709199999954,
+          "medianMs": 373.67230000000563,
+          "p95Ms": 2468.455400000006,
+          "correct": 63,
+          "incorrect": 5,
+          "timeout": 0,
+          "totalNodes": 178575,
+          "nps": 3527,
+          "totalMoveGen": 35078,
+          "totalMakeUndo": 1463287,
+          "totalEval": 85866,
+          "totalOracle": 262952,
+          "correctToIncorrect": 0
+        },
+        {
+          "totalMs": 51035.61970000001,
+          "medianMs": 412.9228000000003,
+          "p95Ms": 2621.0337,
+          "correct": 63,
+          "incorrect": 5,
+          "timeout": 0,
+          "totalNodes": 178158,
+          "nps": 3491,
+          "totalMoveGen": 35068,
+          "totalMakeUndo": 1463497,
+          "totalEval": 85666,
+          "totalOracle": 262327,
+          "correctToIncorrect": 0
+        },
+        {
+          "totalMs": 50223.970299999666,
+          "medianMs": 401.5697999999975,
+          "p95Ms": 2696.8327999999747,
+          "correct": 63,
+          "incorrect": 5,
+          "timeout": 0,
+          "totalNodes": 177697,
+          "nps": 3538,
+          "totalMoveGen": 35072,
+          "totalMakeUndo": 1464132,
+          "totalEval": 85441,
+          "totalOracle": 261633,
+          "correctToIncorrect": 0
+        }
+      ],
+      "aggregated": {
+        "averageTotalMs": 50629.76639999988,
+        "averageMedianMs": 396.0549666666678,
+        "averageP95Ms": 2595.440633333327,
+        "averageNps": 3519,
+        "correct": 63,
+        "incorrect": 5,
+        "timeout": 0,
+        "correctToIncorrect": 0
+      }
+    }
+  },
+  "comparisons": {
+    "speedupBitboardVsChessJsPercent": 24.99,
+    "searchOracleOverheadPercent": 145.94
+  }
+}

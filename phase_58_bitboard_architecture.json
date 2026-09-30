@@ -1,0 +1,128 @@
+{
+  "timestamp": "2026-09-29T03:29:32.556Z",
+  "status": "PASS",
+  "decision": "READY_FOR_INTEGRATION",
+  "microbenchmark": {
+    "andOrNs": 0.07939490000000002,
+    "shiftNs": 0.013872329999999987,
+    "popcountNs": 0.10836132999999998,
+    "lsbNs": 0.05899794000000001,
+    "rookAttacksNs": 0.2818041000000003,
+    "bishopAttacksNs": 0.41580909999999993
+  },
+  "moveGenComparison": {
+    "avgChessJsLegalUs": 46.165280999999986,
+    "avgBbPseudoUs": 7.249893999999995,
+    "avgBbLegalUs": 32.659907999999994,
+    "avgSpeedupLegal": 1.4135153411944699,
+    "table": [
+      {
+        "name": "Initial Position",
+        "chessJsLegalUs": 33.14792,
+        "bbPseudoUs": 5.7484699999999975,
+        "bbLegalUs": 26.175179999999997,
+        "speedupLegal": 1.2663874708789014,
+        "bbMovesSec": 38204,
+        "chessJsMovesSec": 30168
+      },
+      {
+        "name": "Open Middlegame",
+        "chessJsLegalUs": 58.58957000000001,
+        "bbPseudoUs": 7.144309999999996,
+        "bbLegalUs": 37.63098499999996,
+        "speedupLegal": 1.5569502100463242,
+        "bbMovesSec": 26574,
+        "chessJsMovesSec": 17068
+      },
+      {
+        "name": "Tactical (Kiwipete)",
+        "chessJsLegalUs": 82.84818,
+        "bbPseudoUs": 15.01001500000002,
+        "bbLegalUs": 65.48599999999996,
+        "speedupLegal": 1.2651281189872652,
+        "bbMovesSec": 15270,
+        "chessJsMovesSec": 12070
+      },
+      {
+        "name": "Endgame",
+        "chessJsLegalUs": 23.885359999999945,
+        "bbPseudoUs": 3.2741399999999885,
+        "bbLegalUs": 14.554899999999996,
+        "speedupLegal": 1.6410528413111702,
+        "bbMovesSec": 68705,
+        "chessJsMovesSec": 41867
+      },
+      {
+        "name": "Position in Check",
+        "chessJsLegalUs": 32.35537500000001,
+        "bbPseudoUs": 5.072534999999971,
+        "bbLegalUs": 19.45247500000005,
+        "speedupLegal": 1.6633037698287712,
+        "bbMovesSec": 51407,
+        "chessJsMovesSec": 30907
+      }
+    ]
+  },
+  "searchSimulation": [
+    {
+      "name": "Initial Position",
+      "depth": 1,
+      "expectedNodes": 20,
+      "bbTimeMs": 0.10570000000006985,
+      "bbNps": 189215,
+      "chessJsTimeMs": 0.17710000000079162,
+      "chessJsNps": 112931,
+      "speedup": 1.675496688748104
+    },
+    {
+      "name": "Initial Position",
+      "depth": 2,
+      "expectedNodes": 400,
+      "bbTimeMs": 3.3674000000009983,
+      "bbNps": 118786,
+      "chessJsTimeMs": 1.9699999999993452,
+      "chessJsNps": 203046,
+      "speedup": 0.5850210845158761
+    },
+    {
+      "name": "Initial Position",
+      "depth": 3,
+      "expectedNodes": 8902,
+      "bbTimeMs": 25.82090000000062,
+      "bbNps": 344759,
+      "chessJsTimeMs": 23.6237000000001,
+      "chessJsNps": 376825,
+      "speedup": 0.9149061419237723
+    },
+    {
+      "name": "Kiwipete",
+      "depth": 1,
+      "expectedNodes": 48,
+      "bbTimeMs": 0.18059999999968568,
+      "bbNps": 265781,
+      "chessJsTimeMs": 0.13229999999930442,
+      "chessJsNps": 362812,
+      "speedup": 0.7325581395323072
+    },
+    {
+      "name": "Kiwipete",
+      "depth": 2,
+      "expectedNodes": 2039,
+      "bbTimeMs": 13.228499999999258,
+      "bbNps": 154137,
+      "chessJsTimeMs": 14.369899999999689,
+      "chessJsNps": 141894,
+      "speedup": 1.0862834032581543
+    },
+    {
+      "name": "Kiwipete",
+      "depth": 3,
+      "expectedNodes": 97862,
+      "bbTimeMs": 240.85039999999935,
+      "bbNps": 406319,
+      "chessJsTimeMs": 215.6306000000004,
+      "chessJsNps": 453841,
+      "speedup": 0.895288527650363
+    }
+  ]
+}

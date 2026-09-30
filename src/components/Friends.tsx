@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { collection, query, where, getDocs, doc, updateDoc, arrayUnion, arrayRemove, onSnapshot, addDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, updateDoc, arrayUnion, arrayRemove, onSnapshot } from 'firebase/firestore';
 import { getDb } from '../lib/firebase';
+import { authenticatedApiFetch } from '../lib/api';
 import { UserData } from '../types';
 import { Search, UserPlus, UserMinus, Swords, Circle, Loader2, MessageCircle } from 'lucide-react';
 import { cn } from '../lib/utils';
@@ -28,9 +29,10 @@ export default function Friends({ currentUser }: FriendsProps) {
     // Handle Firestore 'in' limit of 10 by slicing for the demo (or use multiple queries)
     const friendsToFetch = currentUser.friends.slice(0, 10);
     if (friendsToFetch.length === 0) return;
-    
+
     const q = query(
       collection(db, 'users'),
+      where('profileSchemaVersion', '==', 2),
       where('uid', 'in', friendsToFetch)
     );
 
@@ -51,6 +53,7 @@ export default function Friends({ currentUser }: FriendsProps) {
     const db = getDb();
     const q = query(
       collection(db, 'users'),
+      where('profileSchemaVersion', '==', 2),
       where('displayName', '>=', searchTerm),
       where('displayName', '<=', searchTerm + '\uf8ff')
     );
@@ -71,7 +74,7 @@ export default function Friends({ currentUser }: FriendsProps) {
     const db = getDb();
     const userRef = doc(db, 'users', currentUser.uid);
     const isFriend = currentUser.friends?.includes(targetUser.uid);
-    
+
     try {
       await updateDoc(userRef, {
         friends: isFriend ? arrayRemove(targetUser.uid) : arrayUnion(targetUser.uid)
@@ -89,15 +92,14 @@ export default function Friends({ currentUser }: FriendsProps) {
     setChallenging(friend.uid);
     const db = getDb();
     try {
-      const docRef = await addDoc(collection(db, 'challenges'), {
-        challengerId: currentUser.uid,
-        challengedId: friend.uid,
-        challengerName: currentUser.displayName,
-        challengerElo: currentUser.elo,
-        status: 'pending',
-        createdAt: Date.now()
+      const response = await authenticatedApiFetch('/api/challenge/create', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ challengedId: friend.uid })
       });
-      
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Não foi possível enviar o convite.');
+      const docRef = doc(db, 'challenges', result.challengeId);
+
       // Listen to this specific challenge to see if declined or accepted
       const unsubscribe = onSnapshot(docRef, (docSnap) => {
         const data = docSnap.data();
@@ -111,7 +113,7 @@ export default function Friends({ currentUser }: FriendsProps) {
           unsubscribe();
         }
       });
-      
+
       // Timeout after 30 seconds
       setTimeout(() => {
         setChallenging(null);
@@ -139,7 +141,7 @@ export default function Friends({ currentUser }: FriendsProps) {
               className="w-full bg-neutral-900 border border-neutral-700 rounded-xl pl-10 pr-4 py-3 text-white focus:outline-none focus:border-emerald-500 transition-colors"
             />
           </div>
-          <button 
+          <button
             type="submit"
             disabled={isSearching}
             className="bg-emerald-500 hover:bg-emerald-400 text-neutral-950 font-bold py-3 px-6 rounded-xl transition-colors flex items-center justify-center min-w-[120px]"
@@ -168,8 +170,8 @@ export default function Friends({ currentUser }: FriendsProps) {
                     onClick={() => toggleFriend(user)}
                     className={cn(
                       "flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors",
-                      isFriend 
-                        ? "bg-red-500/10 text-red-500 hover:bg-red-500/20" 
+                      isFriend
+                        ? "bg-red-500/10 text-red-500 hover:bg-red-500/20"
                         : "bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20"
                     )}
                   >
@@ -185,7 +187,7 @@ export default function Friends({ currentUser }: FriendsProps) {
 
       <div className="bg-neutral-800 rounded-2xl p-6 border border-neutral-700/50 shadow-xl flex-1">
         <h2 className="text-2xl font-bold text-white mb-6">Lista de Amigos</h2>
-        
+
         {loading ? (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="w-8 h-8 text-emerald-500 animate-spin" />
@@ -218,7 +220,7 @@ export default function Friends({ currentUser }: FriendsProps) {
                     </div>
                   </div>
                 </div>
-                
+
                 <div className="flex gap-2">
                   <button
                     onClick={() => challengeFriend(friend)}

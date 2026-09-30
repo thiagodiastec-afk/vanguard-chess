@@ -1,0 +1,35 @@
+{
+  "timestamp": "2026-09-29T16:29:24.555Z",
+  "residualOperations": [
+    {
+      "operation": "computeZobristHash(game)",
+      "location": "src/lib/zobrist.ts:114 / src/lib/engine.ts:1180",
+      "reason": "Probing e armazenamento na Transposition Table (TT) ainda lê game.board() e game.fen()",
+      "frequencyPerSearch": "~70.000 chamadas por busca de 68 posições",
+      "costPerCallUs": 5.09,
+      "estimatedTotalSearchCostMs": 356.3,
+      "canBeEliminatedInFutureStage": true,
+      "recommendation": "Implementar computeZobristHashBitboard(boardState) incremental ou direto nos 64-bit BigInts"
+    },
+    {
+      "operation": "game._makeMove(m) / game._undoMove() em BITBOARD_ONLY",
+      "location": "src/lib/engine.ts:1260,1269 / 1084,1093",
+      "reason": "Mantido em sincronia estrita porque computeZobristHash e orderMoves ainda recebem a instância game",
+      "frequencyPerSearch": "~780.000 chamadas por busca de 68 posições",
+      "costPerCallUs": 1.66,
+      "estimatedTotalSearchCostMs": 1293.1,
+      "canBeEliminatedInFutureStage": true,
+      "recommendation": "Desacoplar game do minimax após migração do Zobrist e da ordenação de movimentos"
+    },
+    {
+      "operation": "new Map() e [...moves].sort() em orderMoves",
+      "location": "src/lib/engine.ts:1399,1407",
+      "reason": "Ordenação de lances aloca novo Map e array clone em cada nó interno do minimax",
+      "frequencyPerSearch": "~35.000 chamadas por busca",
+      "costPerCallUs": "~1.5 µs por chamada",
+      "estimatedTotalSearchCostMs": "~50 ms",
+      "canBeEliminatedInFutureStage": true,
+      "recommendation": "Utilizar array in-place ou MVV-LVA score embutido no RawMove"
+    }
+  ]
+}

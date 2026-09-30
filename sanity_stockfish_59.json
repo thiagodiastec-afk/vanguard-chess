@@ -1,0 +1,82 @@
+{
+  "total": 10,
+  "matches": 6,
+  "agreementPct": "60.0",
+  "results": [
+    {
+      "id": "mate1_01_scholars",
+      "fen": "r1bqkb1r/pppp1ppp/2n5/4p3/2B1n3/5Q2/PPPP1PPP/RNB1K1NR w KQkq - 0 4",
+      "vgMove": "Qxf7#",
+      "sfMove": "f3f7",
+      "match": true
+    },
+    {
+      "id": "mate1_02_back_rank_white",
+      "fen": "6k1/5ppp/8/8/8/8/8/3R2K1 w - - 0 1",
+      "vgMove": "Rd8#",
+      "sfMove": "d1d8",
+      "match": true
+    },
+    {
+      "id": "mate1_03_back_rank_black",
+      "fen": "3r2k1/8/8/8/8/8/5PPP/6K1 b - - 0 1",
+      "vgMove": "Rd1#",
+      "sfMove": "d8d1",
+      "match": true
+    },
+    {
+      "id": "mate1_04_smothered_mate_w",
+      "fen": "6rk/6pp/3N4/8/8/8/8/4K3 w - - 0 1",
+      "vgMove": "Nf7#",
+      "sfMove": "d6f7",
+      "match": true
+    },
+    {
+      "id": "mate2_01_anastasia",
+      "fen": "5rk1/1p3ppp/1N6/8/8/8/1P3PPP/2R3K1 w - - 0 1",
+      "vgMove": "Re1",
+      "sfMove": "c1c7",
+      "sfScoreCp": 537,
+      "match": false
+    },
+    {
+      "id": "capture_01_hanging_queen",
+      "fen": "r1bqkbnr/pppp1ppp/2n5/4p3/3P4/2N5/PPP1PPPP/R1BQKBNR w KQkq - 0 3",
+      "vgMove": "Nf3",
+      "sfMove": "d4e5",
+      "sfScoreCp": 124,
+      "match": false
+    },
+    {
+      "id": "capture_05_black_captures_queen",
+      "fen": "rnb1kbnr/pppp1ppp/8/8/4Q3/8/PPPP1PPP/RNB1KBNR b KQkq - 0 3",
+      "vgMove": "Ne7",
+      "sfMove": "g8e7",
+      "sfScoreCp": -1330,
+      "match": true
+    },
+    {
+      "id": "fork_04_knight_fork_c7",
+      "fen": "r3k2r/pppn1ppp/3b4/3Np3/8/8/PPP2PPP/R1B1KB1R w KQkq - 0 1",
+      "vgMove": "Be3",
+      "sfMove": "d5e3",
+      "sfScoreCp": 412,
+      "match": false
+    },
+    {
+      "id": "skewer_01_king_queen",
+      "fen": "8/8/8/8/3k4/8/3q4/3R2K1 b - - 0 1",
+      "vgMove": "Qxd1+",
+      "sfMove": "d2d1",
+      "match": true
+    },
+    {
+      "id": "defense_01_block_check",
+      "fen": "rnbqk1nr/pppp1ppp/8/8/1b2P3/8/PPPP1PPP/RNBQKBNR w KQkq - 1 3",
+      "vgMove": "Qg4",
+      "sfMove": "c2c3",
+      "sfScoreCp": 260,
+      "match": false
+    }
+  ]
+}

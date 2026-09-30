@@ -11,11 +11,7 @@ import { getCustomPieces } from '../lib/chessPieces';
 import MoveHistory from './MoveHistory';
 import CapturedPieces from './CapturedPieces';
 import EvalBar from "./EvalBar";
-import { doc, updateDoc, increment, arrayUnion } from 'firebase/firestore';
-import { getDb } from '../lib/firebase';
-import { calculateAchievements } from '../lib/achievementManager';
-import { ACHIEVEMENTS } from '../lib/achievements';
-import { sendNotification } from '../lib/notifications';
+import { authenticatedApiFetch } from '../lib/api';
 
 interface ComputerGameProps {
   difficulty: string;
@@ -83,14 +79,14 @@ export default function ComputerGame({ difficulty, currentUser, onExit }: Comput
 
   const makeComputerMove = useCallback(() => {
     if (game.isGameOver() || game.turn() === playerColor || isThinking) return;
-    
+
     setIsThinking(true);
     setHintArrow(null);
-    
+
     // Dynamically import the worker to ensure it compiles correctly with Vite
     import('../lib/engine.worker?worker').then((WorkerModule) => {
       const worker = new WorkerModule.default();
-      
+
       worker.onmessage = (e) => {
         const { bestMove } = e.data;
         if (bestMove) {
@@ -117,7 +113,7 @@ export default function ComputerGame({ difficulty, currentUser, onExit }: Comput
     if (game.isGameOver() || isGettingHint || isThinking) return;
     setIsGettingHint(true);
     setHasUsedHelp(true);
-    
+
     import('../lib/engine.worker?worker').then((WorkerModule) => {
       const worker = new WorkerModule.default();
       worker.onmessage = (e) => {
@@ -136,24 +132,23 @@ export default function ComputerGame({ difficulty, currentUser, onExit }: Comput
     });
   };
 
-  const statsUpdated = useRef(false);
 
     const moveHighlights = useMemo(() => {
     const history = game.history({ verbose: true });
     const highlights: Record<string, React.CSSProperties> = {};
-    
+
     if (history.length > 0) {
       const lastMove = history[history.length - 1] as any;
       const isCapture = lastMove.captured != null;
       const captureColor = 'rgba(239, 68, 68, 0.5)'; // red-500
       const normalColor = 'rgba(234, 179, 8, 0.4)'; // amber-500
 
-      highlights[lastMove.from] = { 
-        backgroundColor: normalColor, 
-        transition: 'background-color 0.3s ease' 
+      highlights[lastMove.from] = {
+        backgroundColor: normalColor,
+        transition: 'background-color 0.3s ease'
       };
-      highlights[lastMove.to] = { 
-        backgroundColor: isCapture ? captureColor : normalColor, 
+      highlights[lastMove.to] = {
+        backgroundColor: isCapture ? captureColor : normalColor,
         transition: 'background-color 0.3s ease',
         transform: isCapture ? 'scale(1.05)' : 'none',
         boxShadow: isCapture ? 'inset 0 0 15px rgba(239, 68, 68, 0.8)' : 'none'
@@ -214,110 +209,10 @@ export default function ComputerGame({ difficulty, currentUser, onExit }: Comput
     return () => clearTimeout(timeout);
   }, [isThinking]);
 
-  const calculateEloChange = (myElo: number, opponentElo: number, result: 1 | 0.5 | 0) => {
-    const K = 32;
-    const expectedScore = 1 / (1 + Math.pow(10, (opponentElo - myElo) / 400));
-    return Math.round(K * (result - expectedScore));
-  };
-
   useEffect(() => {
-    if (winner && currentUser && !statsUpdated.current) {
-      statsUpdated.current = true;
-      const updateStats = async () => {
-        try {
-          const db = getDb();
-          let numericResult: 1 | 0.5 | 0 = 0;
-          if (winner === 'draw') numericResult = 0.5;
-          else if (winner === playerColor) numericResult = 1;
-          
-          let botElo = 1000;
-          switch (activeDifficulty) {
-            case 'iniciante': botElo = 800; break;
-            case 'facil': botElo = 1000; break;
-            case 'medio': botElo = 1300; break;
-            case 'dificil': botElo = 1600; break;
-            case 'profissional': botElo = 2000; break;
-          }
-          
-          if (numericResult === 1) {
-            confetti({
-              particleCount: 100,
-              spread: 70,
-              origin: { y: 0.6 },
-              colors: ['#10b981', '#fbbf24', '#ffffff']
-            });
-          }
-
-          // If playing as guest, skip Firestore updates
-          if (currentUser.isGuest) return;
-
-          const eloChange = calculateEloChange(currentUser.elo, botElo, numericResult);
-          const updateData: any = {
-            elo: increment(eloChange),
-            gamesPlayed: increment(1),
-            eloHistory: arrayUnion({ date: Date.now(), elo: currentUser.elo + eloChange })
-          };
-
-          let coinsReward = 0;
-          if (numericResult === 1) {
-            updateData['stats.wins'] = increment(1);
-            if (activeDifficulty === 'iniciante') coinsReward = 10;
-            else if (activeDifficulty === 'facil') coinsReward = 20;
-            else if (activeDifficulty === 'medio') coinsReward = 50;
-            else if (activeDifficulty === 'dificil') coinsReward = 100;
-            else if (activeDifficulty === 'profissional') coinsReward = 250;
-            
-            if (!hasUsedHelp) {
-              coinsReward = Math.floor(coinsReward * 1.5);
-            }
-            
-            updateData['coins'] = increment(coinsReward);
-          }
-          else if (numericResult === 0) updateData['stats.losses'] = increment(1);
-          else {
-            updateData['stats.draws'] = increment(1);
-            updateData['coins'] = increment(5);
-          }
-
-          const { updates: badgeUpdates, newBadges } = calculateAchievements(
-            currentUser, 
-            numericResult, 
-            game.history().length, 
-            true, 
-            activeDifficulty
-          );
-          Object.assign(updateData, badgeUpdates);
-
-          await updateDoc(doc(db, 'users', currentUser.uid), updateData);
-          for (const badgeId of newBadges) {
-            const badge = ACHIEVEMENTS[badgeId];
-            if (badge) {
-              sendNotification('Nova Conquista Desbloqueada!', {
-                body: `Você ganhou a insígnia: ${badge.name}`
-              });
-            }
-          }
-        } catch (e) {
-          console.error("Failed to update stats", e);
-        }
-      };
-      updateStats();
-    } else if (winner && !currentUser) {
-      // Show confetti for guests too
-      let numericResult: 1 | 0.5 | 0 = 0;
-      if (winner === 'draw') numericResult = 0.5;
-      else if (winner === playerColor) numericResult = 1;
-      
-      if (numericResult === 1) {
-        confetti({
-          particleCount: 100,
-          spread: 70,
-          origin: { y: 0.6 },
-          colors: ['#10b981', '#fbbf24', '#ffffff']
-        });
-      }
-    }
-  }, [winner, currentUser, activeDifficulty, playerColor, hasUsedHelp]);
+    const playerWon = winner === (playerColor === 'w' ? 'white' : 'black');
+    if (playerWon) confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 }, colors: ['#10b981', '#fbbf24', '#ffffff'] });
+  }, [winner, playerColor]);
 
   const getMoveOptions = (square: any) => {
     const moves = game.moves({
@@ -339,7 +234,7 @@ export default function ComputerGame({ difficulty, currentUser, onExit }: Comput
         borderRadius: '50%'
       };
     });
-    
+
     newSquares[square] = {
       background: 'rgba(234, 179, 8, 0.4)' // Highlight selected piece
     };
@@ -452,11 +347,11 @@ export default function ComputerGame({ difficulty, currentUser, onExit }: Comput
     return false;
   };
 
-  
+
   const handleAnalyze = async () => {
     setIsAnalyzing(true);
     try {
-      const response = await fetch('/api/analyze', {
+      const response = await authenticatedApiFetch('/api/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ pgn: game.pgn(), color: playerColor })
@@ -480,21 +375,20 @@ export default function ComputerGame({ difficulty, currentUser, onExit }: Comput
     setGameOver(false);
     setWinner(null);
     setAnalysis(null);
-    statsUpdated.current = false;
     setHasUsedHelp(false);
   };
 
-  
+
   const handleUndo = () => {
     if (gameOver || game.history().length === 0) return;
     setHasUsedHelp(true);
-    
+
     const newGame = new Chess();
     newGame.loadPgn(game.pgn());
-    
+
     // Check whose turn it currently is in the original game
     const currentTurn = game.turn();
-    
+
     if (currentTurn === playerColor) {
       // It's the player's turn, which means the computer just moved.
       // So we undo the computer's move, AND the player's move.
@@ -510,12 +404,12 @@ export default function ComputerGame({ difficulty, currentUser, onExit }: Comput
     setIsThinking(false);
   };
 
-  
+
   const renderCapturedPieces = (color: 'w' | 'b', layout: 'horizontal' | 'vertical' = 'horizontal') => {
     const history = game.history({ verbose: true });
     // If color is 'w', they capture 'b' pieces.
     const capturedPieces = history.filter(m => m.color === color && m.captured).map(m => m.captured);
-    
+
     if (capturedPieces.length === 0) return null;
 
     const order = { p: 1, n: 2, b: 3, r: 4, q: 5 };
@@ -527,8 +421,8 @@ export default function ComputerGame({ difficulty, currentUser, onExit }: Comput
       return (
         <div className="flex flex-col flex-wrap items-center justify-center gap-[-10px] max-h-[600px] w-12 sm:w-16">
           {capturedPieces.map((piece, i) => (
-            <img 
-              key={i} 
+            <img
+              key={i}
               src={`https://images.chesscomfiles.com/chess-themes/pieces/wood/150/${targetColor}${piece}.png`}
               alt="captured"
               className="w-8 h-8 sm:w-12 sm:h-12 -mt-2 sm:-mt-4 first:mt-0 drop-shadow-[0_5px_5px_rgba(0,0,0,0.5)] z-10 transition-transform"
@@ -542,8 +436,8 @@ export default function ComputerGame({ difficulty, currentUser, onExit }: Comput
     return (
       <div className="flex flex-wrap gap-[-6px] mt-2">
         {capturedPieces.map((piece, i) => (
-          <img 
-            key={i} 
+          <img
+            key={i}
             src={`https://images.chesscomfiles.com/chess-themes/pieces/wood/150/${targetColor}${piece}.png`}
             alt="captured"
             className="w-5 h-5 -ml-1.5 first:ml-0 drop-shadow-md"
@@ -563,7 +457,7 @@ export default function ComputerGame({ difficulty, currentUser, onExit }: Comput
       {/* Menu Superior do Jogo */}
       <div className="w-full bg-neutral-900/90 backdrop-blur-md border-b border-neutral-800 px-4 py-2.5 sm:px-6 flex items-center justify-between z-10 gap-3">
         <div className="flex items-center gap-3">
-          <button 
+          <button
             onClick={() => {
               if (!gameOver && game.moveNumber() > 1) {
                 localStorage.setItem('vanguard_chess_bot_save', JSON.stringify({
@@ -589,9 +483,9 @@ export default function ComputerGame({ difficulty, currentUser, onExit }: Comput
             </span>
           </div>
         </div>
-        
+
         <div className="flex items-center gap-1.5 sm:gap-2">
-          <button 
+          <button
             onClick={handleHint}
             disabled={gameOver || isThinking || isGettingHint}
             className="flex items-center justify-center gap-1 px-2.5 py-1.5 sm:px-3 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/20 rounded-xl font-bold transition-all disabled:opacity-40 disabled:cursor-not-allowed text-xs sm:text-sm active:scale-95"
@@ -600,7 +494,7 @@ export default function ComputerGame({ difficulty, currentUser, onExit }: Comput
             <Lightbulb className={cn("w-3.5 h-3.5 sm:w-4 sm:h-4", isGettingHint && "animate-pulse")} />
             <span>{isGettingHint ? 'Pensando...' : 'Dica'}</span>
           </button>
-          <button 
+          <button
             onClick={handleUndo}
             disabled={gameOver || game.history().length === 0}
             className="flex items-center justify-center gap-1 px-2.5 py-1.5 sm:px-3 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border border-blue-500/20 rounded-xl font-bold transition-all disabled:opacity-40 disabled:cursor-not-allowed text-xs sm:text-sm active:scale-95"
@@ -609,7 +503,7 @@ export default function ComputerGame({ difficulty, currentUser, onExit }: Comput
             <Undo className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             <span className="hidden sm:inline">Desfazer</span>
           </button>
-          <button 
+          <button
             onClick={resetGame}
             className="flex items-center justify-center gap-1 px-2.5 py-1.5 sm:px-3 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white rounded-xl font-bold transition-all text-xs sm:text-sm active:scale-95"
             title="Reiniciar Partida"
@@ -617,7 +511,7 @@ export default function ComputerGame({ difficulty, currentUser, onExit }: Comput
             <RefreshCcw className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             <span className="hidden sm:inline">Reiniciar</span>
           </button>
-          <button 
+          <button
             onClick={resign}
             disabled={gameOver}
             className="flex items-center justify-center gap-1 px-2.5 py-1.5 sm:px-3 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 rounded-xl font-bold transition-all disabled:opacity-40 disabled:cursor-not-allowed text-xs sm:text-sm active:scale-95"
@@ -631,13 +525,13 @@ export default function ComputerGame({ difficulty, currentUser, onExit }: Comput
 
       {/* Main Game Layout Container */}
       <div className="w-full max-w-[1700px] mx-auto p-1 sm:p-2 lg:p-3 flex flex-col lg:flex-row gap-3 lg:gap-5 items-center lg:items-start justify-center flex-1">
-        
+
         {/* Left Side: Players Info, Controls & Move History (Order 1) */}
         <div className="w-full lg:w-[300px] xl:w-[340px] flex flex-col gap-2.5 flex-shrink-0 order-2 lg:order-1 lg:h-[min(calc(100dvh-115px),780px)]">
-          
+
           {/* Top Rectangle: Players & Match Info */}
           <div className="bg-neutral-900/95 rounded-2xl p-3 sm:p-3.5 border border-neutral-800 shadow-xl flex flex-col gap-2.5 flex-shrink-0">
-            
+
             {/* Computer Info */}
             <div className="flex flex-col gap-1 bg-neutral-950/60 p-2.5 rounded-xl border border-neutral-800/60">
               <div className="flex items-center justify-between">
@@ -654,7 +548,7 @@ export default function ComputerGame({ difficulty, currentUser, onExit }: Comput
                   {getDifficultyName()}
                 </span>
               </div>
-              
+
               <div className="flex items-center justify-between pt-0.5">
                 <CapturedPieces id="bot-captured-pieces" fen={game.fen()} color="b" />
                 {isThinking && (
@@ -680,7 +574,7 @@ export default function ComputerGame({ difficulty, currentUser, onExit }: Comput
                   </span>
                 )}
               </div>
-              
+
               <div className="flex items-center justify-between pt-0.5">
                 <CapturedPieces id="user-captured-pieces" fen={game.fen()} color="w" />
                 <span className="text-[10px] text-neutral-500 font-mono">
@@ -724,7 +618,7 @@ export default function ComputerGame({ difficulty, currentUser, onExit }: Comput
 
         {/* Right / Center Side: Enlarged Chessboard (Order 2) */}
         <div className="flex-1 w-full max-w-[min(100%,calc(100dvh-115px))] lg:max-w-[min(calc(100dvh-115px),760px)] flex items-center justify-center gap-2 sm:gap-3 order-1 lg:order-2">
-          
+
           {/* Evaluation Bar */}
           <div className="py-1 self-stretch">
             <EvalBar game={game} isFlipped={playerColor === 'b'} />
@@ -733,7 +627,7 @@ export default function ComputerGame({ difficulty, currentUser, onExit }: Comput
           {/* Board Container */}
           <div className="flex-1 w-full relative">
             <div className="w-full rounded-xl sm:rounded-2xl bg-gradient-to-br from-[#2a170e] via-[#1a0c06] to-[#0f0703] p-1.5 sm:p-2.5 border-2 sm:border-4 border-[#613318] shadow-[0_20px_50px_rgba(0,0,0,0.8)]">
-              
+
               <div className="w-full aspect-square relative rounded-xl overflow-hidden shadow-inner bg-black">
                 {gameOver && (
                   <div className="absolute inset-0 z-20 bg-black/80 flex flex-col items-center justify-center p-6 text-center backdrop-blur-md overflow-y-auto animate-in fade-in duration-300">
@@ -743,12 +637,12 @@ export default function ComputerGame({ difficulty, currentUser, onExit }: Comput
                           {winner === 'draw' ? 'Empate' : winner === (playerColor === 'w' ? 'white' : 'black') ? 'Você Venceu! 🎉' : 'Computador Venceu'}
                         </h2>
                         <p className="text-neutral-300 mb-6 text-sm">
-                          {game.isCheckmate() ? 'Vitória por Xeque-mate!' : 
-                           game.isDraw() ? 'Empate por repetição ou material insuficiente' : 
+                          {game.isCheckmate() ? 'Vitória por Xeque-mate!' :
+                           game.isDraw() ? 'Empate por repetição ou material insuficiente' :
                            game.isStalemate() ? 'Empate por afogamento' : 'Partida encerrada por desistência.'}
                         </p>
                         <div className="flex flex-col sm:flex-row gap-2.5 justify-center">
-                          <button 
+                          <button
                             onClick={handleAnalyze}
                             disabled={isAnalyzing}
                             className="bg-indigo-500 hover:bg-indigo-400 text-white font-bold py-2.5 px-5 rounded-xl transition-all shadow-lg flex items-center justify-center gap-2 disabled:opacity-50 text-xs sm:text-sm active:scale-95"
@@ -756,7 +650,7 @@ export default function ComputerGame({ difficulty, currentUser, onExit }: Comput
                             <Sparkles className="w-4 h-4" />
                             {isAnalyzing ? 'Analisando...' : 'Treinador IA'}
                           </button>
-                          <button 
+                          <button
                             onClick={resetGame}
                             className="bg-emerald-500 hover:bg-emerald-400 text-neutral-950 font-bold py-2.5 px-5 rounded-xl transition-all shadow-lg flex items-center justify-center gap-2 text-xs sm:text-sm active:scale-95"
                           >
@@ -776,7 +670,7 @@ export default function ComputerGame({ difficulty, currentUser, onExit }: Comput
                             <p key={idx} className="mb-2 text-xs leading-relaxed">{paragraph.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')}</p>
                           ))}
                         </div>
-                        <button 
+                        <button
                           onClick={resetGame}
                           className="w-full bg-emerald-500 hover:bg-emerald-400 text-neutral-950 font-bold py-2.5 px-6 rounded-xl transition-all flex items-center justify-center gap-2 text-xs sm:text-sm active:scale-95"
                         >
@@ -787,9 +681,9 @@ export default function ComputerGame({ difficulty, currentUser, onExit }: Comput
                     )}
                   </div>
                 )}
-                
+
                 {/* @ts-ignore react-chessboard types are broken in v5 */}
-                <Chessboard 
+                <Chessboard
                   options={{
                     id: "ComputerGame",
                     position: game.fen(),

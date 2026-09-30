@@ -1,24 +1,23 @@
-import { useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { getAuth as getFirebaseAuth, signInWithPopup, signInWithRedirect, GoogleAuthProvider, signOut, User, browserPopupRedirectResolver } from 'firebase/auth';
 import { doc, setDoc, getDoc, collection, onSnapshot, query, where, or, updateDoc, addDoc } from 'firebase/firestore';
 import { initFirebase, getDb, getFirebaseAuth as getFirebaseInstance } from './lib/firebase';
 import { UserData, GameData } from './types';
 import Lobby from './components/Lobby';
-import Game from './components/Game';
-import ComputerGame from "./components/ComputerGame";
-import LocalGame from "./components/LocalGame";
-import Tournaments from './components/Tournaments';
-import Rules from './components/Rules';
-import Chat from './components/Chat';
-import Training from './components/Training';
-import Profile from './components/Profile';
-import Store from './components/Store';
-import Friends from './components/Friends';
-import Leaderboard from './components/Leaderboard';
-import AdBanner from './components/AdBanner';
-import About from './components/About';
-import NicknameModal from './components/NicknameModal';
-import AuthModal from './components/AuthModal';
+const Game = lazy(() => import('./components/Game'));
+const ComputerGame = lazy(() => import('./components/ComputerGame'));
+const LocalGame = lazy(() => import('./components/LocalGame'));
+const Tournaments = lazy(() => import('./components/Tournaments'));
+const Rules = lazy(() => import('./components/Rules'));
+const Chat = lazy(() => import('./components/Chat'));
+const Training = lazy(() => import('./components/Training'));
+const Profile = lazy(() => import('./components/Profile'));
+const Store = lazy(() => import('./components/Store'));
+const Friends = lazy(() => import('./components/Friends'));
+const Leaderboard = lazy(() => import('./components/Leaderboard'));
+const AdBanner = lazy(() => import('./components/AdBanner'));
+const About = lazy(() => import('./components/About'));
+const AuthModal = lazy(() => import('./components/AuthModal'));
 import ErrorBoundary from './components/ErrorBoundary';
 import { LogIn, Loader2, LogOut, Trophy, Swords, MessageSquare, Target, Settings, Volume2, VolumeX, Palette, User as UserIcon, Bell, BellOff, Users, BookOpen, Crown, Heart, Store as StoreIcon, Copy, CheckCircle2, Info , ShieldCheck, Check, Edit2, Sparkles } from 'lucide-react';
 import { sounds } from './lib/sounds';
@@ -26,6 +25,7 @@ import { themeManager, CHESS_THEMES, useTheme } from './lib/themes';
 import { backgroundManager, useBackground } from './lib/backgrounds';
 import { cn } from './lib/utils';
 import { requestNotificationPermission } from './lib/notifications';
+import { authenticatedApiFetch } from './lib/api';
 
 type Tab = 'play' | 'tournaments' | 'chat' | 'training' | 'rules' | 'ranking' | 'profile' | 'friends' | 'store' | 'about';
 
@@ -71,7 +71,7 @@ export default function App() {
       setNotificationsEnabled(Notification.permission === 'granted');
     }
   }, []);
-  
+
   useEffect(() => {
     if (!spectatingGameId || !firebaseReady) {
       setSpectatingGame(null);
@@ -92,34 +92,11 @@ export default function App() {
   const acceptChallenge = async () => {
     if (!incomingChallenge || !userData) return;
     try {
-      const db = getDb();
-      const newGameRef = doc(collection(db, 'games'));
-      
-      const newGame = {
-        whiteId: incomingChallenge.challengerId,
-        whiteName: incomingChallenge.challengerName,
-        whiteElo: incomingChallenge.challengerElo,
-        blackId: userData.uid,
-        blackName: userData.displayName || 'Jogador',
-        blackElo: userData.elo || 1200,
-        status: 'playing',
-        fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
-        pgn: '',
-        turn: 'w',
-        whiteThemeId: 'luxury',
-        lastMoveAt: Date.now(),
-        timeControl: 300,
-        whiteTime: 300,
-        blackTime: 300,
-        spectatorsAllowedWhite: true,
-        spectatorsAllowedBlack: true,
-      };
-      
-      await setDoc(newGameRef, newGame);
-      await updateDoc(doc(db, 'challenges', incomingChallenge.id), { 
-        status: 'accepted',
-        gameId: newGameRef.id 
+      const response = await authenticatedApiFetch('/api/challenge/accept', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ challengeId: incomingChallenge.id })
       });
+      if (!response.ok) throw new Error('Não foi possível aceitar o desafio.');
       setIncomingChallenge(null);
     } catch (e) {
       console.error(e);
@@ -141,16 +118,17 @@ export default function App() {
   const currentBackground = useBackground();
   useEffect(() => {
     let unsubs: any[] = [];
-    
+
     initFirebase().then(({ auth, db }) => {
       setFirebaseReady(true);
-      
+
       const unsubscribeAuth = auth.onAuthStateChanged(async (firebaseUser) => {
         // Clear previous listeners
         unsubs.forEach(u => u());
         unsubs = [];
 
         setUser(firebaseUser);
+        setUserData(null);
         if (firebaseUser) {
           // Online Status Management
           const setOnlineStatus = async (online: boolean) => {
@@ -163,11 +141,11 @@ export default function App() {
               console.error(e);
             }
           };
-          
+
           setOnlineStatus(true);
           const heartbeatInterval = setInterval(() => setOnlineStatus(true), 15000);
           unsubs.push(() => clearInterval(heartbeatInterval));
-          
+
           const handleVisibility = () => {
             if (document.visibilityState === 'visible') {
               setOnlineStatus(true);
@@ -175,11 +153,11 @@ export default function App() {
               setOnlineStatus(false);
             }
           };
-          
+
           const handleUnload = () => {
             setOnlineStatus(false);
           };
-          
+
           window.addEventListener('visibilitychange', handleVisibility);
           window.addEventListener('beforeunload', handleUnload);
           unsubs.push(() => {
@@ -194,7 +172,7 @@ export default function App() {
             where('challengedId', '==', firebaseUser.uid),
             where('status', '==', 'pending')
           );
-          
+
           unsubs.push(onSnapshot(challengesQuery, (snapshot) => {
             const challenges = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
             if (challenges.length > 0) {
@@ -211,7 +189,7 @@ export default function App() {
             where('challengerId', '==', firebaseUser.uid),
             where('status', '==', 'accepted')
           );
-          
+
           unsubs.push(onSnapshot(myChallengesQuery, (snapshot) => {
             snapshot.docChanges().forEach(change => {
               if (change.type === 'added') {
@@ -227,24 +205,44 @@ export default function App() {
           }));
 
           const userRef = doc(db, 'users', firebaseUser.uid);
-          const userSnap = await getDoc(userRef);
-          
+          const privateUserRef = doc(db, 'userPrivate', firebaseUser.uid);
+          const bootstrapResponse = await authenticatedApiFetch('/api/profile/bootstrap', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ displayName: firebaseUser.displayName || '' })
+          });
+          if (!bootstrapResponse.ok) console.warn('Private profile bootstrap was unavailable; preserving current profile state.');
+          let publicProfile: UserData | null = null;
+          let privateProfile: Partial<UserData> = {};
+          const publishProfile = () => {
+            if (publicProfile) setUserData({ ...publicProfile, ...privateProfile, uid: firebaseUser.uid });
+          };
+          const [userSnap, privateSnap] = await Promise.all([getDoc(userRef), getDoc(privateUserRef)]);
           if (!userSnap.exists()) {
-            const newUserData: UserData = {
+            publicProfile = {
               uid: firebaseUser.uid,
+              profileSchemaVersion: 2,
               displayName: firebaseUser.displayName || 'Jogador Misterioso',
               elo: 1200,
               gamesPlayed: 0,
-              coins: 500,
-              unlockedThemes: ['luxury', 'classic'],
-              unlockedBackgrounds: ['default'],
               activeBackground: 'default'
             };
-            await setDoc(userRef, newUserData);
-            setUserData(newUserData);
+            await setDoc(userRef, publicProfile);
+            if (!privateSnap.exists()) {
+              const defaultPrivateProfile = {
+                coins: 500, unlockedThemes: ['luxury', 'classic'], unlockedBackgrounds: ['default'],
+                isPremium: false, premiumUntil: 0
+              };
+              await setDoc(privateUserRef, defaultPrivateProfile);
+              privateProfile = defaultPrivateProfile;
+            } else {
+              privateProfile = privateSnap.data() as Partial<UserData>;
+            }
           } else {
-            setUserData(userSnap.data() as UserData);
+            publicProfile = userSnap.data() as UserData;
+            privateProfile = privateSnap.exists() ? privateSnap.data() as Partial<UserData> : {};
           }
+          publishProfile();
 
           // Handle Invite Link
           try {
@@ -252,27 +250,11 @@ export default function App() {
             const inviteId = urlParams.get('invite') || sessionStorage.getItem('pending_invite');
             if (inviteId) {
                sessionStorage.removeItem('pending_invite');
-               const gameRef = doc(db, 'games', inviteId);
-               const gameSnap = await getDoc(gameRef);
-               if (gameSnap.exists()) {
-                 const gameData = gameSnap.data();
-                 if (gameData.status === 'waiting_friend' && gameData.whiteId !== firebaseUser.uid) {
-                   const now = Date.now();
-                   const currentProfile = userSnap.exists() ? (userSnap.data() as UserData) : null;
-                   const playerElo = currentProfile?.elo || 1200;
-                   const playerName = currentProfile?.displayName || firebaseUser.displayName || 'Amigo';
-                   await updateDoc(gameRef, {
-                     blackId: firebaseUser.uid,
-                     blackName: playerName,
-                     blackElo: playerElo,
-                     status: 'playing',
-                     lastMoveAt: now,
-                     whiteTime: gameData.timeControl || 300,
-                     blackTime: gameData.timeControl || 300
-                   });
-                   setActiveTab('play');
-                 }
-               }
+               const response = await authenticatedApiFetch('/api/game/invite/join', {
+                 method: 'POST', headers: { 'Content-Type': 'application/json' },
+                 body: JSON.stringify({ gameId: inviteId })
+               });
+               if (response.ok) setActiveTab('play');
                window.history.replaceState({}, document.title, window.location.pathname);
             }
           } catch (err) {
@@ -283,8 +265,9 @@ export default function App() {
           unsubs.push(onSnapshot(userRef, async (docSnap) => {
             if (docSnap.exists()) {
               const data = docSnap.data() as UserData;
-              setUserData(data);
-              
+              publicProfile = data;
+              publishProfile();
+
               if (data.activeTheme && data.activeTheme !== themeManager.getTheme().id) {
                 themeManager.setTheme(data.activeTheme);
               }
@@ -295,32 +278,48 @@ export default function App() {
               // Create user if not exists
               const initialData: UserData = {
                 uid: firebaseUser.uid,
+                profileSchemaVersion: 2,
                 displayName: firebaseUser.displayName || 'Jogador',
                 hasSetNickname: false,
-                elo: 1000,
+                elo: 1200,
                 gamesPlayed: 0,
-                coins: 100
+                activeBackground: 'default'
               };
               try {
                 await setDoc(userRef, initialData);
+                publicProfile = initialData;
+                if (!privateSnap.exists()) {
+                  const defaultPrivateProfile = {
+                    coins: 500, unlockedThemes: ['luxury', 'classic'], unlockedBackgrounds: ['default'],
+                    isPremium: false, premiumUntil: 0
+                  };
+                  await setDoc(privateUserRef, defaultPrivateProfile);
+                  privateProfile = defaultPrivateProfile;
+                }
+                publishProfile();
               } catch (e) {
                 console.error("Error creating user document", e);
               }
             }
           }));
 
+          unsubs.push(onSnapshot(privateUserRef, (privateSnap) => {
+            privateProfile = privateSnap.exists() ? privateSnap.data() as Partial<UserData> : {};
+            publishProfile();
+          }, (error) => console.error('Private profile listener error:', error)));
+
           const gamesRef = collection(db, 'games');
           const q = query(
-            gamesRef, 
+            gamesRef,
             or(
-              where('whiteId', '==', firebaseUser.uid), 
+              where('whiteId', '==', firebaseUser.uid),
               where('blackId', '==', firebaseUser.uid)
             )
           );
-          
+
           unsubs.push(onSnapshot(q, (snapshot) => {
             const games = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as GameData));
-            
+
             setActiveGame(prev => {
               // 1. If currently playing a specific match, always prioritize syncing that exact match
               if (prev) {
@@ -335,7 +334,7 @@ export default function App() {
                 .filter(g => g.status === 'playing')
                 .sort((a, b) => (b.lastMoveAt || 0) - (a.lastMoveAt || 0));
               const active = playingGames[0] || null;
-              
+
               if (active) {
                 if (!prev) setActiveTab('play');
                 setComputerGameDifficulty(null);
@@ -366,7 +365,7 @@ export default function App() {
       return () => { unsubscribeAuth(); unsubs.forEach(u => u()); };
     });
   }, []);
-  
+
 
   const handleLogin = (mode: 'register' | 'login' = 'login') => {
     setAuthModalMode(mode);
@@ -427,7 +426,7 @@ export default function App() {
 
   return (
     <div className={cn("min-h-screen text-zinc-50 flex flex-col md:flex-row font-sans selection:bg-emerald-500/30", currentBackground.className || "")} style={currentBackground.style}>
-      
+
       {/* Desktop Sidebar */}
       <aside className="hidden md:flex flex-col w-20 hover:w-64 transition-all duration-300 border-r border-zinc-800 bg-zinc-950/90 backdrop-blur-xl h-screen sticky top-0 z-50 group overflow-hidden">
         <div className="p-5 group-hover:p-6 flex items-center gap-3 transition-all">
@@ -447,8 +446,8 @@ export default function App() {
                 onClick={() => setActiveTab(item.id)}
                 className={cn(
                   "w-full flex items-center gap-4 px-3 py-3 rounded-xl text-sm font-semibold transition-all duration-200 overflow-hidden",
-                  isActive 
-                    ? "bg-zinc-800/80 text-emerald-400 shadow-sm" 
+                  isActive
+                    ? "bg-zinc-800/80 text-emerald-400 shadow-sm"
                     : "text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-100"
                 )}
                 title={item.label}
@@ -464,7 +463,7 @@ export default function App() {
 
         <div className="p-4 border-t border-zinc-800/50">
           {userData ? (
-            <div 
+            <div
               onClick={() => setActiveTab('profile')}
               className="flex items-center gap-3 bg-transparent group-hover:bg-zinc-900/50 p-1 group-hover:p-3 rounded-2xl border border-transparent group-hover:border-zinc-800 transition-all overflow-hidden justify-center group-hover:justify-start relative cursor-pointer hover:bg-zinc-800/50"
               title="Ver Perfil & Alterar Nickname"
@@ -472,7 +471,7 @@ export default function App() {
               <div className="w-10 h-10 bg-zinc-800 rounded-full flex items-center justify-center flex-shrink-0 font-bold text-emerald-400">
                 {(userData.displayName?.charAt(0)?.toUpperCase() || "?")}
               </div>
-              
+
               <div className="flex-1 min-w-0 text-left opacity-0 group-hover:opacity-100 transition-opacity duration-300 absolute left-[60px] group-hover:static group-hover:left-auto">
                 <div className="font-bold text-sm text-zinc-100 truncate flex items-center gap-1.5">
                   <span>{userData.displayName}</span>
@@ -480,17 +479,17 @@ export default function App() {
                 </div>
                 <div className="text-xs text-emerald-500 font-semibold">{userData.elo} Elo</div>
               </div>
-              
-              <div 
+
+              <div
                 className="flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300 hidden group-hover:flex absolute right-3 group-hover:static group-hover:right-auto"
                 onClick={e => e.stopPropagation()}
               >
-                <button 
+                <button
                   onClick={() => {
                     setEditNickname(userData.displayName || '');
                     setShowSettings(true);
-                  }} 
-                  className="p-1.5 text-zinc-500 hover:text-zinc-300 transition-colors" 
+                  }}
+                  className="p-1.5 text-zinc-500 hover:text-zinc-300 transition-colors"
                   title="Configurações & Nickname"
                 >
                   <Settings className="w-4 h-4" />
@@ -502,16 +501,16 @@ export default function App() {
             </div>
           ) : (
             <div className="space-y-2 flex flex-col items-center group-hover:items-stretch transition-all overflow-hidden">
-              <button 
-                onClick={() => handleLogin('register')} 
-                className="w-10 h-10 group-hover:w-full group-hover:h-auto bg-[#81b64c] hover:bg-[#76a843] active:bg-[#6c9a3c] text-white font-bold group-hover:py-3 group-hover:px-4 rounded-xl transition-all active:scale-95 text-sm flex items-center justify-center gap-2 shadow-[0_3px_0_#5c8734]" 
+              <button
+                onClick={() => handleLogin('register')}
+                className="w-10 h-10 group-hover:w-full group-hover:h-auto bg-[#81b64c] hover:bg-[#76a843] active:bg-[#6c9a3c] text-white font-bold group-hover:py-3 group-hover:px-4 rounded-xl transition-all active:scale-95 text-sm flex items-center justify-center gap-2 shadow-[0_3px_0_#5c8734]"
                 title="Cadastrar / Entrar"
               >
                 <LogIn className="w-5 h-5 group-hover:w-4 group-hover:h-4 flex-shrink-0" />
                 <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 hidden group-hover:inline whitespace-nowrap">Cadastre-se / Entrar</span>
               </button>
               <button onClick={() => setShowPix(true)} className="w-10 h-10 group-hover:w-full group-hover:h-auto bg-zinc-800 hover:bg-zinc-700 text-emerald-400 font-bold group-hover:py-3 group-hover:px-4 rounded-xl transition-all active:scale-95 text-sm flex items-center justify-center gap-2 border border-emerald-500/20" title="Apoiar">
-                <Heart className="w-5 h-5 group-hover:w-4 group-hover:h-4 fill-emerald-500 flex-shrink-0" /> 
+                <Heart className="w-5 h-5 group-hover:w-4 group-hover:h-4 fill-emerald-500 flex-shrink-0" />
                 <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 hidden group-hover:inline whitespace-nowrap">Apoiar</span>
               </button>
             </div>
@@ -529,11 +528,11 @@ export default function App() {
             </div>
             <h1 className="text-lg font-black tracking-tight text-white">Vanguard<span className="text-emerald-400">Chess</span></h1>
           </div>
-          
+
           <div className="flex items-center gap-2">
             {userData ? (
               <>
-                <button 
+                <button
                   onClick={() => setActiveTab('profile')}
                   className="flex items-center gap-2 bg-zinc-900/80 border border-zinc-800 px-2.5 py-1 rounded-xl text-left hover:border-emerald-500/40 transition-colors"
                   title="Ver Perfil"
@@ -551,14 +550,14 @@ export default function App() {
               </>
             ) : (
               <div className="flex items-center gap-1.5">
-                <button 
-                  onClick={() => handleLogin('login')} 
+                <button
+                  onClick={() => handleLogin('login')}
                   className="bg-[#363430] hover:bg-[#423f3a] text-neutral-200 border border-[#48443e] px-2.5 py-1.5 rounded-lg font-bold text-xs"
                 >
                   Entrar
                 </button>
-                <button 
-                  onClick={() => handleLogin('register')} 
+                <button
+                  onClick={() => handleLogin('register')}
                   className="bg-[#81b64c] hover:bg-[#76a843] text-white px-3 py-1.5 rounded-lg font-bold text-xs shadow-[0_2px_0_#5c8734]"
                 >
                   Cadastre-se
@@ -569,40 +568,45 @@ export default function App() {
         </header>
 
         {/* AdBanner area (below mobile header, top of main content) */}
-        {!userData?.isPremium && <AdBanner />}
+        {!(userData?.isPremium && userData.premiumUntil && userData.premiumUntil > Date.now()) && (
+          <Suspense fallback={null}>
+            <AdBanner />
+          </Suspense>
+        )}
 
         {(() => {
           const isPlayingGame = activeTab === 'play' && (Boolean(activeGame) || Boolean(computerGameDifficulty) || Boolean(isLocalGame));
           return (
             <main className={cn(
               "flex-1",
-              isPlayingGame 
-                ? "overflow-y-auto md:overflow-hidden p-1 sm:p-2 lg:p-2.5 pb-20 md:pb-2 flex flex-col justify-center" 
+              isPlayingGame
+                ? "overflow-y-auto md:overflow-hidden p-1 sm:p-2 lg:p-2.5 pb-20 md:pb-2 flex flex-col justify-center"
                 : "overflow-y-auto p-4 md:p-8 pb-24 md:pb-8"
             )}>
               <div className={cn("mx-auto h-full", isPlayingGame ? "w-full max-w-[1700px] flex flex-col justify-center items-center" : "max-w-7xl")}>
+                <Suspense fallback={<div className="w-full py-8 text-center text-sm text-zinc-400" role="status">Carregando…</div>}>
                 {activeTab === 'play' && (
                   activeGame ? (
                     <ErrorBoundary fallbackTitle="Erro ao carregar partida" onReset={() => setActiveGame(null)}>
-                      <Game 
+                      <Game
                         key={activeGame.id}
-                        game={activeGame} 
+                        game={activeGame}
                         currentUser={userData || {
                           uid: user?.uid || 'guest',
                           displayName: user?.displayName || 'Jogador',
                           elo: 1200,
                           gamesPlayed: 0,
                           coins: 0
-                        }} 
-                        onExit={() => setActiveGame(null)} 
+                        }}
+                        onExit={() => setActiveGame(null)}
                       />
                     </ErrorBoundary>
                   ) : computerGameDifficulty ? (
                     <ErrorBoundary fallbackTitle="Erro no jogo contra computador" onReset={() => setComputerGameDifficulty(null)}>
-                      <ComputerGame 
-                        difficulty={computerGameDifficulty} 
-                        currentUser={userData} 
-                        onExit={() => setComputerGameDifficulty(null)} 
+                      <ComputerGame
+                        difficulty={computerGameDifficulty}
+                        currentUser={userData}
+                        onExit={() => setComputerGameDifficulty(null)}
                       />
                     </ErrorBoundary>
                   ) : isLocalGame ? (
@@ -614,7 +618,7 @@ export default function App() {
                 {activeTab === 'rules' && <Rules />}
                 {activeTab === 'ranking' && <Leaderboard />}
                 {activeTab === 'about' && <About />}
-                
+
                 {/* Protected Routes */}
                 {!userData && ['tournaments', 'chat', 'training', 'friends', 'store', 'profile'].includes(activeTab) && (
                   <div className="flex-1 flex items-center justify-center h-[60vh]">
@@ -659,6 +663,7 @@ export default function App() {
                     {activeTab === 'profile' && <Profile currentUser={userData} />}
                   </>
                 )}
+                </Suspense>
               </div>
             </main>
           );
@@ -692,7 +697,7 @@ export default function App() {
         <div className="fixed inset-0 z-[60] bg-black/80 flex flex-col items-center justify-center p-4 backdrop-blur-md" onClick={() => setShowSettings(false)}>
           <div className="bg-zinc-900 rounded-3xl p-6 w-full max-w-sm border border-zinc-800 shadow-2xl relative" onClick={e => e.stopPropagation()}>
             <h2 className="text-xl font-bold text-white mb-6">Configurações</h2>
-            
+
             <div className="space-y-4">
               {/* Identificação / Nickname */}
               <div className="p-4 bg-zinc-800/50 rounded-2xl border border-zinc-700/50 space-y-3">
@@ -776,7 +781,7 @@ export default function App() {
                   )} />
                 </button>
               </div>
-              
+
               <div className="flex items-center justify-between p-4 bg-zinc-800/50 rounded-2xl border border-zinc-700/50">
                 <div className="flex items-center gap-3">
                   {notificationsEnabled ? <Bell className="w-5 h-5 text-emerald-500" /> : <BellOff className="w-5 h-5 text-zinc-500" />}
@@ -904,18 +909,18 @@ export default function App() {
             <p className="text-zinc-400 mb-6 text-sm">
               Sua doação ajuda a manter os servidores do jogo online e livres de anúncios.
             </p>
-            
+
             <div className="bg-white p-3 rounded-2xl inline-block mb-6 shadow-xl">
               <img src="data:image/png;base64,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" alt="QR Code Pix" className="w-48 h-48 object-contain rounded-xl" />
             </div>
-            
+
             <div className="bg-zinc-800/50 p-4 rounded-2xl mb-6 text-left border border-zinc-700/50 text-sm">
               <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold mb-1">Nome</p>
               <p className="text-zinc-100 font-bold mb-3">THIAGO BERNARDO DIAS</p>
               <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold mb-1">Instituição</p>
               <p className="text-zinc-100 font-bold">Banco Inter</p>
             </div>
-            
+
             <div className="bg-zinc-950 rounded-2xl p-3 border border-emerald-500/30 flex items-center justify-between gap-3 mb-6 relative overflow-hidden group">
               <div className="absolute inset-0 bg-emerald-500/10 opacity-0 group-hover:opacity-100 transition-opacity" />
               <span className="text-emerald-400 font-mono text-base truncate flex-1 text-left z-10 font-bold px-2">
@@ -944,11 +949,13 @@ export default function App() {
       )}
 
       {/* Chess.com Style Auth Modal */}
-      <AuthModal 
-        isOpen={showAuthModal} 
-        onClose={() => setShowAuthModal(false)} 
-        defaultMode={authModalMode} 
-      />
+      <Suspense fallback={null}>
+        <AuthModal
+          isOpen={showAuthModal}
+          onClose={() => setShowAuthModal(false)}
+          defaultMode={authModalMode}
+        />
+      </Suspense>
     </div>
   );
 }

@@ -1,10 +1,11 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { collection, query, where, orderBy, onSnapshot, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, query, where, orderBy, onSnapshot } from 'firebase/firestore';
 import { getDb } from '../lib/firebase';
 import { UserData, Message } from '../types';
 import { Send } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { sendNotification } from '../lib/notifications';
+import { authenticatedApiFetch } from '../lib/api';
 
 interface ChatBoxProps {
   roomId: string;
@@ -16,6 +17,7 @@ interface ChatBoxProps {
 export default function ChatBox({ roomId, currentUser, className, title }: ChatBoxProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
+  const [isSending, setIsSending] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -37,7 +39,7 @@ export default function ChatBox({ roomId, currentUser, className, title }: ChatB
           }
         }
       });
-      
+
       const msgs = snapshot.docs
         .map(doc => ({ id: doc.id, ...doc.data() } as Message))
         .sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
@@ -52,19 +54,26 @@ export default function ChatBox({ roomId, currentUser, className, title }: ChatB
 
   const sendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inputText.trim()) return;
+    if (!inputText.trim() || isSending) return;
 
-    const db = getDb();
     const text = inputText.trim();
+    const gameId = roomId.startsWith('game_') ? roomId.slice('game_'.length) : '';
+    if (!gameId) return;
     setInputText('');
-
-    await addDoc(collection(db, 'messages'), {
-      roomId,
-      uid: currentUser.uid,
-      displayName: currentUser.displayName,
-      text,
-      createdAt: Date.now()
-    });
+    setIsSending(true);
+    try {
+      const response = await authenticatedApiFetch('/api/game/chat/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ gameId, text })
+      });
+      if (!response.ok) throw new Error('Não foi possível enviar a mensagem.');
+    } catch (error) {
+      console.error('Failed to send game chat message:', error);
+      setInputText(text);
+    } finally {
+      setIsSending(false);
+    }
   };
 
   return (
@@ -74,7 +83,7 @@ export default function ChatBox({ roomId, currentUser, className, title }: ChatB
           <h3 className="font-semibold text-white text-xs sm:text-sm">{title}</h3>
         </div>
       )}
-      
+
       <div className="flex-1 p-3 sm:p-4 overflow-y-auto space-y-2 sm:space-y-3 min-h-0 custom-scrollbar">
         {messages.length === 0 ? (
           <div className="h-full flex items-center justify-center text-neutral-500 text-sm">
@@ -104,12 +113,13 @@ export default function ChatBox({ roomId, currentUser, className, title }: ChatB
           type="text"
           value={inputText}
           onChange={e => setInputText(e.target.value)}
+          maxLength={500}
           placeholder="Digite sua mensagem..."
           className="flex-1 bg-neutral-800 border border-neutral-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500 transition-colors"
         />
         <button
           type="submit"
-          disabled={!inputText.trim()}
+          disabled={!inputText.trim() || isSending}
           className="bg-emerald-500 hover:bg-emerald-400 text-neutral-950 p-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <Send className="w-4 h-4" />
