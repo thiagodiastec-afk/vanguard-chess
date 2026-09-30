@@ -56,7 +56,7 @@ export default function Rules() {
               <div className="text-4xl w-10 text-center">♔</div>
               <div>
                 <h4 className="text-lg font-bold text-white mb-1">Rei</h4>
-                <p className="text-neutral-400">Move-se apenas uma casa em qualquer direção (horizontal, vertical ou diagonal). É a peça mais importante: se ele for capturado, o jogo acaba.</p>
+                <p className="text-neutral-400">Move-se apenas uma casa em qualquer direção (horizontal, vertical ou diagonal). É a peça mais importante. O Rei não é capturado: quando está sob ataque, fica em xeque; se não houver defesa legal, ocorre xeque-mate e a partida termina.</p>
               </div>
             </div>
 

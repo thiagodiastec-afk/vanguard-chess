@@ -103,7 +103,16 @@ export default function LocalGame({ onExit }: LocalGameProps) {
     }
   }, [game]);
 
-  const onDrop = (sourceSquare: string, targetSquare: string) => {
+  const onDrop = (argsOrSource: any, argTarget?: string) => {
+    // react-chessboard v5 passes one object; keep the positional form for compatibility.
+    const sourceSquare = typeof argsOrSource === 'object' && argsOrSource !== null
+      ? argsOrSource.sourceSquare
+      : argsOrSource;
+    const targetSquare = typeof argsOrSource === 'object' && argsOrSource !== null
+      ? argsOrSource.targetSquare
+      : argTarget;
+
+    if (typeof sourceSquare !== 'string' || typeof targetSquare !== 'string') return false;
     if (gameOver) return false;
 
     try {
