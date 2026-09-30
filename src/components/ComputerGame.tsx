@@ -105,7 +105,8 @@ export default function ComputerGame({ difficulty, currentUser, onExit }: Comput
         worker.terminate();
       };
 
-      worker.postMessage({ type: 'search', fen: game.fen(), difficulty: activeDifficulty });
+      const maxTimeMs = activeDifficulty === 'profissional' ? 15000 : activeDifficulty === 'dificil' ? 10000 : 3000;
+      worker.postMessage({ type: 'search', fen: game.fen(), difficulty: activeDifficulty, maxTimeMs });
     });
   }, [game, activeDifficulty, playerColor, isThinking]);
 

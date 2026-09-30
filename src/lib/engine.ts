@@ -1571,8 +1571,8 @@ export function calculateBestMove(
   let targetDepth = 1;
   if (difficulty === 'facil') targetDepth = 1;
   else if (difficulty === 'medio') targetDepth = 2;
-  else if (difficulty === 'dificil') targetDepth = 3;
-  else if (difficulty === 'profissional') targetDepth = 3;
+  else if (difficulty === 'dificil') targetDepth = 5;
+  else if (difficulty === 'profissional') targetDepth = 6;
   else if (difficulty === 'depth4') targetDepth = 4;
   else if (difficulty === 'depth5') targetDepth = 5;
 

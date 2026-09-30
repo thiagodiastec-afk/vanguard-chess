@@ -2,11 +2,11 @@ import { Chess } from 'chess.js';
 import { calculateBestMove, evaluateBoard, minimax } from './engine';
 
 self.onmessage = (e: MessageEvent) => {
-  const { type, fen, difficulty, pgn } = e.data;
+  const { type, fen, difficulty, pgn, maxTimeMs } = e.data;
   
   if (type === 'search') {
     const game = new Chess(fen);
-    const bestMove = calculateBestMove(game, difficulty);
+    const bestMove = calculateBestMove(game, difficulty, { maxTimeMs });
     self.postMessage({ type: 'search_result', bestMove });
   } 
   else if (type === 'analyze') {
