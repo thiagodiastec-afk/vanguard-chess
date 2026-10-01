@@ -161,11 +161,11 @@ export default function Academy({ currentUser, onOpenStore, onBack }: AcademyPro
         <div className="w-16 h-16 rounded-2xl bg-amber-400/10 border border-amber-300/20 flex items-center justify-center mx-auto mb-5"><Crown className="w-8 h-8 text-amber-300" /></div>
         <p className="text-amber-300 text-xs font-black uppercase tracking-[0.2em] mb-3">Benefício VIP</p>
         <h1 className="text-3xl sm:text-4xl font-black text-white">Sua jornada do primeiro lance ao mestre</h1>
-        <p className="max-w-2xl mx-auto mt-4 text-neutral-300 leading-relaxed">A Academia ensina princípios de abertura, tática, finais e combinações avançadas com posições interativas, dicas e explicações. O curso completo está incluído na assinatura VIP mensal.</p>
+        <p className="max-w-2xl mx-auto mt-4 text-neutral-300 leading-relaxed">A Academia ensina princípios de abertura, tática, finais e combinações avançadas com posições interativas, dicas e explicações. O curso completo está incluído nos planos VIP mensal e anual.</p>
         <div className="grid sm:grid-cols-2 gap-3 max-w-2xl mx-auto my-7 text-left">
           {['12 aulas interativas em quatro níveis', 'Dicas antes de revelar a solução', 'Explicação do plano por trás do lance', 'Progresso e pontos salvos na sua conta'].map(item => <div key={item} className="rounded-xl bg-black/25 border border-white/10 p-4 flex gap-3 text-sm text-neutral-200"><CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />{item}</div>)}
         </div>
-        <button onClick={onOpenStore} className="rounded-xl bg-amber-400 hover:bg-amber-300 text-neutral-950 font-black px-7 py-4 shadow-lg shadow-amber-950/30">Conhecer VIP · R$ 14,99/30 dias</button>
+        <button onClick={onOpenStore} className="rounded-xl bg-amber-400 hover:bg-amber-300 text-neutral-950 font-black px-7 py-4 shadow-lg shadow-amber-950/30">Ver planos VIP</button>
         <p className="mt-3 text-xs text-neutral-500">A cobrança é processada pelo Mercado Pago. A Academia é liberada após a confirmação do pagamento.</p>
       </div>
     </div>

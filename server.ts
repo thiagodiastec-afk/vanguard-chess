@@ -211,6 +211,31 @@ const STORE_PRODUCTS = {
   vip: { title: 'Acesso VIP + Academia (30 dias)', price: 14.99, premium: true }
 };
 
+const VIP_SUBSCRIPTION_PLANS = {
+  monthly: { title: 'VIP + Academia mensal', amount: 14.99, frequency: 1, frequencyType: 'months', termMonths: 1 },
+  annual: { title: 'VIP + Academia anual (10% de desconto)', amount: 161.89, frequency: 12, frequencyType: 'months', termMonths: 12 }
+} as const;
+
+function getVipPlanForSubscription(subscription: any) {
+  const recurring = subscription?.auto_recurring;
+  if (!recurring || recurring.currency_id !== 'BRL') return null;
+  return Object.entries(VIP_SUBSCRIPTION_PLANS).find(([, plan]) =>
+    Number(recurring.transaction_amount) === plan.amount &&
+    Number(recurring.frequency) === plan.frequency &&
+    recurring.frequency_type === plan.frequencyType
+  ) || null;
+}
+
+function addUtcMonths(timestamp: number, months: number) {
+  const date = new Date(timestamp);
+  const day = date.getUTCDate();
+  date.setUTCDate(1);
+  date.setUTCMonth(date.getUTCMonth() + months);
+  const lastDay = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + 1, 0)).getUTCDate();
+  date.setUTCDate(Math.min(day, lastDay));
+  return date.getTime();
+}
+
 const ACADEMY_LESSON_BY_ID = new Map(ACADEMY_LESSONS.map(lesson => [lesson.id, lesson]));
 
 app.get('/api/academy/course', async (req, res) => {
@@ -988,14 +1013,199 @@ Original message: "${text}"`;
     }
   });
 
+  app.post('/api/payment/create-subscription', async (req, res) => {
+    try {
+      const userId = await authenticatedUid(req, res);
+      if (!userId) return;
+      if (!allowRateLimit(userId, 'vip-subscription', 4, 60_000)) return res.status(429).json({ error: 'Muitas tentativas. Tente novamente em um minuto.' });
+      const planId = typeof req.body?.planId === 'string' ? req.body.planId : '';
+      const plan = VIP_SUBSCRIPTION_PLANS[planId as keyof typeof VIP_SUBSCRIPTION_PLANS];
+      if (!plan) return res.status(400).json({ error: 'Plano VIP inválido.' });
+      if (!process.env.MERCADO_PAGO_ACCESS_TOKEN) return res.status(503).json({ error: 'O pagamento está indisponível no momento.' });
+      const appUrl = process.env.APP_URL;
+      if (!appUrl || !/^https:\/\//i.test(appUrl)) return res.status(503).json({ error: 'O endereço seguro do site não está configurado para pagamentos.' });
+
+      const authUser = await getAuth(getAdmin()).getUser(userId);
+      if (!authUser.email) return res.status(400).json({ error: 'Adicione um e-mail à sua conta antes de assinar.' });
+      const db = getFirestore(getAdmin(), FIRESTORE_DATABASE_ID);
+      const privateRef = db.collection('userPrivate').doc(userId);
+      const existingProfile = (await privateRef.get()).data() || {};
+      if (existingProfile.vipSubscriptionId && !['cancelled', 'canceled'].includes(existingProfile.vipSubscriptionStatus || '')) {
+        return res.status(409).json({ error: 'Você já tem uma assinatura VIP em andamento. Continue ou cancele essa autorização na Loja antes de criar outra.' });
+      }
+
+      const notificationUrl = `${appUrl.replace(/\/$/, '')}/api/payment/webhook`;
+      const mpResponse = await fetch('https://api.mercadopago.com/preapproval', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${process.env.MERCADO_PAGO_ACCESS_TOKEN}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          reason: plan.title,
+          external_reference: userId,
+          payer_email: authUser.email,
+          auto_recurring: {
+            frequency: plan.frequency,
+            frequency_type: plan.frequencyType,
+            transaction_amount: plan.amount,
+            currency_id: 'BRL'
+          },
+          back_url: appUrl,
+          notification_url: notificationUrl
+        })
+      });
+      const subscription = await mpResponse.json();
+      if (!mpResponse.ok || typeof subscription.init_point !== 'string' || typeof subscription.id !== 'string') {
+        console.error('Mercado Pago subscription creation failed:', mpResponse.status, subscription.message || subscription.error || 'Invalid response');
+        return res.status(502).json({ error: 'O Mercado Pago não conseguiu iniciar a assinatura. Tente novamente.' });
+      }
+
+      await privateRef.set({
+        vipSubscriptionId: subscription.id,
+        vipSubscriptionPlan: planId,
+        vipSubscriptionStatus: subscription.status || 'pending',
+        vipSubscriptionCheckoutUrl: subscription.init_point
+      }, { merge: true });
+      res.json({ init_point: subscription.init_point });
+    } catch (error) {
+      console.error('VIP subscription creation error:', error);
+      res.status(500).json({ error: 'Não foi possível iniciar a assinatura VIP.' });
+    }
+  });
+
+  app.post('/api/payment/cancel-subscription', async (req, res) => {
+    try {
+      const userId = await authenticatedUid(req, res);
+      if (!userId) return;
+      if (!allowRateLimit(userId, 'vip-subscription-cancel', 4, 60_000)) return res.status(429).json({ error: 'Muitas tentativas. Tente novamente em um minuto.' });
+      const token = process.env.MERCADO_PAGO_ACCESS_TOKEN;
+      if (!token) return res.status(503).json({ error: 'O gerenciamento da assinatura está indisponível.' });
+      const db = getFirestore(getAdmin(), FIRESTORE_DATABASE_ID);
+      const privateRef = db.collection('userPrivate').doc(userId);
+      const profile = (await privateRef.get()).data() || {};
+      const subscriptionId = typeof profile.vipSubscriptionId === 'string' ? profile.vipSubscriptionId : '';
+      if (!subscriptionId) return res.status(404).json({ error: 'Nenhuma assinatura ativa foi encontrada.' });
+
+      const response = await fetch(`https://api.mercadopago.com/preapproval/${encodeURIComponent(subscriptionId)}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const subscription = await response.json();
+      if (!response.ok || String(subscription.external_reference) !== userId) return res.status(502).json({ error: 'Não foi possível confirmar a assinatura com o Mercado Pago.' });
+      if (subscription.status === 'cancelled' || subscription.status === 'canceled') {
+        await privateRef.set({ vipSubscriptionStatus: 'cancelled', vipSubscriptionCheckoutUrl: FieldValue.delete() }, { merge: true });
+        return res.json({ success: true, status: 'cancelled' });
+      }
+      const cancelResponse = await fetch(`https://api.mercadopago.com/preapproval/${encodeURIComponent(subscriptionId)}`, {
+        method: 'PUT',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'cancelled' })
+      });
+      const cancelled = await cancelResponse.json();
+      if (!cancelResponse.ok) return res.status(502).json({ error: 'O Mercado Pago não conseguiu cancelar a renovação.' });
+      await privateRef.set({ vipSubscriptionStatus: cancelled.status || 'cancelled', vipSubscriptionCheckoutUrl: FieldValue.delete() }, { merge: true });
+      res.json({ success: true, status: cancelled.status || 'cancelled' });
+    } catch (error) {
+      console.error('VIP subscription cancellation error:', error);
+      res.status(500).json({ error: 'Não foi possível cancelar a renovação VIP.' });
+    }
+  });
+
   app.post("/api/payment/webhook", async (req, res) => {
     try {
-      const { type, data } = req.body;
+      const { data } = req.body;
+      const type = String(req.query.type || req.body.type || '');
       const dataId = String(req.query['data.id'] || data?.id || '');
-      if (type !== 'payment' || !/^\d+$/.test(dataId)) return res.sendStatus(200);
+      if (!['payment', 'subscription_preapproval', 'subscription_authorized_payment'].includes(type)) return res.sendStatus(200);
+      if (!/^[A-Za-z0-9_-]{1,128}$/.test(dataId)) return res.sendStatus(200);
       if (!isValidMercadoPagoSignature(req, dataId)) return res.status(401).send('Invalid signature');
       if (!process.env.MERCADO_PAGO_ACCESS_TOKEN || !process.env.FIREBASE_SERVICE_ACCOUNT) {
         return res.status(503).send('Payment processing is not configured');
+      }
+
+      const accessToken = process.env.MERCADO_PAGO_ACCESS_TOKEN;
+      if (type === 'subscription_preapproval') {
+        const response = await fetch(`https://api.mercadopago.com/preapproval/${encodeURIComponent(dataId)}`, {
+          headers: { Authorization: `Bearer ${accessToken}` }
+        });
+        const subscription = await response.json();
+        const planEntry = getVipPlanForSubscription(subscription);
+        const userId = String(subscription.external_reference || '');
+        if (!response.ok) throw new Error('Could not verify Mercado Pago subscription');
+        if (!userId || !planEntry) {
+          console.error('Rejected Mercado Pago subscription with mismatched owner or plan', dataId);
+          return res.sendStatus(200);
+        }
+        const [planId] = planEntry;
+        const db = getFirestore(getAdmin(), FIRESTORE_DATABASE_ID);
+        const privateRef = db.collection('userPrivate').doc(userId);
+        await db.runTransaction(async transaction => {
+          const userDoc = await transaction.get(privateRef);
+          if (!userDoc.exists) throw new Error('Subscription user profile not found');
+          const stored = userDoc.data() || {};
+          if (stored.vipSubscriptionId && stored.vipSubscriptionId !== dataId) return;
+          transaction.set(privateRef, {
+          vipSubscriptionId: dataId,
+            vipSubscriptionPlan: planId,
+            vipSubscriptionStatus: subscription.status || 'pending',
+            ...(subscription.status === 'authorized' ? { vipSubscriptionCheckoutUrl: FieldValue.delete() } : {})
+          }, { merge: true });
+        });
+        return res.sendStatus(200);
+      }
+
+      if (type === 'subscription_authorized_payment') {
+        const response = await fetch(`https://api.mercadopago.com/authorized_payments/${encodeURIComponent(dataId)}`, {
+          headers: { Authorization: `Bearer ${accessToken}` }
+        });
+        const invoice = await response.json();
+        if (!response.ok) throw new Error('Could not verify Mercado Pago subscription invoice');
+        if (invoice.payment?.status !== 'approved') return res.sendStatus(200);
+        const subscriptionId = String(invoice.preapproval_id || '');
+        if (!subscriptionId) return res.sendStatus(200);
+        const subscriptionResponse = await fetch(`https://api.mercadopago.com/preapproval/${encodeURIComponent(subscriptionId)}`, {
+          headers: { Authorization: `Bearer ${accessToken}` }
+        });
+        const subscription = await subscriptionResponse.json();
+        if (!subscriptionResponse.ok) throw new Error('Could not verify Mercado Pago subscription');
+        const planEntry = getVipPlanForSubscription(subscription);
+        const userId = String(subscription.external_reference || invoice.external_reference || '');
+        if (!userId || !planEntry || Number(invoice.transaction_amount) !== planEntry[1].amount || invoice.currency_id !== 'BRL') {
+          console.error('Rejected Mercado Pago subscription invoice with mismatched owner, plan, or amount', dataId);
+          return res.sendStatus(200);
+        }
+        const [planId, plan] = planEntry;
+        const db = getFirestore(getAdmin(), FIRESTORE_DATABASE_ID);
+        const paymentRef = db.collection('processedPayments').doc(`subscription_${dataId}`);
+        const userRef = db.collection('userPrivate').doc(userId);
+        const publicUserRef = db.collection('users').doc(userId);
+        await db.runTransaction(async transaction => {
+          const [processed, userDoc, publicUserDoc] = await Promise.all([
+            transaction.get(paymentRef), transaction.get(userRef), transaction.get(publicUserRef)
+          ]);
+          if (processed.exists) return;
+          if (!userDoc.exists || !publicUserDoc.exists) throw new Error('Subscription user profile not found');
+          const profile = userDoc.data() || {};
+          const premiumUntil = addUtcMonths(Math.max(Date.now(), Number(profile.premiumUntil) || 0), plan.termMonths);
+          transaction.update(userRef, {
+            isPremium: true,
+            premiumUntil,
+            vipSubscriptionId: subscriptionId,
+            vipSubscriptionPlan: planId,
+            vipSubscriptionStatus: subscription.status || 'authorized',
+            vipSubscriptionCheckoutUrl: FieldValue.delete()
+          });
+          transaction.update(publicUserRef, { hasPremiumBadge: true });
+          transaction.create(paymentRef, {
+            userId,
+            subscriptionId,
+            planId,
+            amount: plan.amount,
+            currency: 'BRL',
+            processedAt: FieldValue.serverTimestamp()
+          });
+        });
+        return res.sendStatus(200);
       }
 
       const client = new MercadoPagoConfig({ accessToken: process.env.MERCADO_PAGO_ACCESS_TOKEN });
@@ -1006,6 +1216,7 @@ Original message: "${text}"`;
       const userId = paymentData.external_reference;
       const packageId = paymentData.metadata?.package_id;
       const product = typeof packageId === 'string' ? STORE_PRODUCTS[packageId] : null;
+      if (!product) return res.sendStatus(200);
       if (!userId || !product || paymentData.currency_id !== 'BRL' ||
           Number(paymentData.transaction_amount) !== product.price ||
           paymentData.metadata?.user_id !== userId) {

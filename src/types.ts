@@ -26,6 +26,10 @@ export interface UserData {
   activeTheme?: string;
   isPremium?: boolean;
   premiumUntil?: number;
+  vipSubscriptionId?: string;
+  vipSubscriptionPlan?: 'monthly' | 'annual';
+  vipSubscriptionStatus?: string;
+  vipSubscriptionCheckoutUrl?: string;
   hasPremiumBadge?: boolean;
   isGuest?: boolean;
 }

@@ -26,7 +26,10 @@ export default function Store({ currentUser, initialTab = 'themes' }: StoreProps
   const [activeTab, setActiveTab] = useState<'themes' | 'backgrounds' | 'coins' | 'vip'>(initialTab);
   const [checkoutPack, setCheckoutPack] = useState<any>(null);
   const [creatingCheckout, setCreatingCheckout] = useState(false);
+  const [cancellingVip, setCancellingVip] = useState(false);
   const hasActivePremium = Boolean(currentUser.isPremium && currentUser.premiumUntil && currentUser.premiumUntil > Date.now());
+  const hasActiveVipSubscription = Boolean(currentUser.vipSubscriptionId && !['cancelled', 'canceled'].includes(currentUser.vipSubscriptionStatus || ''));
+  const hasCancelableVipSubscription = hasActiveVipSubscription;
 
   const coins = currentUser.coins || 0;
   const unlockedThemes = currentUser.unlockedThemes || ['luxury', 'classic', 'wood'];
@@ -36,6 +39,21 @@ export default function Store({ currentUser, initialTab = 'themes' }: StoreProps
 
   const handleWatchAd = async () => {
     alert('Recompensas por anúncio estarão disponíveis quando a integração de anúncios estiver ativa.');
+  };
+
+  const cancelVipSubscription = async () => {
+    if (!window.confirm('Cancelar a renovação automática? Seu acesso continua até o fim do período já pago.')) return;
+    setCancellingVip(true);
+    try {
+      const response = await authenticatedApiFetch('/api/payment/cancel-subscription', { method: 'POST' });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Não foi possível cancelar a renovação.');
+      alert('Renovação cancelada. Você mantém o acesso VIP até o fim do período pago.');
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Não foi possível cancelar a renovação.');
+    } finally {
+      setCancellingVip(false);
+    }
   };
 
   const handleBuy = async (themeId: string, price: number) => {
@@ -354,7 +372,7 @@ export default function Store({ currentUser, initialTab = 'themes' }: StoreProps
               </p>
             </div>
 
-            <div className="max-w-3xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8 relative z-10">
+            <div className="max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-[1fr_1.15fr] gap-8 relative z-10">
               <div className="space-y-6">
                 <h4 className="text-xl font-bold text-white border-b border-neutral-700 pb-2">Benefícios</h4>
                 <ul className="space-y-4">
@@ -368,7 +386,6 @@ export default function Store({ currentUser, initialTab = 'themes' }: StoreProps
                   </li>
                   <li className="flex items-center gap-3 text-neutral-300">
                     <div className="bg-emerald-500/20 p-1.5 rounded-full"><Check className="w-4 h-4 text-emerald-500" /></div>
-                    +500 Moedas mensais bônus
                   </li>
                   <li className="flex items-center gap-3 text-neutral-300">
                     <div className="bg-emerald-500/20 p-1.5 rounded-full"><Check className="w-4 h-4 text-emerald-500" /></div>
@@ -381,25 +398,57 @@ export default function Store({ currentUser, initialTab = 'themes' }: StoreProps
                 </ul>
               </div>
 
-              <div className="bg-neutral-900 border border-fuchsia-500/30 rounded-2xl p-6 flex flex-col text-center">
-                <h4 className="text-lg font-bold text-fuchsia-400 mb-2">VIP + Academia · 30 dias</h4>
-                <div className="text-4xl font-black text-white mb-6">
-                  R$ 14,99<span className="text-lg text-neutral-500 font-normal">/30 dias</span>
-                </div>
-
+              <div className="space-y-4">
                 {hasActivePremium ? (
-                  <button disabled className="mt-auto w-full bg-neutral-800 text-fuchsia-400 font-bold py-4 px-4 rounded-xl flex items-center justify-center gap-2 border border-fuchsia-500/20">
-                    <Check className="w-5 h-5" /> Você já é Premium VIP
-                  </button>
+                  <div className="bg-neutral-900 border border-fuchsia-500/30 rounded-2xl p-6 text-center">
+                    <h4 className="text-lg font-bold text-fuchsia-400 mb-2">VIP + Academia ativos</h4>
+                    <p className="text-sm text-neutral-400">Acesso até {currentUser.premiumUntil ? new Date(currentUser.premiumUntil).toLocaleDateString('pt-BR') : 'a data de expiração'}.</p>
+                    {hasActiveVipSubscription && (
+                      <button
+                        disabled={cancellingVip}
+                        onClick={cancelVipSubscription}
+                        className="mt-5 w-full rounded-xl border border-red-500/40 text-red-300 hover:bg-red-500/10 disabled:opacity-60 font-bold py-3 px-4"
+                      >
+                        {cancellingVip ? 'Cancelando…' : 'Cancelar renovação automática'}
+                      </button>
+                    )}
+                    {currentUser.vipSubscriptionStatus === 'cancelled' && <p className="mt-4 text-sm text-amber-300">A renovação está cancelada; seu acesso termina na data acima.</p>}
+                  </div>
+                ) : hasCancelableVipSubscription ? (
+                  <div className="bg-neutral-900 border border-amber-500/30 rounded-2xl p-6 text-center">
+                    <h4 className="text-lg font-bold text-amber-300 mb-2">{hasActiveVipSubscription ? 'Assinatura autorizada' : 'Confirme sua assinatura'}</h4>
+                    <p className="text-sm text-neutral-400 mb-5">{hasActiveVipSubscription ? 'Aguardando confirmação da primeira cobrança. O VIP será liberado assim que o Mercado Pago aprovar o pagamento.' : 'A autorização do plano ainda está pendente no Mercado Pago.'}</p>
+                    {currentUser.vipSubscriptionCheckoutUrl && (
+                      <button onClick={() => window.open(currentUser.vipSubscriptionCheckoutUrl, '_blank', 'noopener,noreferrer')} className="w-full bg-amber-400 hover:bg-amber-300 text-neutral-950 font-black py-3 px-4 rounded-xl">Continuar no Mercado Pago</button>
+                    )}
+                    <button disabled={cancellingVip} onClick={cancelVipSubscription} className="mt-3 w-full rounded-xl border border-red-500/40 text-red-300 hover:bg-red-500/10 disabled:opacity-60 font-bold py-3 px-4">
+                      {cancellingVip ? 'Cancelando…' : 'Cancelar autorização pendente'}
+                    </button>
+                  </div>
                 ) : (
-                  <button
-                    onClick={() => setCheckoutPack({ id: 'vip', name: 'Acesso VIP + Academia (30 dias)', priceBRL: '14,99', isVip: true })}
-                    className="mt-auto w-full bg-fuchsia-600 hover:bg-fuchsia-500 text-white font-bold py-4 px-4 rounded-xl transition-colors shadow-[0_0_20px_rgba(217,70,239,0.3)]"
-                  >
-                    Assinar Agora
-                  </button>
+                  <>
+                    <div className="bg-neutral-900 border border-fuchsia-500/30 rounded-2xl p-5 flex flex-col text-center">
+                      <h4 className="text-lg font-bold text-fuchsia-400 mb-1">Plano mensal</h4>
+                      <div className="text-3xl font-black text-white mb-1">R$ 14,99<span className="text-base text-neutral-500 font-normal">/mês</span></div>
+                      <p className="text-xs text-neutral-500 mb-4">Cobrança automática mensal</p>
+                      <button
+                        onClick={() => setCheckoutPack({ id: 'vip_monthly', planId: 'monthly', name: 'VIP + Academia mensal', priceBRL: '14,99/mês', isSubscription: true })}
+                        className="mt-auto w-full bg-fuchsia-600 hover:bg-fuchsia-500 text-white font-bold py-3 px-4 rounded-xl transition-colors"
+                      >Assinar mensal</button>
+                    </div>
+                    <div className="bg-neutral-900 border border-amber-500/50 rounded-2xl p-5 flex flex-col text-center relative">
+                      <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-amber-400 text-neutral-950 text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-full">10% de desconto</span>
+                      <h4 className="text-lg font-bold text-amber-300 mb-1 mt-1">Plano anual</h4>
+                      <div className="text-3xl font-black text-white mb-1">R$ 161,89<span className="text-base text-neutral-500 font-normal">/ano</span></div>
+                      <p className="text-xs text-neutral-400 mb-4">12 meses · equivalente a R$ 13,49/mês · economize R$ 17,99</p>
+                      <button
+                        onClick={() => setCheckoutPack({ id: 'vip_annual', planId: 'annual', name: 'VIP + Academia anual (10% de desconto)', priceBRL: '161,89/ano', isSubscription: true })}
+                        className="mt-auto w-full bg-amber-400 hover:bg-amber-300 text-neutral-950 font-black py-3 px-4 rounded-xl transition-colors"
+                      >Assinar anual</button>
+                    </div>
+                  </>
                 )}
-                <p className="text-xs text-neutral-500 mt-4">Pagamento avulso. Renove quando desejar; não há cobrança automática.</p>
+                <p className="text-xs text-neutral-500 text-center">As renovações são automáticas até o cancelamento. Você pode cancelar pela Loja; o acesso continua até o fim do período pago.</p>
               </div>
             </div>
           </div>
@@ -568,10 +617,12 @@ export default function Store({ currentUser, initialTab = 'themes' }: StoreProps
             </div>
 
             <h3 className="text-2xl font-bold text-white mb-2">Finalizar Compra</h3>
-            <p className="text-neutral-400 mb-6">Você está adquirindo o pacote <strong className="text-white">{checkoutPack.name}</strong> por R$ {checkoutPack.priceBRL}.</p>
+            <p className="text-neutral-400 mb-6">Você está contratando <strong className="text-white">{checkoutPack.name}</strong> por R$ {checkoutPack.priceBRL}.</p>
 
             <p className="mb-6 rounded-xl border border-neutral-700 bg-neutral-800 p-4 text-sm text-neutral-300">
-              O checkout abre no Mercado Pago. Os créditos só são liberados após confirmação segura do pagamento.
+              {checkoutPack.isSubscription
+                ? 'O Mercado Pago solicitará autorização para cobranças automáticas conforme o plano escolhido. O VIP é liberado após a confirmação do pagamento e a renovação pode ser cancelada pela Loja.'
+                : 'O checkout abre no Mercado Pago. As moedas só são creditadas após a confirmação segura do pagamento.'}
             </p>
 
             <button
@@ -584,10 +635,11 @@ export default function Store({ currentUser, initialTab = 'themes' }: StoreProps
                 if (checkoutWindow) checkoutWindow.opener = null;
                 setCreatingCheckout(true);
                 try {
-                  const response = await authenticatedApiFetch('/api/payment/create-preference', {
+                  const isSubscription = Boolean(checkoutPack.isSubscription);
+                  const response = await authenticatedApiFetch(isSubscription ? '/api/payment/create-subscription' : '/api/payment/create-preference', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ packageId: checkoutPack.id })
+                    body: JSON.stringify(isSubscription ? { planId: checkoutPack.planId } : { packageId: checkoutPack.id })
                   });
 
                   const data = await response.json();
@@ -606,7 +658,7 @@ export default function Store({ currentUser, initialTab = 'themes' }: StoreProps
               }}
               className="w-full bg-[#009EE3] hover:bg-[#0089C5] disabled:opacity-60 disabled:cursor-wait text-white font-bold py-3 px-4 rounded-xl transition-colors flex justify-center items-center gap-2 mb-3"
             >
-              {creatingCheckout ? 'Preparando pagamento…' : 'Pagar com Mercado Pago'}
+              {creatingCheckout ? 'Preparando pagamento…' : checkoutPack.isSubscription ? 'Continuar para o Mercado Pago' : 'Pagar com Mercado Pago'}
             </button>
           </div>
         </div>
