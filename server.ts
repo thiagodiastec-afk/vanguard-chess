@@ -113,7 +113,15 @@ async function startServer() {
         }
         transaction.set(privateRef, privateProfile, { merge: true });
       });
-      res.json({ success: true });
+      const [profileDoc, privateDoc] = await Promise.all([profileRef.get(), privateRef.get()]);
+      if (!profileDoc.exists || !privateDoc.exists) {
+        throw new Error('PROFILE_BOOTSTRAP_INCOMPLETE');
+      }
+      res.json({
+        success: true,
+        profile: profileDoc.data(),
+        privateProfile: privateDoc.data()
+      });
     } catch (error) {
       if (error.message === 'FIREBASE_SERVICE_ACCOUNT_MISSING') return res.status(503).json({ error: 'Profile service is not configured' });
       console.error('Profile bootstrap error:', error);

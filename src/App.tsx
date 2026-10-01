@@ -1,6 +1,6 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
 import { getAuth as getFirebaseAuth, signInWithPopup, signInWithRedirect, GoogleAuthProvider, signOut, User, browserPopupRedirectResolver } from 'firebase/auth';
-import { doc, setDoc, getDoc, collection, onSnapshot, query, where, or, updateDoc, addDoc } from 'firebase/firestore';
+import { doc, collection, onSnapshot, query, where, or, updateDoc, addDoc } from 'firebase/firestore';
 import { initFirebase, getDb, getFirebaseAuth as getFirebaseInstance } from './lib/firebase';
 import { UserData, GameData } from './types';
 import Lobby from './components/Lobby';
@@ -225,37 +225,16 @@ export default function App() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ displayName: firebaseUser.displayName || '' })
           });
-          if (!bootstrapResponse.ok) console.warn('Private profile bootstrap was unavailable; preserving current profile state.');
-          let publicProfile: UserData | null = null;
-          let privateProfile: Partial<UserData> = {};
+          if (!bootstrapResponse.ok) {
+            const failure = await bootstrapResponse.json().catch(() => ({}));
+            throw new Error(failure.error || `Profile bootstrap failed (${bootstrapResponse.status})`);
+          }
+          const bootstrapProfile = await bootstrapResponse.json();
+          let publicProfile: UserData | null = bootstrapProfile.profile as UserData;
+          let privateProfile: Partial<UserData> = bootstrapProfile.privateProfile as Partial<UserData>;
           const publishProfile = () => {
             if (publicProfile) setUserData({ ...publicProfile, ...privateProfile, uid: firebaseUser.uid });
           };
-          const [userSnap, privateSnap] = await Promise.all([getDoc(userRef), getDoc(privateUserRef)]);
-          if (!userSnap.exists()) {
-            publicProfile = {
-              uid: firebaseUser.uid,
-              profileSchemaVersion: 2,
-              displayName: firebaseUser.displayName || 'Jogador Misterioso',
-              elo: 1200,
-              gamesPlayed: 0,
-              activeBackground: 'default'
-            };
-            await setDoc(userRef, publicProfile);
-            if (!privateSnap.exists()) {
-              const defaultPrivateProfile = {
-                coins: 500, unlockedThemes: ['luxury', 'classic'], unlockedBackgrounds: ['default'],
-                isPremium: false, premiumUntil: 0
-              };
-              await setDoc(privateUserRef, defaultPrivateProfile);
-              privateProfile = defaultPrivateProfile;
-            } else {
-              privateProfile = privateSnap.data() as Partial<UserData>;
-            }
-          } else {
-            publicProfile = userSnap.data() as UserData;
-            privateProfile = privateSnap.exists() ? privateSnap.data() as Partial<UserData> : {};
-          }
           publishProfile();
 
           // Handle Invite Link
@@ -289,31 +268,7 @@ export default function App() {
                 backgroundManager.setBackground(data.activeBackground);
               }
             } else {
-              // Create user if not exists
-              const initialData: UserData = {
-                uid: firebaseUser.uid,
-                profileSchemaVersion: 2,
-                displayName: firebaseUser.displayName || 'Jogador',
-                hasSetNickname: false,
-                elo: 1200,
-                gamesPlayed: 0,
-                activeBackground: 'default'
-              };
-              try {
-                await setDoc(userRef, initialData);
-                publicProfile = initialData;
-                if (!privateSnap.exists()) {
-                  const defaultPrivateProfile = {
-                    coins: 500, unlockedThemes: ['luxury', 'classic'], unlockedBackgrounds: ['default'],
-                    isPremium: false, premiumUntil: 0
-                  };
-                  await setDoc(privateUserRef, defaultPrivateProfile);
-                  privateProfile = defaultPrivateProfile;
-                }
-                publishProfile();
-              } catch (e) {
-                console.error("Error creating user document", e);
-              }
+              console.error('Authenticated profile document disappeared after server bootstrap.');
             }
           }));
 
