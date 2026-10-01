@@ -11,6 +11,7 @@ import { authenticatedApiFetch } from '../lib/api';
 
 interface StoreProps {
   currentUser: UserData;
+  initialTab?: 'themes' | 'backgrounds' | 'coins' | 'vip';
 }
 
 const COIN_PACKAGES = [
@@ -19,10 +20,10 @@ const COIN_PACKAGES = [
   { id: 'pack_3', name: 'Tesouro do Rei', coins: 5000, priceBRL: '39,90', bonus: 30, popular: false }
 ];
 
-export default function Store({ currentUser }: StoreProps) {
+export default function Store({ currentUser, initialTab = 'themes' }: StoreProps) {
   const [buying, setBuying] = useState<string | null>(null);
   const [previewTheme, setPreviewTheme] = useState<any>(null);
-  const [activeTab, setActiveTab] = useState<'themes' | 'backgrounds' | 'coins' | 'vip'>('themes');
+  const [activeTab, setActiveTab] = useState<'themes' | 'backgrounds' | 'coins' | 'vip'>(initialTab);
   const [checkoutPack, setCheckoutPack] = useState<any>(null);
   const [creatingCheckout, setCreatingCheckout] = useState(false);
   const hasActivePremium = Boolean(currentUser.isPremium && currentUser.premiumUntil && currentUser.premiumUntil > Date.now());
@@ -184,7 +185,7 @@ export default function Store({ currentUser }: StoreProps) {
             }`}
           >
             <Star className="w-5 h-5" />
-            Assinatura VIP (Sem Anúncios)
+            VIP + Academia
           </button>
         </div>
 
@@ -349,7 +350,7 @@ export default function Store({ currentUser }: StoreProps) {
               </div>
               <h3 className="text-3xl font-bold text-white mb-4">Assinatura Premium VIP</h3>
               <p className="text-neutral-400 max-w-2xl mx-auto">
-                Eleve sua experiência para o próximo nível. Jogue sem interrupções, sem anúncios e com benefícios exclusivos na comunidade.
+                Jogue sem anúncios e aprenda xadrez com a Academia Vanguard: aulas interativas dos fundamentos aos padrões de mestre, com dicas, explicações e progresso salvo.
               </p>
             </div>
 
@@ -373,13 +374,17 @@ export default function Store({ currentUser }: StoreProps) {
                     <div className="bg-emerald-500/20 p-1.5 rounded-full"><Check className="w-4 h-4 text-emerald-500" /></div>
                     Análise básica da IA pós-partida (em breve)
                   </li>
+                  <li className="flex items-center gap-3 text-neutral-300">
+                    <div className="bg-amber-500/20 p-1.5 rounded-full"><Check className="w-4 h-4 text-amber-300" /></div>
+                    Academia de xadrez com 12 aulas e quatro níveis, do iniciante ao mestre
+                  </li>
                 </ul>
               </div>
 
               <div className="bg-neutral-900 border border-fuchsia-500/30 rounded-2xl p-6 flex flex-col text-center">
-                <h4 className="text-lg font-bold text-fuchsia-400 mb-2">Plano Mensal</h4>
+                <h4 className="text-lg font-bold text-fuchsia-400 mb-2">VIP + Academia · 30 dias</h4>
                 <div className="text-4xl font-black text-white mb-6">
-                  R$ 9,90<span className="text-lg text-neutral-500 font-normal">/mês</span>
+                  R$ 9,90<span className="text-lg text-neutral-500 font-normal">/30 dias</span>
                 </div>
 
                 {hasActivePremium ? (
@@ -388,13 +393,13 @@ export default function Store({ currentUser }: StoreProps) {
                   </button>
                 ) : (
                   <button
-                    onClick={() => setCheckoutPack({ id: 'vip', name: 'Assinatura VIP (Mensal)', priceBRL: '9,90', isVip: true })}
+                    onClick={() => setCheckoutPack({ id: 'vip', name: 'Acesso VIP + Academia (30 dias)', priceBRL: '9,90', isVip: true })}
                     className="mt-auto w-full bg-fuchsia-600 hover:bg-fuchsia-500 text-white font-bold py-4 px-4 rounded-xl transition-colors shadow-[0_0_20px_rgba(217,70,239,0.3)]"
                   >
                     Assinar Agora
                   </button>
                 )}
-                <p className="text-xs text-neutral-500 mt-4">Cancele a qualquer momento.</p>
+                <p className="text-xs text-neutral-500 mt-4">Pagamento avulso. Renove quando desejar; não há cobrança automática.</p>
               </div>
             </div>
           </div>

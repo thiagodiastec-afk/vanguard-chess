@@ -10,6 +10,7 @@ import { getAuth } from "firebase-admin/auth";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { Chess } from "chess.js";
+import { ACADEMY_LESSONS } from './src/lib/academyCourse';
 
 const FIRESTORE_DATABASE_ID = process.env.FIRESTORE_DATABASE_ID?.trim();
 if (!FIRESTORE_DATABASE_ID) {
@@ -207,8 +208,76 @@ const STORE_PRODUCTS = {
   pack_1: { title: 'Mão Cheia', price: 4.9, coins: 500 },
   pack_2: { title: 'Baú de Ouro', price: 12.9, coins: 1500 },
   pack_3: { title: 'Tesouro do Rei', price: 39.9, coins: 5000 },
-  vip: { title: 'Assinatura VIP (Mensal)', price: 9.9, premium: true }
+  vip: { title: 'Acesso VIP + Academia (30 dias)', price: 9.9, premium: true }
 };
+
+const ACADEMY_LESSON_BY_ID = new Map(ACADEMY_LESSONS.map(lesson => [lesson.id, lesson]));
+
+app.get('/api/academy/course', async (req, res) => {
+  try {
+    const userId = await authenticatedUid(req, res);
+    if (!userId) return;
+    if (!allowRateLimit(userId, 'academy-course', 30, 60_000)) return res.status(429).json({ error: 'Muitas solicitações. Tente novamente em instantes.' });
+    const db = getFirestore(getAdmin(), FIRESTORE_DATABASE_ID);
+    const privateDoc = await db.collection('userPrivate').doc(userId).get();
+    const profile = privateDoc.data();
+    if (!profile?.isPremium || Number(profile.premiumUntil) <= Date.now()) {
+      return res.status(403).json({ error: 'A Academia faz parte da assinatura VIP ativa. Assine na Loja para desbloquear as aulas.' });
+    }
+    const academyProgress = profile.academyProgress || {};
+    const completedLessonIds = Array.isArray(academyProgress.completedLessonIds)
+      ? academyProgress.completedLessonIds.filter(id => ACADEMY_LESSON_BY_ID.has(id))
+      : [];
+    res.json({
+      lessons: ACADEMY_LESSONS,
+      progress: { completedLessonIds, xp: Number(academyProgress.xp) || 0 }
+    });
+  } catch (error) {
+    console.error('Academy course error:', error);
+    res.status(500).json({ error: 'Não foi possível carregar a Academia.' });
+  }
+});
+
+app.post('/api/academy/progress', async (req, res) => {
+  try {
+    const userId = await authenticatedUid(req, res);
+    if (!userId) return;
+    if (!allowRateLimit(userId, 'academy-progress', 60, 60_000)) return res.status(429).json({ error: 'Muitas atualizações de progresso. Tente novamente em instantes.' });
+    const lessonId = typeof req.body?.lessonId === 'string' ? req.body.lessonId : '';
+    const lesson = ACADEMY_LESSON_BY_ID.get(lessonId);
+    if (!lesson) return res.status(400).json({ error: 'Aula inválida.' });
+
+    const db = getFirestore(getAdmin(), FIRESTORE_DATABASE_ID);
+    const userRef = db.collection('userPrivate').doc(userId);
+    const progress = await db.runTransaction(async transaction => {
+      const snapshot = await transaction.get(userRef);
+      const profile = snapshot.data();
+      if (!profile) throw new Error('ACADEMY_PROFILE_NOT_FOUND');
+      if (!profile.isPremium || Number(profile.premiumUntil) <= Date.now()) throw new Error('ACADEMY_PREMIUM_REQUIRED');
+
+      const academyProgress = profile.academyProgress || {};
+      const completedLessonIds = Array.isArray(academyProgress.completedLessonIds)
+        ? academyProgress.completedLessonIds.filter(id => ACADEMY_LESSON_BY_ID.has(id))
+        : [];
+      let xp = Number(academyProgress.xp) || 0;
+      if (!completedLessonIds.includes(lesson.id)) {
+        transaction.update(userRef, {
+          'academyProgress.completedLessonIds': FieldValue.arrayUnion(lesson.id),
+          'academyProgress.xp': FieldValue.increment(lesson.xp)
+        });
+        completedLessonIds.push(lesson.id);
+        xp += lesson.xp;
+      }
+      return { completedLessonIds, xp };
+    });
+    res.json({ success: true, progress });
+  } catch (error) {
+    if (error.message === 'ACADEMY_PREMIUM_REQUIRED') return res.status(403).json({ error: 'Sua assinatura VIP não está ativa.' });
+    if (error.message === 'ACADEMY_PROFILE_NOT_FOUND') return res.status(404).json({ error: 'Perfil não encontrado.' });
+    console.error('Academy progress error:', error);
+    res.status(500).json({ error: 'Não foi possível salvar seu progresso.' });
+  }
+});
 
 const STORE_COSMETICS = {
   theme: { blue: 150, coral: 150, dark: 200, neon: 500, marble: 600, gold: 1000, amethyst: 750, forest: 800, ruby: 1200, obsidian: 2000, galaxy: 3000 },

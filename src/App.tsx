@@ -41,6 +41,7 @@ export default function App() {
   const [isLocalGame, setIsLocalGame] = useState(false);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<Tab>('play');
+  const [storeInitialTab, setStoreInitialTab] = useState<'themes' | 'backgrounds' | 'coins' | 'vip'>('themes');
   const [showSettings, setShowSettings] = useState(false);
   const [showPix, setShowPix] = useState(false);
   const [copiedPix, setCopiedPix] = useState(false);
@@ -460,7 +461,7 @@ export default function App() {
             return (
               <button
                 key={item.id}
-                onClick={() => setActiveTab(item.id)}
+                onClick={() => { if (item.id === 'store') setStoreInitialTab('themes'); setActiveTab(item.id); }}
                 className={cn(
                   "w-full flex items-center gap-4 px-3 py-3 rounded-xl text-sm font-semibold transition-all duration-200 overflow-hidden",
                   isActive
@@ -680,9 +681,9 @@ export default function App() {
                   <>
                     {activeTab === 'tournaments' && <Tournaments currentUser={userData} />}
                     {activeTab === 'chat' && <Chat currentUser={userData} />}
-                    {activeTab === 'training' && <Training onPlayComputer={(diff) => setComputerGameDifficulty(diff)} />}
+                    {activeTab === 'training' && <Training currentUser={userData} onPlayComputer={(diff) => setComputerGameDifficulty(diff)} onOpenStore={() => { setStoreInitialTab('vip'); setActiveTab('store'); }} />}
                     {activeTab === 'friends' && <Friends currentUser={userData} />}
-                    {activeTab === 'store' && <Store currentUser={userData} />}
+                    {activeTab === 'store' && <Store currentUser={userData} initialTab={storeInitialTab} />}
                     {activeTab === 'profile' && <Profile currentUser={userData} />}
                   </>
                 )}
@@ -701,7 +702,7 @@ export default function App() {
           return (
             <button
               key={item.id}
-              onClick={() => setActiveTab(item.id)}
+              onClick={() => { if (item.id === 'store') setStoreInitialTab('themes'); setActiveTab(item.id); }}
               className={cn(
                 "flex-1 flex flex-col items-center justify-center gap-1 min-w-[72px] py-3 text-[10px] font-semibold transition-colors relative",
                 isActive ? "text-emerald-400" : "text-zinc-500"
@@ -848,6 +849,7 @@ export default function App() {
                         onClick={async () => {
                           if (!isUnlocked) {
                             setShowSettings(false);
+                            setStoreInitialTab('themes');
                             setActiveTab('store');
                             return;
                           }

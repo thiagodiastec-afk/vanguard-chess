@@ -3,10 +3,11 @@ import { Chess } from 'chess.js';
 import { useTheme } from '../lib/themes';
 import { sounds } from '../lib/sounds';
 import { Chessboard } from 'react-chessboard';
-import { Puzzle } from '../types';
-import { Target, BookOpen, CheckCircle2, ChevronRight, RefreshCcw, Bot } from 'lucide-react';
+import { Puzzle, UserData } from '../types';
+import { Target, BookOpen, CheckCircle2, ChevronRight, RefreshCcw, Bot, Crown, LockKeyhole } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { getCustomPieces } from '../lib/chessPieces';
+import Academy from './Academy';
 
 const PUZZLES: Puzzle[] = [
   {
@@ -33,10 +34,31 @@ const PUZZLES: Puzzle[] = [
 ];
 
 interface TrainingProps {
+  currentUser: UserData;
   onPlayComputer?: (diff: string) => void;
+  onOpenStore: () => void;
 }
 
-export default function Training({ onPlayComputer }: TrainingProps) {
+export default function Training({ currentUser, onPlayComputer, onOpenStore }: TrainingProps) {
+  const [section, setSection] = useState<'practice' | 'academy'>('practice');
+  const hasActivePremium = Boolean(currentUser.isPremium && currentUser.premiumUntil && currentUser.premiumUntil > Date.now());
+
+  return (
+    <div className="flex-1 min-w-0 flex flex-col">
+      <div className="px-4 sm:px-6 pt-5 max-w-6xl mx-auto w-full">
+        <div className="flex flex-wrap gap-2 rounded-2xl border border-neutral-800 bg-neutral-900 p-2 w-fit">
+          <button onClick={() => setSection('practice')} className={`px-4 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 ${section === 'practice' ? 'bg-emerald-500 text-neutral-950' : 'text-neutral-400 hover:text-white'}`}><Target className="w-4 h-4" />Treino gratuito</button>
+          <button onClick={() => setSection('academy')} className={`px-4 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 ${section === 'academy' ? 'bg-amber-400 text-neutral-950' : 'text-neutral-400 hover:text-white'}`}><Crown className="w-4 h-4" />Academia VIP {!hasActivePremium && <LockKeyhole className="w-3.5 h-3.5" />}</button>
+        </div>
+      </div>
+      {section === 'practice'
+        ? <FreeTraining onPlayComputer={onPlayComputer} />
+        : <Academy currentUser={currentUser} onOpenStore={onOpenStore} onBack={() => setSection('practice')} />}
+    </div>
+  );
+}
+
+function FreeTraining({ onPlayComputer }: Pick<TrainingProps, 'onPlayComputer'>) {
   const theme = useTheme();
   const [currentPuzzleIdx, setCurrentPuzzleIdx] = useState(0);
   const [chess] = useState(new Chess(PUZZLES[0].fen));
