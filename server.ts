@@ -206,6 +206,10 @@ async function authenticatedUid(req, res) {
     if (error.message === 'FIREBASE_SERVICE_ACCOUNT_MISSING') {
       res.status(503).json({ error: 'Authentication service is not configured' });
     } else {
+      console.error('Firebase ID token verification failed:', {
+        code: error?.code || 'unknown',
+        message: error?.message || 'Unknown verification error'
+      });
       res.status(401).json({ error: 'Invalid authentication token' });
     }
     return null;
