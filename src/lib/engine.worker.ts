@@ -6,6 +6,68 @@ self.onmessage = (e: MessageEvent) => {
   
   if (type === 'search') {
     const game = new Chess(fen);
+    if (difficulty === 'dificil' || difficulty === 'profissional') {
+      const skillLevel = difficulty === 'dificil' ? 12 : 20;
+      const searchTimeMs = maxTimeMs ?? 3000;
+      let stockfish: Worker | null = null;
+      let finished = false;
+
+      const finish = (move: string | null) => {
+        if (finished) return;
+        finished = true;
+        clearTimeout(watchdog);
+        stockfish?.terminate();
+        self.postMessage({ type: 'search_result', bestMove: move });
+      };
+
+      const useFallback = () => {
+        try {
+          finish(calculateBestMove(game, difficulty, { maxTimeMs: searchTimeMs }));
+        } catch {
+          finish(null);
+        }
+      };
+
+      const watchdog = setTimeout(useFallback, searchTimeMs + 10000);
+      try {
+        // These static files are shipped from the existing stockfish.js dependency.
+        // The engine runs off the UI thread and is GPL-3.0; its license is in /licenses.
+        const worker = new Worker('/stockfish.wasm.js');
+        stockfish = worker;
+        worker.onerror = useFallback;
+        worker.onmessage = (engineEvent: MessageEvent<string>) => {
+          const line = String(engineEvent.data);
+          if (line === 'uciok') {
+            worker.postMessage(`setoption name Skill Level value ${skillLevel}`);
+            worker.postMessage('isready');
+          } else if (line === 'readyok') {
+            worker.postMessage(`position fen ${fen}`);
+            worker.postMessage(`go movetime ${searchTimeMs}`);
+          } else if (line.startsWith('bestmove ')) {
+            const match = line.match(/^bestmove ([a-h][1-8])([a-h][1-8])([qrbn])?/);
+            if (!match) {
+              finish(null);
+              return;
+            }
+            try {
+              const move = game.move({
+                from: match[1],
+                to: match[2],
+                promotion: match[3] ?? 'q'
+              });
+              finish(move?.san ?? null);
+            } catch {
+              finish(null);
+            }
+          }
+        };
+        worker.postMessage('uci');
+      } catch {
+        useFallback();
+      }
+      return;
+    }
+
     const bestMove = calculateBestMove(game, difficulty, { maxTimeMs });
     self.postMessage({ type: 'search_result', bestMove });
   } 
