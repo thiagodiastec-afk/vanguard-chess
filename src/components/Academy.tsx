@@ -165,7 +165,7 @@ export default function Academy({ currentUser, onOpenStore, onBack }: AcademyPro
         <div className="grid sm:grid-cols-2 gap-3 max-w-2xl mx-auto my-7 text-left">
           {['12 aulas interativas em quatro níveis', 'Dicas antes de revelar a solução', 'Explicação do plano por trás do lance', 'Progresso e pontos salvos na sua conta'].map(item => <div key={item} className="rounded-xl bg-black/25 border border-white/10 p-4 flex gap-3 text-sm text-neutral-200"><CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />{item}</div>)}
         </div>
-        <button onClick={onOpenStore} className="rounded-xl bg-amber-400 hover:bg-amber-300 text-neutral-950 font-black px-7 py-4 shadow-lg shadow-amber-950/30">Conhecer VIP · R$ 9,90/mês</button>
+        <button onClick={onOpenStore} className="rounded-xl bg-amber-400 hover:bg-amber-300 text-neutral-950 font-black px-7 py-4 shadow-lg shadow-amber-950/30">Conhecer VIP · R$ 14,99/30 dias</button>
         <p className="mt-3 text-xs text-neutral-500">A cobrança é processada pelo Mercado Pago. A Academia é liberada após a confirmação do pagamento.</p>
       </div>
     </div>

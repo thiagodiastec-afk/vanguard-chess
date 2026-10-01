@@ -384,7 +384,7 @@ export default function Store({ currentUser, initialTab = 'themes' }: StoreProps
               <div className="bg-neutral-900 border border-fuchsia-500/30 rounded-2xl p-6 flex flex-col text-center">
                 <h4 className="text-lg font-bold text-fuchsia-400 mb-2">VIP + Academia · 30 dias</h4>
                 <div className="text-4xl font-black text-white mb-6">
-                  R$ 9,90<span className="text-lg text-neutral-500 font-normal">/30 dias</span>
+                  R$ 14,99<span className="text-lg text-neutral-500 font-normal">/30 dias</span>
                 </div>
 
                 {hasActivePremium ? (
@@ -393,7 +393,7 @@ export default function Store({ currentUser, initialTab = 'themes' }: StoreProps
                   </button>
                 ) : (
                   <button
-                    onClick={() => setCheckoutPack({ id: 'vip', name: 'Acesso VIP + Academia (30 dias)', priceBRL: '9,90', isVip: true })}
+                    onClick={() => setCheckoutPack({ id: 'vip', name: 'Acesso VIP + Academia (30 dias)', priceBRL: '14,99', isVip: true })}
                     className="mt-auto w-full bg-fuchsia-600 hover:bg-fuchsia-500 text-white font-bold py-4 px-4 rounded-xl transition-colors shadow-[0_0_20px_rgba(217,70,239,0.3)]"
                   >
                     Assinar Agora

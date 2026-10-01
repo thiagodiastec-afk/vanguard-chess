@@ -208,7 +208,7 @@ const STORE_PRODUCTS = {
   pack_1: { title: 'Mão Cheia', price: 4.9, coins: 500 },
   pack_2: { title: 'Baú de Ouro', price: 12.9, coins: 1500 },
   pack_3: { title: 'Tesouro do Rei', price: 39.9, coins: 5000 },
-  vip: { title: 'Acesso VIP + Academia (30 dias)', price: 9.9, premium: true }
+  vip: { title: 'Acesso VIP + Academia (30 dias)', price: 14.99, premium: true }
 };
 
 const ACADEMY_LESSON_BY_ID = new Map(ACADEMY_LESSONS.map(lesson => [lesson.id, lesson]));
