@@ -271,7 +271,7 @@ export default function Store({ currentUser, initialTab = 'themes' }: StoreProps
             }`}
           >
             <Star className="w-5 h-5" />
-            VIP + Academia
+            VIP Premium
           </button>
         </div>
 
@@ -436,7 +436,7 @@ export default function Store({ currentUser, initialTab = 'themes' }: StoreProps
               </div>
               <h3 className="text-3xl font-bold text-white mb-4">Assinatura Premium VIP</h3>
               <p className="text-neutral-400 max-w-2xl mx-auto">
-                Jogue sem anúncios e aprenda xadrez com a Academia Vanguard: aulas interativas dos fundamentos aos padrões de mestre, com dicas, explicações e progresso salvo.
+                O VIP Premium remove os anúncios e adiciona o badge exclusivo. A Academia Vanguard, com aulas interativas e treinador IA, é gratuita para todos os jogadores.
               </p>
             </div>
 
@@ -486,14 +486,7 @@ export default function Store({ currentUser, initialTab = 'themes' }: StoreProps
                   </li>
                   <li className="flex items-center gap-3 text-neutral-300">
                     <div className="bg-emerald-500/20 p-1.5 rounded-full"><Check className="w-4 h-4 text-emerald-500" /></div>
-                  </li>
-                  <li className="flex items-center gap-3 text-neutral-300">
-                    <div className="bg-emerald-500/20 p-1.5 rounded-full"><Check className="w-4 h-4 text-emerald-500" /></div>
                     Análise básica da IA pós-partida (em breve)
-                  </li>
-                  <li className="flex items-center gap-3 text-neutral-300">
-                    <div className="bg-amber-500/20 p-1.5 rounded-full"><Check className="w-4 h-4 text-amber-300" /></div>
-                    Academia de xadrez com 12 aulas e quatro níveis, do iniciante ao mestre
                   </li>
                 </ul>
               </div>
@@ -501,7 +494,7 @@ export default function Store({ currentUser, initialTab = 'themes' }: StoreProps
               <div className="space-y-4">
                 {hasActivePremium ? (
                   <div className="bg-neutral-900 border border-fuchsia-500/30 rounded-2xl p-6 text-center">
-                    <h4 className="text-lg font-bold text-fuchsia-400 mb-2">VIP + Academia ativos</h4>
+                    <h4 className="text-lg font-bold text-fuchsia-400 mb-2">VIP Premium ativo</h4>
                     <p className="text-sm text-neutral-400">Acesso até {currentUser.premiumUntil ? new Date(currentUser.premiumUntil).toLocaleDateString('pt-BR') : 'a data de expiração'}.</p>
                     {hasActiveVipSubscription && (
                       <button
@@ -532,7 +525,7 @@ export default function Store({ currentUser, initialTab = 'themes' }: StoreProps
                       <div className="text-3xl font-black text-white mb-1">R$ 14,99<span className="text-base text-neutral-500 font-normal">/mês</span></div>
                       <p className="text-xs text-neutral-500 mb-4">Cobrança automática mensal</p>
                       <button
-                        onClick={() => setCheckoutPack({ id: 'vip_monthly', planId: 'monthly', name: 'VIP + Academia mensal', priceBRL: '14,99/mês', isSubscription: true })}
+                        onClick={() => setCheckoutPack({ id: 'vip_monthly', planId: 'monthly', name: 'VIP mensal sem anúncios', priceBRL: '14,99/mês', isSubscription: true })}
                         className="mt-auto w-full bg-fuchsia-600 hover:bg-fuchsia-500 text-white font-bold py-3 px-4 rounded-xl transition-colors"
                       >Assinar mensal</button>
                     </div>
@@ -542,7 +535,7 @@ export default function Store({ currentUser, initialTab = 'themes' }: StoreProps
                       <div className="text-3xl font-black text-white mb-1">R$ 161,89<span className="text-base text-neutral-500 font-normal">/ano</span></div>
                       <p className="text-xs text-neutral-400 mb-4">12 meses · equivalente a R$ 13,49/mês · economize R$ 17,99</p>
                       <button
-                        onClick={() => setCheckoutPack({ id: 'vip_annual', planId: 'annual', name: 'VIP + Academia anual (10% de desconto)', priceBRL: '161,89/ano', isSubscription: true })}
+                        onClick={() => setCheckoutPack({ id: 'vip_annual', planId: 'annual', name: 'VIP anual sem anúncios (10% de desconto)', priceBRL: '161,89/ano', isSubscription: true })}
                         className="mt-auto w-full bg-amber-400 hover:bg-amber-300 text-neutral-950 font-black py-3 px-4 rounded-xl transition-colors"
                       >Assinar anual</button>
                     </div>

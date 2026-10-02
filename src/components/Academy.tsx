@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { Chess } from 'chess.js';
 import { Chessboard } from 'react-chessboard';
-import { ArrowLeft, BookOpen, CheckCircle2, ChevronRight, Crown, Lightbulb, Loader2, RotateCcw, Sparkles, Target } from 'lucide-react';
+import { ArrowLeft, BookOpen, Bot, CheckCircle2, ChevronRight, Crown, Lightbulb, Loader2, RotateCcw, Send, Sparkles, Target } from 'lucide-react';
 import { UserData } from '../types';
 import { authenticatedApiFetch } from '../lib/api';
 import { useTheme } from '../lib/themes';
@@ -10,15 +10,13 @@ import type { AcademyLesson, AcademyProgress } from '../lib/academyTypes';
 
 interface AcademyProps {
   currentUser: UserData;
-  onOpenStore: () => void;
   onBack: () => void;
 }
 
-const LEVELS = ['Fundamentos', 'Intermediário', 'Avançado', 'Mestre'] as const;
+const LEVELS = ['Iniciante', 'Intermediário', 'Profissional'] as const;
 
-export default function Academy({ currentUser, onOpenStore, onBack }: AcademyProps) {
+export default function Academy({ currentUser, onBack }: AcademyProps) {
   const theme = useTheme();
-  const hasActivePremium = Boolean(currentUser.isPremium && currentUser.premiumUntil && currentUser.premiumUntil > Date.now());
   const [lessons, setLessons] = useState<AcademyLesson[]>([]);
   const [progress, setProgress] = useState<AcademyProgress>({ completedLessonIds: [], xp: 0 });
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -32,13 +30,13 @@ export default function Academy({ currentUser, onOpenStore, onBack }: AcademyPro
   const [loading, setLoading] = useState(true);
   const [courseError, setCourseError] = useState('');
   const [isReplying, setIsReplying] = useState(false);
+  const [coachQuestion, setCoachQuestion] = useState('');
+  const [coachReply, setCoachReply] = useState('');
+  const [coachError, setCoachError] = useState('');
+  const [coachBusy, setCoachBusy] = useState(false);
   const replyTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    if (!hasActivePremium) {
-      setLoading(false);
-      return;
-    }
     setLoading(true);
     setCourseError('');
     let active = true;
@@ -54,7 +52,7 @@ export default function Academy({ currentUser, onOpenStore, onBack }: AcademyPro
       .catch(error => { if (active) setCourseError(error instanceof Error ? error.message : 'Erro ao carregar o curso.'); })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; if (replyTimer.current) clearTimeout(replyTimer.current); };
-  }, [hasActivePremium]);
+  }, [currentUser.uid]);
 
   const lesson = useMemo(() => lessons.find(item => item.id === selectedId) ?? null, [lessons, selectedId]);
 
@@ -68,6 +66,9 @@ export default function Academy({ currentUser, onOpenStore, onBack }: AcademyPro
     setFeedback('');
     setSaveError('');
     setIsReplying(false);
+    setCoachQuestion('');
+    setCoachReply('');
+    setCoachError('');
   }, [lesson]);
 
   const isCompleted = Boolean(lesson && progress.completedLessonIds.includes(lesson.id));
@@ -91,6 +92,28 @@ export default function Academy({ currentUser, onOpenStore, onBack }: AcademyPro
       setSaveError(error instanceof Error ? error.message : 'Não foi possível salvar seu progresso.');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const askCoach = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!lesson || coachBusy) return;
+    setCoachBusy(true);
+    setCoachError('');
+    setCoachReply('');
+    try {
+      const response = await authenticatedApiFetch('/api/academy/coach', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lessonId: lesson.id, fen, question: coachQuestion })
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'O treinador IA não conseguiu responder.');
+      setCoachReply(String(data.answer || 'Não consegui formular uma orientação agora. Tente novamente.'));
+    } catch (error) {
+      setCoachError(error instanceof Error ? error.message : 'O treinador IA está indisponível agora.');
+    } finally {
+      setCoachBusy(false);
     }
   };
 
@@ -147,29 +170,16 @@ export default function Academy({ currentUser, onOpenStore, onBack }: AcademyPro
     setShowHint(false);
     setSaveError('');
     setIsReplying(false);
+    setCoachReply('');
+    setCoachError('');
   };
 
   const completedCount = progress.completedLessonIds.length;
   const progressPercent = lessons.length ? Math.round(completedCount / lessons.length * 100) : 0;
   const boardOrientation = lesson && new Chess(lesson.fen).turn() === 'b' ? 'black' : 'white';
+  const lessonVideo = lesson?.video && /^[A-Za-z0-9_-]{11}$/.test(lesson.video.youtubeId) ? lesson.video : null;
 
   if (loading) return <div className="flex-1 min-h-[50vh] flex items-center justify-center text-amber-300"><Loader2 className="w-7 h-7 animate-spin mr-3" />Abrindo sua Academia…</div>;
-
-  if (!hasActivePremium) return (
-    <div className="flex-1 max-w-4xl mx-auto w-full p-4 sm:p-8">
-      <div className="rounded-3xl border border-amber-500/30 bg-gradient-to-br from-neutral-900 via-neutral-900 to-amber-950/40 p-7 sm:p-12 text-center shadow-2xl">
-        <div className="w-16 h-16 rounded-2xl bg-amber-400/10 border border-amber-300/20 flex items-center justify-center mx-auto mb-5"><Crown className="w-8 h-8 text-amber-300" /></div>
-        <p className="text-amber-300 text-xs font-black uppercase tracking-[0.2em] mb-3">Benefício VIP</p>
-        <h1 className="text-3xl sm:text-4xl font-black text-white">Sua jornada do primeiro lance ao mestre</h1>
-        <p className="max-w-2xl mx-auto mt-4 text-neutral-300 leading-relaxed">A Academia ensina princípios de abertura, tática, finais e combinações avançadas com posições interativas, dicas e explicações. O curso completo está incluído nos planos VIP mensal e anual.</p>
-        <div className="grid sm:grid-cols-2 gap-3 max-w-2xl mx-auto my-7 text-left">
-          {['12 aulas interativas em quatro níveis', 'Dicas antes de revelar a solução', 'Explicação do plano por trás do lance', 'Progresso e pontos salvos na sua conta'].map(item => <div key={item} className="rounded-xl bg-black/25 border border-white/10 p-4 flex gap-3 text-sm text-neutral-200"><CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />{item}</div>)}
-        </div>
-        <button onClick={onOpenStore} className="rounded-xl bg-amber-400 hover:bg-amber-300 text-neutral-950 font-black px-7 py-4 shadow-lg shadow-amber-950/30">Ver planos VIP</button>
-        <p className="mt-3 text-xs text-neutral-500">A cobrança é processada pelo Mercado Pago. A Academia é liberada após a confirmação do pagamento.</p>
-      </div>
-    </div>
-  );
 
   if (courseError) return (
     <div className="flex-1 max-w-3xl mx-auto w-full p-6">
@@ -191,9 +201,10 @@ export default function Academy({ currentUser, onOpenStore, onBack }: AcademyPro
         <div className="rounded-2xl border border-amber-500/25 bg-gradient-to-r from-neutral-900 to-amber-950/20 p-5 sm:p-7 mb-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-5">
             <div>
-              <div className="flex items-center gap-2 text-amber-300 text-sm font-bold uppercase tracking-wider mb-2"><Crown className="w-4 h-4" />Academia Vanguard · VIP</div>
-              <h1 className="text-2xl sm:text-3xl font-black text-white">Aprenda do primeiro lance aos padrões de mestre</h1>
-              <p className="text-neutral-400 mt-2">Aulas interativas, dicas, explicações e progresso salvo na sua conta.</p>
+              <div className="flex items-center gap-2 text-amber-300 text-sm font-bold uppercase tracking-wider mb-2"><Crown className="w-4 h-4" />Academia Vanguard · Gratuita</div>
+              <h1 className="text-2xl sm:text-3xl font-black text-white">Aprenda no seu ritmo, do básico ao profissional</h1>
+              <p className="text-neutral-400 mt-2">Aulas interativas, orientação de IA e progresso salvo na sua conta.</p>
+              <p className="text-sm text-amber-200/80 mt-3">A trilha combina exercícios interativos com videoaulas de mestres convidados à medida que forem aprovadas e publicadas.</p>
             </div>
             <div className="min-w-44 rounded-xl bg-black/30 border border-white/10 p-4">
               <div className="flex justify-between text-sm mb-2"><span className="text-neutral-300">Seu progresso</span><span className="text-amber-300 font-bold">{completedCount}/{lessons.length}</span></div>
@@ -229,6 +240,24 @@ export default function Academy({ currentUser, onOpenStore, onBack }: AcademyPro
           </aside>
 
           <section className="rounded-2xl border border-neutral-800 bg-neutral-900 overflow-hidden">
+            {lessonVideo && <div className="p-4 sm:p-6 border-b border-neutral-800">
+              <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+                <div className="text-sm font-bold text-amber-300">Videoaula do instrutor</div>
+                <div className="text-xs text-neutral-400">{lessonVideo.instructor}{lessonVideo.credential ? ` · ${lessonVideo.credential}` : ''}</div>
+              </div>
+              <div className="aspect-video overflow-hidden rounded-xl bg-black">
+                <iframe
+                  className="h-full w-full"
+                  src={`https://www.youtube-nocookie.com/embed/${lessonVideo.youtubeId}`}
+                  title={lessonVideo.title}
+                  loading="lazy"
+                  referrerPolicy="strict-origin-when-cross-origin"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  allowFullScreen
+                />
+              </div>
+              <p className="mt-2 text-xs text-neutral-500">{lessonVideo.title}</p>
+            </div>}
             <div className="p-5 sm:p-7 border-b border-neutral-800">
               <div className="flex flex-wrap items-center gap-2 text-xs font-bold uppercase tracking-wider mb-3"><span className="rounded-full bg-amber-400/10 text-amber-300 px-3 py-1">{lesson.level}</span><span className="text-neutral-500">{lesson.concept}</span></div>
               <h2 className="text-2xl font-black text-white">{lesson.title}</h2>
@@ -246,6 +275,16 @@ export default function Academy({ currentUser, onOpenStore, onBack }: AcademyPro
                   {showHint && !solved && <p className="mt-3 rounded-lg bg-amber-400/10 border border-amber-400/20 p-3 text-sm text-amber-100"><Lightbulb className="w-4 h-4 inline mr-2" />{lesson.hint}</p>}
                   {feedback && !solved && <p className="mt-3 text-sm text-rose-300">{feedback}</p>}
                   {solved && <div className="mt-4 rounded-xl bg-emerald-500/10 border border-emerald-500/25 p-4"><div className="flex items-center gap-2 text-emerald-300 font-bold mb-2"><CheckCircle2 className="w-5 h-5" />Aula concluída · +{lesson.xp} pontos</div><p className="text-sm text-neutral-200 leading-relaxed">{lesson.explanation}</p></div>}
+                  <form onSubmit={askCoach} className="mt-4 border-t border-neutral-800 pt-4">
+                    <label htmlFor="academy-coach-question" className="flex items-center gap-2 text-sm font-bold text-sky-300 mb-2"><Bot className="w-4 h-4" />Treinador IA — disponível para todos</label>
+                    <div className="flex flex-col sm:flex-row gap-2">
+                      <input id="academy-coach-question" value={coachQuestion} onChange={event => setCoachQuestion(event.target.value)} maxLength={500} placeholder="Peça uma dica ou pergunte sobre a posição" className="flex-1 min-w-0 rounded-xl bg-neutral-900 border border-neutral-700 px-3 py-2.5 text-sm text-white placeholder:text-neutral-500" />
+                      <button type="submit" disabled={coachBusy || !lesson} className="rounded-xl bg-sky-700 hover:bg-sky-600 disabled:opacity-50 px-4 py-2.5 text-sm font-bold text-white flex items-center justify-center gap-2">{coachBusy ? <><Loader2 className="w-4 h-4 animate-spin" />Pensando…</> : <><Send className="w-4 h-4" />{coachQuestion.trim() ? 'Perguntar' : 'Dar uma dica'}</>}</button>
+                    </div>
+                    {coachReply && <p role="status" className="mt-3 rounded-lg bg-sky-950/50 border border-sky-800/60 p-3 text-sm leading-relaxed text-sky-100 whitespace-pre-wrap">{coachReply}</p>}
+                    {coachError && <p role="alert" className="mt-3 text-sm text-rose-300">{coachError}</p>}
+                    <p className="mt-2 text-[11px] text-neutral-500">A IA é uma auxiliar de estudo e pode errar; confira as ideias no tabuleiro.</p>
+                  </form>
                   {saveError && <div className="mt-3 text-sm text-rose-300">{saveError}<button onClick={() => void finishLesson()} className="ml-2 underline hover:text-white">Tentar salvar novamente</button></div>}
                   {saving && <p className="mt-3 text-sm text-amber-300 flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" />Salvando seu progresso…</p>}
                 </div>

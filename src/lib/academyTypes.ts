@@ -1,4 +1,4 @@
-export type AcademyLevel = 'Fundamentos' | 'Intermediário' | 'Avançado' | 'Mestre';
+export type AcademyLevel = 'Iniciante' | 'Intermediário' | 'Profissional';
 
 export interface AcademyLesson {
   id: string;
@@ -12,6 +12,13 @@ export interface AcademyLesson {
   hint: string;
   explanation: string;
   xp: number;
+  /** Optional instructor video. Only approved YouTube video IDs are rendered. */
+  video?: {
+    youtubeId: string;
+    title: string;
+    instructor: string;
+    credential?: string;
+  };
 }
 
 export interface AcademyProgress {
