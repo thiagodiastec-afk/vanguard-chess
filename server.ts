@@ -8,7 +8,7 @@ import { GoogleGenAI } from "@google/genai";
 import { initializeApp, cert } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
-import { createHmac, timingSafeEqual } from "node:crypto";
+import { createHash, createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import { Chess } from "chess.js";
 import { ACADEMY_LESSONS } from './src/lib/academyCourse';
 
@@ -214,6 +214,13 @@ async function authenticatedUid(req, res) {
     }
     return null;
   }
+}
+
+function getVipInviteAdminEmails() {
+  return new Set((process.env.VIP_INVITE_ADMIN_EMAILS || '')
+    .split(',')
+    .map(email => email.trim().toLowerCase())
+    .filter(Boolean));
 }
 
 const STORE_PRODUCTS = {
@@ -1025,6 +1032,98 @@ Original message: "${text}"`;
     }
   });
 
+  app.get('/api/vip-invites/admin-status', async (req, res) => {
+    const userId = await authenticatedUid(req, res);
+    if (!userId) return;
+    try {
+      const authUser = await getAuth(getAdmin()).getUser(userId);
+      const admins = getVipInviteAdminEmails();
+      res.json({ isAdmin: Boolean(authUser.emailVerified && authUser.email && admins.has(authUser.email.toLowerCase())) });
+    } catch (error) {
+      console.error('VIP invite admin check failed:', error);
+      res.status(500).json({ error: 'Não foi possível verificar as permissões.' });
+    }
+  });
+
+  app.post('/api/vip-invites/create', async (req, res) => {
+    try {
+      const userId = await authenticatedUid(req, res);
+      if (!userId) return;
+      if (!allowRateLimit(userId, 'vip-invite-create', 5, 60 * 60_000)) return res.status(429).json({ error: 'Limite de convites atingido. Tente novamente mais tarde.' });
+      const authUser = await getAuth(getAdmin()).getUser(userId);
+      const admins = getVipInviteAdminEmails();
+      if (!authUser.emailVerified || !authUser.email || !admins.has(authUser.email.toLowerCase())) {
+        return res.status(403).json({ error: 'A emissão de convites é restrita à administração.' });
+      }
+      const durationDays = Number(req.body?.durationDays);
+      const quantity = Number(req.body?.quantity);
+      if (![30, 90].includes(durationDays)) return res.status(400).json({ error: 'Escolha uma duração válida: 30 ou 90 dias.' });
+      if (!Number.isInteger(quantity) || quantity < 1 || quantity > 10) return res.status(400).json({ error: 'Gere entre 1 e 10 convites por vez.' });
+
+      const db = getFirestore(getAdmin(), FIRESTORE_DATABASE_ID);
+      const codes = Array.from({ length: quantity }, () => `VIP-${randomBytes(10).toString('hex').toUpperCase()}`);
+      const now = Date.now();
+      const batch = db.batch();
+      for (const code of codes) {
+        const normalizedCode = code.replace(/[^A-Z0-9]/g, '');
+        const codeHash = createHash('sha256').update(normalizedCode).digest('hex');
+        batch.create(db.collection('vipInvites').doc(codeHash), {
+          durationDays,
+          createdBy: userId,
+          createdAt: now,
+          expiresAt: now + 30 * 24 * 60 * 60_000,
+          status: 'available'
+        });
+      }
+      await batch.commit();
+      res.json({ codes, durationDays, expiresInDays: 30, usesPerCode: 1 });
+    } catch (error) {
+      console.error('VIP invite creation failed:', error);
+      res.status(500).json({ error: 'Não foi possível gerar os convites.' });
+    }
+  });
+
+  app.post('/api/vip-invites/redeem', async (req, res) => {
+    try {
+      const userId = await authenticatedUid(req, res);
+      if (!userId) return;
+      if (!allowRateLimit(userId, 'vip-invite-redeem', 8, 60_000)) return res.status(429).json({ error: 'Muitas tentativas. Aguarde um minuto e tente novamente.' });
+      const code = typeof req.body?.code === 'string'
+        ? req.body.code.toUpperCase().replace(/[^A-Z0-9]/g, '')
+        : '';
+      if (!/^VIP[0-9A-F]{20}$/.test(code)) return res.status(400).json({ error: 'Confira o código do convite e tente novamente.' });
+
+      const codeHash = createHash('sha256').update(code).digest('hex');
+      const db = getFirestore(getAdmin(), FIRESTORE_DATABASE_ID);
+      const inviteRef = db.collection('vipInvites').doc(codeHash);
+      const privateRef = db.collection('userPrivate').doc(userId);
+      const publicRef = db.collection('users').doc(userId);
+      const result = await db.runTransaction(async transaction => {
+        const [inviteSnapshot, privateSnapshot, publicSnapshot] = await Promise.all([
+          transaction.get(inviteRef), transaction.get(privateRef), transaction.get(publicRef)
+        ]);
+        const invite = inviteSnapshot.data();
+        const now = Date.now();
+        if (!invite || invite.status !== 'available' || Number(invite.expiresAt) <= now) throw new Error('VIP_INVITE_INVALID');
+        if (!privateSnapshot.exists || !publicSnapshot.exists) throw new Error('VIP_INVITE_PROFILE_MISSING');
+        const durationDays = Number(invite.durationDays);
+        if (![30, 90].includes(durationDays)) throw new Error('VIP_INVITE_INVALID');
+        const currentPremiumUntil = Number(privateSnapshot.data()?.premiumUntil) || 0;
+        const premiumUntil = Math.max(now, currentPremiumUntil) + durationDays * 24 * 60 * 60_000;
+        transaction.update(inviteRef, { status: 'redeemed', redeemedBy: userId, redeemedAt: now });
+        transaction.set(privateRef, { isPremium: true, premiumUntil, vipAccessSource: 'invite' }, { merge: true });
+        transaction.update(publicRef, { hasPremiumBadge: true });
+        return { durationDays, premiumUntil };
+      });
+      res.json({ success: true, ...result });
+    } catch (error) {
+      if (error.message === 'VIP_INVITE_INVALID') return res.status(400).json({ error: 'Este convite é inválido, expirou ou já foi resgatado.' });
+      if (error.message === 'VIP_INVITE_PROFILE_MISSING') return res.status(409).json({ error: 'Seu perfil ainda está sendo preparado. Atualize a página e tente de novo.' });
+      console.error('VIP invite redemption failed:', error);
+      res.status(500).json({ error: 'Não foi possível resgatar o convite.' });
+    }
+  });
+
   app.post('/api/payment/create-subscription', async (req, res) => {
     try {
       const userId = await authenticatedUid(req, res);
@@ -1202,6 +1301,7 @@ Original message: "${text}"`;
           transaction.update(userRef, {
             isPremium: true,
             premiumUntil,
+            vipAccessSource: 'subscription',
             vipSubscriptionId: subscriptionId,
             vipSubscriptionPlan: planId,
             vipSubscriptionStatus: subscription.status || 'authorized',

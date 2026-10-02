@@ -4,7 +4,7 @@ import { APP_BACKGROUNDS, backgroundManager } from '../lib/backgrounds';
 import { UserData } from '../types';
 import { doc, updateDoc } from 'firebase/firestore';
 import { getDb } from '../lib/firebase';
-import { useState } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { Chessboard } from 'react-chessboard';
 import { getCustomPieces } from '../lib/chessPieces';
 import { authenticatedApiFetch } from '../lib/api';
@@ -27,6 +27,13 @@ export default function Store({ currentUser, initialTab = 'themes' }: StoreProps
   const [checkoutPack, setCheckoutPack] = useState<any>(null);
   const [creatingCheckout, setCreatingCheckout] = useState(false);
   const [cancellingVip, setCancellingVip] = useState(false);
+  const [vipInviteCode, setVipInviteCode] = useState('');
+  const [vipInviteMessage, setVipInviteMessage] = useState('');
+  const [vipInviteBusy, setVipInviteBusy] = useState(false);
+  const [isVipInviteAdmin, setIsVipInviteAdmin] = useState(false);
+  const [inviteDurationDays, setInviteDurationDays] = useState(30);
+  const [inviteQuantity, setInviteQuantity] = useState(1);
+  const [generatedVipCodes, setGeneratedVipCodes] = useState<string[]>([]);
   const hasActivePremium = Boolean(currentUser.isPremium && currentUser.premiumUntil && currentUser.premiumUntil > Date.now());
   const hasActiveVipSubscription = Boolean(currentUser.vipSubscriptionId && !['cancelled', 'canceled'].includes(currentUser.vipSubscriptionStatus || ''));
   const hasCancelableVipSubscription = hasActiveVipSubscription;
@@ -36,6 +43,67 @@ export default function Store({ currentUser, initialTab = 'themes' }: StoreProps
   const unlockedBackgrounds = currentUser.unlockedBackgrounds || ['default'];
   const activeBackground = currentUser.activeBackground || 'default';
   const activeTheme = currentUser.activeTheme || 'luxury';
+
+  useEffect(() => {
+    let active = true;
+    authenticatedApiFetch('/api/vip-invites/admin-status')
+      .then(response => response.ok ? response.json() : null)
+      .then(data => { if (active) setIsVipInviteAdmin(Boolean(data?.isAdmin)); })
+      .catch(() => { if (active) setIsVipInviteAdmin(false); });
+    return () => { active = false; };
+  }, [currentUser.uid]);
+
+  const redeemVipInvite = async (event: FormEvent) => {
+    event.preventDefault();
+    setVipInviteBusy(true);
+    setVipInviteMessage('');
+    try {
+      const response = await authenticatedApiFetch('/api/vip-invites/redeem', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: vipInviteCode })
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Não foi possível usar este convite.');
+      setVipInviteCode('');
+      setVipInviteMessage(`Convite resgatado! Seu VIP gratuito está ativo por ${data.durationDays} dias, até ${new Date(data.premiumUntil).toLocaleDateString('pt-BR')}.`);
+    } catch (error) {
+      setVipInviteMessage(error instanceof Error ? error.message : 'Não foi possível resgatar o convite.');
+    } finally {
+      setVipInviteBusy(false);
+    }
+  };
+
+  const createVipInvites = async (event: FormEvent) => {
+    event.preventDefault();
+    setVipInviteBusy(true);
+    setVipInviteMessage('');
+    setGeneratedVipCodes([]);
+    try {
+      const response = await authenticatedApiFetch('/api/vip-invites/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ durationDays: inviteDurationDays, quantity: inviteQuantity })
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Não foi possível gerar os convites.');
+      setGeneratedVipCodes(data.codes);
+      setVipInviteMessage(`Gerados ${data.codes.length} convites de uso único. Cada código expira em 30 dias.`);
+    } catch (error) {
+      setVipInviteMessage(error instanceof Error ? error.message : 'Não foi possível gerar os convites.');
+    } finally {
+      setVipInviteBusy(false);
+    }
+  };
+
+  const copyVipInvites = async () => {
+    try {
+      await navigator.clipboard.writeText(generatedVipCodes.join('\n'));
+      setVipInviteMessage('Convites copiados. Guarde-os e envie cada um em particular; cada código só pode ser usado uma vez.');
+    } catch {
+      setVipInviteMessage('Não foi possível copiar automaticamente. Selecione e copie os códigos exibidos.');
+    }
+  };
 
   const handleWatchAd = async () => {
     alert('Recompensas por anúncio estarão disponíveis quando a integração de anúncios estiver ativa.');
@@ -370,6 +438,38 @@ export default function Store({ currentUser, initialTab = 'themes' }: StoreProps
               <p className="text-neutral-400 max-w-2xl mx-auto">
                 Jogue sem anúncios e aprenda xadrez com a Academia Vanguard: aulas interativas dos fundamentos aos padrões de mestre, com dicas, explicações e progresso salvo.
               </p>
+            </div>
+
+            <div className="relative z-10 max-w-3xl mx-auto mb-8 space-y-5">
+              <form onSubmit={redeemVipInvite} className="bg-neutral-900 border border-emerald-500/30 rounded-2xl p-5">
+                <div className="flex items-center gap-2 mb-2"><Gift className="w-5 h-5 text-emerald-400" /><h4 className="font-bold text-white">Recebeu um convite VIP?</h4></div>
+                <p className="text-sm text-neutral-400 mb-4">Resgate o código na sua conta para ativar o VIP sem pagamento. Cada convite vale para uma conta.</p>
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <input value={vipInviteCode} onChange={event => setVipInviteCode(event.target.value)} maxLength={32} autoComplete="off" placeholder="Ex.: VIP-AB12CD34..." className="flex-1 min-w-0 rounded-xl bg-neutral-800 border border-neutral-700 px-4 py-3 text-white uppercase tracking-wider" aria-label="Código do convite VIP" />
+                  <button type="submit" disabled={vipInviteBusy || !vipInviteCode.trim()} className="rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 px-5 py-3 font-bold text-white">{vipInviteBusy ? 'Aguarde…' : 'Resgatar convite'}</button>
+                </div>
+              </form>
+
+              {isVipInviteAdmin && (
+                <form onSubmit={createVipInvites} className="bg-neutral-900 border border-amber-500/30 rounded-2xl p-5">
+                  <h4 className="font-bold text-amber-300 mb-2">Emitir convites VIP</h4>
+                  <p className="text-sm text-neutral-400 mb-4">Somente administradores podem emitir códigos. Cada código é válido uma vez e expira em 30 dias.</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-3">
+                    <label className="text-xs text-neutral-400">Duração do VIP
+                      <select value={inviteDurationDays} onChange={event => setInviteDurationDays(Number(event.target.value))} className="mt-1 w-full rounded-xl bg-neutral-800 border border-neutral-700 px-3 py-3 text-white">
+                        <option value={30}>30 dias</option><option value={90}>90 dias</option>
+                      </select>
+                    </label>
+                    <label className="text-xs text-neutral-400">Quantidade (até 10)
+                      <input type="number" min={1} max={10} value={inviteQuantity} onChange={event => setInviteQuantity(Math.max(1, Math.min(10, Number(event.target.value) || 1)))} className="mt-1 w-full rounded-xl bg-neutral-800 border border-neutral-700 px-3 py-3 text-white" />
+                    </label>
+                    <button type="submit" disabled={vipInviteBusy} className="self-end rounded-xl bg-amber-400 hover:bg-amber-300 disabled:opacity-50 px-5 py-3 font-bold text-neutral-950">{vipInviteBusy ? 'Gerando…' : 'Gerar códigos'}</button>
+                  </div>
+                  {generatedVipCodes.length > 0 && <div className="mt-4 rounded-xl bg-neutral-800 p-4"><pre className="whitespace-pre-wrap break-all font-mono text-sm text-emerald-300">{generatedVipCodes.join('\n')}</pre><button type="button" onClick={copyVipInvites} className="mt-3 rounded-lg border border-neutral-600 px-3 py-2 text-sm font-bold text-white hover:bg-neutral-700">Copiar convites</button></div>}
+                </form>
+              )}
+
+              {vipInviteMessage && <p role="status" className="rounded-xl border border-neutral-700 bg-neutral-900 px-4 py-3 text-sm text-neutral-200">{vipInviteMessage}</p>}
             </div>
 
             <div className="max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-[1fr_1.15fr] gap-8 relative z-10">
