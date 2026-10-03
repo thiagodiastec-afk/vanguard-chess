@@ -18,7 +18,6 @@ import {
 } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { initFirebase } from '../lib/firebase';
-import { UserData } from '../types';
 import {
   X,
   Mail,
@@ -37,6 +36,7 @@ import {
   RotateCcw
 } from 'lucide-react';
 import { cn } from '../lib/utils';
+import { validateUsername } from '../lib/username';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -115,23 +115,8 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'register' }:
     try {
       const { db } = await initFirebase();
       if (!db) return;
-      const userRef = doc(db, 'users', firebaseUser.uid);
-      const userSnap = await getDoc(userRef);
-
+      const userSnap = await getDoc(doc(db, 'users', firebaseUser.uid));
       if (!userSnap.exists()) {
-        const finalName = customName || firebaseUser.displayName || (firebaseUser.email ? firebaseUser.email.split('@')[0] : 'Jogador');
-        const initialUserData: UserData = {
-          uid: firebaseUser.uid,
-          profileSchemaVersion: 2,
-          displayName: finalName,
-          hasSetNickname: Boolean(customName || firebaseUser.displayName),
-          elo: 1200,
-          gamesPlayed: 0,
-          activeBackground: 'default',
-          isOnline: true,
-          lastSeen: Date.now()
-        };
-        await setDoc(userRef, initialUserData);
         await setDoc(doc(db, 'userPrivate', firebaseUser.uid), {
           coins: 500,
           unlockedThemes: ['luxury', 'classic'],
@@ -273,6 +258,15 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'register' }:
     if (mode === 'register' && password.length < 6) {
       setError('A senha deve ter pelo menos 6 caracteres.');
       return;
+    }
+
+    if (mode === 'register') {
+      const requestedName = displayName.trim() || email.trim().split('@')[0];
+      const validationError = validateUsername(requestedName);
+      if (validationError) {
+        setError(validationError);
+        return;
+      }
     }
 
     setLoading(true);
@@ -630,7 +624,7 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'register' }:
                       value={displayName}
                       onChange={e => setDisplayName(e.target.value)}
                       placeholder="Ex: MestreDoXadrez"
-                      maxLength={18}
+                      maxLength={15}
                       className="w-full bg-[#1e1c19] border border-[#3d3a34] focus:border-[#81b64c] rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder-neutral-500 focus:outline-none focus:ring-1 focus:ring-[#81b64c] transition-all"
                     />
                   </div>

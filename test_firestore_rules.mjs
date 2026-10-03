@@ -22,7 +22,10 @@ try {
 
   await assertFails(setDoc(doc(anonymous, 'users/visitor'), { ...starterProfile, uid: 'visitor' }));
   await assertFails(setDoc(doc(alice, 'users/alice'), { ...starterProfile, coins: 500 }));
-  await assertSucceeds(setDoc(doc(alice, 'users/alice'), starterProfile));
+  await assertFails(setDoc(doc(alice, 'users/alice'), starterProfile));
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    await setDoc(doc(context.firestore(), 'users/alice'), starterProfile);
+  });
   await assertSucceeds(setDoc(doc(alice, 'userPrivate/alice'), privateStarter));
   await assertSucceeds(getDoc(doc(alice, 'userPrivate/alice')));
   const publicProfileSnapshot = await getDoc(doc(alice, 'users/alice'));
@@ -40,7 +43,7 @@ try {
   });
   await assertSucceeds(getDoc(doc(testEnv.authenticatedContext('legacy-user').firestore(), 'users/legacy-user')));
   await assertFails(getDoc(doc(bob, 'users/legacy-user')));
-  await assertSucceeds(updateDoc(doc(alice, 'users/alice'), { displayName: 'Alice Updated' }));
+  await assertFails(updateDoc(doc(alice, 'users/alice'), { displayName: 'Alice Updated' }));
   await assertFails(updateDoc(doc(alice, 'users/alice'), { coins: 999999 }));
   await assertFails(updateDoc(doc(alice, 'users/alice'), { isPremium: true }));
   await assertFails(updateDoc(doc(alice, 'users/alice'), { premiumUntil: Date.now() + 86400000 }));

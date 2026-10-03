@@ -360,17 +360,18 @@ export default function App() {
     if (!userData || !editNickname.trim() || editNickname.trim() === userData.displayName) return;
     setNicknameSaving(true);
     try {
-      const db = getDb();
-      await updateDoc(doc(db, 'users', userData.uid), {
-        displayName: editNickname.trim(),
-        hasSetNickname: true
+      const response = await authenticatedApiFetch('/api/profile/username', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: editNickname.trim() })
       });
-      setUserData(prev => prev ? ({ ...prev, displayName: editNickname.trim(), hasSetNickname: true }) : null);
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.error || 'Não foi possível salvar o nome.');
+      setUserData(prev => prev ? ({ ...prev, displayName: result.username, hasSetNickname: true }) : null);
       setNicknameFeedback('Apelido alterado com sucesso!');
       setTimeout(() => setNicknameFeedback(null), 3000);
     } catch (err) {
       console.error("Erro ao salvar apelido", err);
-      setNicknameFeedback('Erro ao salvar apelido. Tente novamente.');
+      setNicknameFeedback(err instanceof Error ? err.message : 'Erro ao salvar apelido. Tente novamente.');
     } finally {
       setNicknameSaving(false);
     }
@@ -767,7 +768,7 @@ export default function App() {
                           setEditNickname(e.target.value);
                           setNicknameFeedback(null);
                         }}
-                        maxLength={18}
+                        maxLength={15}
                         placeholder="Novo apelido..."
                         className="flex-1 bg-zinc-950 border border-zinc-700 focus:border-emerald-500 rounded-xl px-3 py-2 text-sm text-white focus:outline-none transition-colors"
                       />

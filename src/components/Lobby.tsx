@@ -23,6 +23,7 @@ export default function Lobby({ currentUser, playSuspendedUntil = 0, onPlayCompu
   const [inviteGameId, setInviteGameId] = useState<string | null>(null);
   const [liveGames, setLiveGames] = useState<GameData[]>([]);
   const [onlineUsers, setOnlineUsers] = useState<UserData[]>([]);
+  const [registeredCount, setRegisteredCount] = useState<number | null>(null);
   const [hasSavedBotGame, setHasSavedBotGame] = useState(false);
   const [timeControl, setTimeControl] = useState<number>(300); // 5 min default
   const [challengingUserId, setChallengingUserId] = useState<string | null>(null);
@@ -67,6 +68,13 @@ export default function Lobby({ currentUser, playSuspendedUntil = 0, onPlayCompu
 
   useEffect(() => {
     const db = getDb();
+
+    fetch('/api/public/registered-count')
+      .then(response => response.ok ? response.json() : null)
+      .then(data => {
+        if (Number.isSafeInteger(data?.count) && data.count >= 0) setRegisteredCount(data.count);
+      })
+      .catch(error => console.warn('Não foi possível carregar o total de inscritos:', error));
 
     // Listen to online users
     const usersQuery = query(
@@ -457,6 +465,10 @@ export default function Lobby({ currentUser, playSuspendedUntil = 0, onPlayCompu
 
           {/* Online Users Widget */}
           <div className="lg:col-span-1 bg-zinc-900/50 rounded-[2rem] p-6 sm:p-8 border border-zinc-800/50 flex flex-col min-h-[300px] max-h-[600px]">
+            <div className="flex items-center justify-between mb-5 rounded-2xl border border-zinc-800 bg-zinc-950/50 px-4 py-3">
+              <span className="text-sm font-medium text-zinc-400">Jogadores inscritos</span>
+              <span className="text-lg font-black text-emerald-400">{registeredCount === null ? '—' : registeredCount.toLocaleString('pt-BR')}</span>
+            </div>
             <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
               <span className="flex h-2.5 w-2.5 relative">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>

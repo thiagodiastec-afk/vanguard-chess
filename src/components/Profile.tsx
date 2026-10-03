@@ -3,6 +3,8 @@ import { User, Swords, Activity, Edit2, Palette, Check } from 'lucide-react';
 import { useState } from 'react';
 import { updateDoc, doc } from 'firebase/firestore';
 import { getDb } from '../lib/firebase';
+import { authenticatedApiFetch } from '../lib/api';
+import { validateUsername } from '../lib/username';
 import { ACHIEVEMENTS } from '../lib/achievements';
 import { CHESS_THEMES, themeManager, useTheme } from '../lib/themes';
 import { cn } from '../lib/utils';
@@ -39,17 +41,25 @@ export default function Profile({ currentUser }: ProfileProps) {
       setIsEditingName(false);
       return;
     }
+
+    const validationError = validateUsername(newName);
+    if (validationError) {
+      alert(validationError);
+      return;
+    }
     
     setIsSaving(true);
     try {
-      const db = getDb();
-      await updateDoc(doc(db, 'users', currentUser.uid), {
-        displayName: newName.trim()
+      const response = await authenticatedApiFetch('/api/profile/username', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: newName.trim() })
       });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.error || 'Ocorreu um erro ao atualizar seu nome.');
       setIsEditingName(false);
     } catch (error) {
       console.error("Erro ao atualizar nome:", error);
-      alert("Ocorreu um erro ao atualizar seu nome.");
+      alert(error instanceof Error ? error.message : "Ocorreu um erro ao atualizar seu nome.");
     } finally {
       setIsSaving(false);
     }

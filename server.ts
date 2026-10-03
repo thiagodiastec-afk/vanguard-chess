@@ -11,12 +11,14 @@ import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import { createHash, createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import { Chess } from "chess.js";
 import { ACADEMY_LESSONS } from './src/lib/academyCourse';
+import { validateUsername } from './src/lib/username';
 
 const FIRESTORE_DATABASE_ID = process.env.FIRESTORE_DATABASE_ID?.trim();
 if (!FIRESTORE_DATABASE_ID) {
   throw new Error('FIRESTORE_DATABASE_ID must be configured explicitly; refusing to select a database implicitly.');
 }
 const rateLimitBuckets = new Map<string, { count: number; resetAt: number }>();
+let registeredCountCache: { count: number; expiresAt: number } | null = null;
 
 function allowRateLimit(uid: string, route: string, maxRequests: number, windowMs: number) {
   const now = Date.now();
@@ -42,6 +44,23 @@ async function startServer() {
   if (!Number.isInteger(PORT) || PORT < 1 || PORT > 65535) throw new Error('PORT must be a valid TCP port');
 
   app.use(express.json({ limit: '64kb' }));
+
+  app.get('/api/public/registered-count', async (_req, res) => {
+    try {
+      if (registeredCountCache && registeredCountCache.expiresAt > Date.now()) {
+        return res.json({ count: registeredCountCache.count });
+      }
+      const db = getFirestore(getAdmin(), FIRESTORE_DATABASE_ID);
+      const snapshot = await db.collection('users').where('profileSchemaVersion', '==', 2).count().get();
+      const count = Number(snapshot.data().count) || 0;
+      registeredCountCache = { count, expiresAt: Date.now() + 5 * 60_000 };
+      return res.json({ count });
+    } catch (error) {
+      if (error.message === 'FIREBASE_SERVICE_ACCOUNT_MISSING') return res.status(503).json({ error: 'Contagem indisponível' });
+      console.error('Registered player count failed:', error);
+      return res.status(503).json({ error: 'Contagem indisponível' });
+    }
+  });
 
   // API Routes
   app.post('/api/profile/bootstrap', async (req, res) => {
@@ -88,9 +107,12 @@ async function startServer() {
         if (Array.isArray(paymentHistory)) privateProfile['paymentHistory'] = paymentHistory;
 
         if (profileDoc.exists) {
+          const currentDisplayName = String(profile.displayName || authProfile.displayName || 'Jogador').trim().slice(0, 15);
+          const invalidExistingName = Boolean(validateUsername(currentDisplayName));
           transaction.update(profileRef, {
             ...removedPrivateFields,
             profileSchemaVersion: 2,
+            ...(invalidExistingName ? { displayName: 'Jogador', hasSetNickname: false } : {}),
             hasPremiumBadge: privateProfile.isPremium && privateProfile.premiumUntil > now,
             ...(needsCompetitiveBaseline ? {
               elo: 1200,
@@ -100,11 +122,13 @@ async function startServer() {
             } : {})
           });
         } else {
+          const authName = String(authProfile.displayName || req.body.displayName || 'Jogador').trim().replace(/\s+/g, ' ').slice(0, 15);
+          const invalidAuthName = Boolean(validateUsername(authName));
           transaction.create(profileRef, {
             uid: userId,
             profileSchemaVersion: 2,
-            displayName: String(req.body.displayName || authProfile.displayName || 'Jogador').slice(0, 40),
-            hasSetNickname: Boolean(authProfile.displayName),
+            displayName: invalidAuthName ? 'Jogador' : authName,
+            hasSetNickname: Boolean(authProfile.displayName) && !invalidAuthName,
             elo: 1200,
             gamesPlayed: 0,
             activeBackground: 'default',
@@ -126,6 +150,30 @@ async function startServer() {
       if (error.message === 'FIREBASE_SERVICE_ACCOUNT_MISSING') return res.status(503).json({ error: 'Profile service is not configured' });
       console.error('Profile bootstrap error:', error);
       res.status(500).json({ error: 'Could not prepare user profile' });
+    }
+  });
+
+  app.post('/api/profile/username', async (req, res) => {
+    try {
+      const userId = await authenticatedUid(req, res);
+      if (!userId) return;
+      if (!allowRateLimit(userId, 'profile-username', 5, 60_000)) return res.status(429).json({ error: 'Aguarde antes de tentar outro nome.' });
+      if (typeof req.body.username !== 'string') return res.status(400).json({ error: 'Informe um nome de usuário.' });
+      const username = req.body.username.trim().replace(/\s+/g, ' ');
+      const validationError = validateUsername(username);
+      if (validationError) return res.status(400).json({ error: validationError });
+      const admin = getAdmin();
+      const profileRef = getFirestore(admin, FIRESTORE_DATABASE_ID).collection('users').doc(userId);
+      const profile = await profileRef.get();
+      if (!profile.exists) return res.status(404).json({ error: 'Perfil não encontrado.' });
+      await Promise.all([
+        profileRef.update({ displayName: username, hasSetNickname: true }),
+        getAuth(admin).updateUser(userId, { displayName: username })
+      ]);
+      return res.json({ success: true, username });
+    } catch (error) {
+      console.error('Username update failed:', error);
+      return res.status(500).json({ error: 'Não foi possível salvar o nome. Tente novamente.' });
     }
   });
 

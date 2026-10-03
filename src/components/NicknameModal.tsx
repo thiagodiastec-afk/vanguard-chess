@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { UserData } from '../types';
-import { doc, updateDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import { collection, query, where, getDocs } from 'firebase/firestore';
 import { getDb } from '../lib/firebase';
+import { authenticatedApiFetch } from '../lib/api';
+import { validateUsername } from '../lib/username';
 import { Shield, Loader2, User as UserIcon } from 'lucide-react';
 
 interface NicknameModalProps {
@@ -24,18 +26,9 @@ export default function NicknameModal({ currentUser }: NicknameModalProps) {
       return;
     }
 
-    if (nickname.trim().length < 3) {
-      setError('O apelido deve ter pelo menos 3 caracteres.');
-      return;
-    }
-
-    if (nickname.trim().length > 15) {
-      setError('O apelido deve ter no máximo 15 caracteres.');
-      return;
-    }
-
-    if (!/^[a-zA-Z0-9_\-\s]+$/.test(nickname.trim())) {
-      setError('Use apenas letras, números, espaços, traços e underscores. Emails ou números de telefone não são permitidos para sua segurança.');
+    const validationError = validateUsername(nickname);
+    if (validationError) {
+      setError(validationError);
       return;
     }
 
@@ -58,14 +51,16 @@ export default function NicknameModal({ currentUser }: NicknameModalProps) {
         return;
       }
 
-      await updateDoc(doc(db, 'users', currentUser.uid), {
-        displayName: nickname.trim(),
-        hasSetNickname: true
+      const response = await authenticatedApiFetch('/api/profile/username', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: nickname.trim() })
       });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.error || 'Erro ao salvar apelido.');
 
     } catch (err) {
       console.error(err);
-      setError('Erro ao salvar apelido. Tente novamente.');
+      setError(err instanceof Error ? err.message : 'Erro ao salvar apelido. Tente novamente.');
       setIsSubmitting(false);
     }
   };

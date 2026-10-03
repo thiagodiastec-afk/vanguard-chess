@@ -28,25 +28,15 @@ service cloud.firestore {
       // Version 2 profiles contain no wallet or subscription fields. Requiring
       // the marker also prevents queries from returning unmigrated legacy docs.
       allow read: if isOwner(userId) || resource.data.profileSchemaVersion == 2;
-      allow create: if isOwner(userId)
-        && incoming().uid == userId
-        && incoming().profileSchemaVersion == 2
-        && incoming().keys().hasOnly([
-          'uid', 'profileSchemaVersion', 'displayName', 'hasSetNickname', 'elo', 'gamesPlayed', 'activeBackground', 'activeTheme',
-          'isOnline', 'lastSeen', 'friends'
-        ])
-        && incoming().elo in [1000, 1200]
-        && incoming().gamesPlayed == 0
-        && (!('displayName' in incoming()) || (incoming().displayName is string && incoming().displayName.size() <= 40));
+      // Profile creation and nickname moderation are performed by the trusted API.
+      allow create: if false;
       // Wallet and paid entitlements are server-owned. Clients cannot grant
       // themselves coins, premium status, or premium time.
       allow update: if isOwner(userId)
         && changedUserFields().hasOnly([
-          'displayName', 'hasSetNickname', 'isOnline', 'lastSeen',
+          'isOnline', 'lastSeen',
           'activeTheme', 'activeBackground', 'friends'
-        ])
-        && (!changedUserFields().hasAny(['displayName']) ||
-            (incoming().displayName is string && incoming().displayName.size() <= 40));
+        ]);
       allow delete: if false;
     }
 
