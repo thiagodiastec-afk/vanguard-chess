@@ -19,7 +19,12 @@ export function validateUsername(value: string): string | null {
   if (!/^[\p{L}\p{N}_\- ]+$/u.test(name)) return 'Use letras, números, espaços, traços ou underscore.';
   if (name.includes('@') || /^[0-9+() -]{7,}$/.test(name)) return 'Não use e-mail ou telefone como nome.';
   const normalized = normalizeForModeration(name);
-  if (PROFANITY_TERMS.some(term => normalized.includes(` ${normalizeForModeration(term).trim()} `))) {
+  const compactName = normalized.replace(/\s+/g, ' ').trim().replace(/ /g, '');
+  if (PROFANITY_TERMS.some(term => {
+    const normalizedTerm = normalizeForModeration(term).trim();
+    return normalized.includes(` ${normalizedTerm} `)
+      || (normalizedTerm.replace(/ /g, '').length >= 4 && compactName.includes(normalizedTerm.replace(/ /g, '')));
+  })) {
     return 'Esse nome não é permitido. Escolha um apelido respeitoso.';
   }
   return null;
