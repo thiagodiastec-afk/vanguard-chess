@@ -216,6 +216,13 @@ async function authenticatedUid(req, res) {
   }
 }
 
+function ensureCanPlay(privateProfile) {
+  const playSuspendedUntil = Number(privateProfile?.playSuspendedUntil || 0);
+  if (playSuspendedUntil > Date.now()) {
+    throw Object.assign(new Error(`Você poderá jogar novamente às ${new Date(playSuspendedUntil).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}.`), { statusCode: 403, playSuspendedUntil });
+  }
+}
+
 function getVipInviteAdminEmails() {
   return new Set((process.env.VIP_INVITE_ADMIN_EMAILS || '')
     .split(',')
@@ -381,8 +388,13 @@ function makeGameData(white, black, timeControl, status = 'playing') {
   };
 }
 
-async function recordRatedResult(transaction, db, game, status) {
-  if (game.resultsRecorded || !['white_won', 'black_won', 'draw'].includes(status)) return false;
+async function recordRatedResult(transaction, db, game, status, privateUpdates: Record<string, Record<string, any>> = {}) {
+  if (game.resultsRecorded || !['white_won', 'black_won', 'draw'].includes(status)) {
+    for (const [userId, fields] of Object.entries(privateUpdates)) {
+      transaction.set(db.collection('userPrivate').doc(userId), fields, { merge: true });
+    }
+    return false;
+  }
   if (!game.whiteId || !game.blackId || game.whiteId === game.blackId) throw new Error('Game participants are invalid');
   const whiteRef = db.collection('users').doc(game.whiteId);
   const blackRef = db.collection('users').doc(game.blackId);
@@ -411,14 +423,22 @@ async function recordRatedResult(transaction, db, game, status) {
   const blackField = whiteScore === 0 ? 'wins' : whiteScore === 1 ? 'losses' : 'draws';
   const whiteSnapshot = legacyCompetitiveSnapshot(white);
   const blackSnapshot = legacyCompetitiveSnapshot(black);
-  if (!whiteHasVerifiedRating) transaction.set(whitePrivateRef, {
-    competitiveDataVersion: 1,
-    legacyCompetitiveRecord: whitePrivate.legacyCompetitiveRecord || whiteSnapshot
-  }, { merge: true });
-  if (!blackHasVerifiedRating) transaction.set(blackPrivateRef, {
-    competitiveDataVersion: 1,
-    legacyCompetitiveRecord: blackPrivate.legacyCompetitiveRecord || blackSnapshot
-  }, { merge: true });
+  const whitePrivateUpdate = {
+    ...(!whiteHasVerifiedRating ? {
+      competitiveDataVersion: 1,
+      legacyCompetitiveRecord: whitePrivate.legacyCompetitiveRecord || whiteSnapshot
+    } : {}),
+    ...(privateUpdates[game.whiteId] || {})
+  };
+  const blackPrivateUpdate = {
+    ...(!blackHasVerifiedRating ? {
+      competitiveDataVersion: 1,
+      legacyCompetitiveRecord: blackPrivate.legacyCompetitiveRecord || blackSnapshot
+    } : {}),
+    ...(privateUpdates[game.blackId] || {})
+  };
+  if (Object.keys(whitePrivateUpdate).length) transaction.set(whitePrivateRef, whitePrivateUpdate, { merge: true });
+  if (Object.keys(blackPrivateUpdate).length) transaction.set(blackPrivateRef, blackPrivateUpdate, { merge: true });
   const whiteResultStats = { wins: Number(whiteStats.wins) || 0, losses: Number(whiteStats.losses) || 0, draws: Number(whiteStats.draws) || 0 };
   const blackResultStats = { wins: Number(blackStats.wins) || 0, losses: Number(blackStats.losses) || 0, draws: Number(blackStats.draws) || 0 };
   whiteResultStats[whiteField] += 1;
@@ -755,6 +775,26 @@ Original message: "${text}"`;
     */
   });
 
+  app.post('/api/play/abandon', async (req, res) => {
+    try {
+      const userId = await authenticatedUid(req, res);
+      if (!userId) return;
+      if (!allowRateLimit(userId, 'play-abandon', 5, 60_000)) return res.status(429).json({ error: 'Aguarde antes de tentar novamente.' });
+      const db = getFirestore(getAdmin(), FIRESTORE_DATABASE_ID);
+      const privateRef = db.collection('userPrivate').doc(userId);
+      const queueRef = db.collection('queue').doc(userId);
+      const playSuspendedUntil = Date.now() + 60 * 60 * 1000;
+      await db.runTransaction(async (tx) => {
+        tx.set(privateRef, { playSuspendedUntil }, { merge: true });
+        tx.delete(queueRef);
+      });
+      res.json({ success: true, playSuspendedUntil });
+    } catch (error) {
+      console.error('Offline game abandonment error:', error);
+      res.status(500).json({ error: 'Não foi possível aplicar a suspensão.' });
+    }
+  });
+
   app.post('/api/game/invite/create', async (req, res) => {
     try {
       const userId = await authenticatedUid(req, res);
@@ -762,13 +802,19 @@ Original message: "${text}"`;
       const timeControl = Number(req.body.timeControl);
       if (!VALID_TIME_CONTROLS.has(timeControl)) return res.status(400).json({ error: 'Invalid time control' });
       const db = getFirestore(getAdmin(), FIRESTORE_DATABASE_ID);
-      const profile = await db.collection('users').doc(userId).get();
-      if (!profile.exists) return res.status(403).json({ error: 'User profile not found' });
+      const profileRef = db.collection('users').doc(userId);
+      const privateRef = db.collection('userPrivate').doc(userId);
       const ref = db.collection('games').doc();
-      const profileData: any = profile.data() || {};
-      await ref.create({ ...makeGameData({ uid: userId, ...profileData }, null, timeControl, 'waiting_friend'), id: ref.id });
+      await db.runTransaction(async (tx) => {
+        const [profile, privateProfile] = await Promise.all([tx.get(profileRef), tx.get(privateRef)]);
+        ensureCanPlay(privateProfile.data());
+        if (!profile.exists) throw Object.assign(new Error('User profile not found'), { statusCode: 403 });
+        tx.create(ref, { ...makeGameData({ uid: userId, ...(profile.data() || {}) }, null, timeControl, 'waiting_friend'), id: ref.id });
+      });
       res.json({ success: true, gameId: ref.id });
     } catch (error) {
+      const status = Number(error?.statusCode);
+      if (status) return res.status(status).json({ error: error.message, playSuspendedUntil: error.playSuspendedUntil });
       console.error('Invite create error:', error);
       res.status(500).json({ error: 'Could not create invite' });
     }
@@ -783,8 +829,10 @@ Original message: "${text}"`;
       const db = getFirestore(getAdmin(), FIRESTORE_DATABASE_ID);
       const gameRef = db.collection('games').doc(gameId);
       const profileRef = db.collection('users').doc(userId);
+      const privateRef = db.collection('userPrivate').doc(userId);
       await db.runTransaction(async (tx) => {
-        const [gameDoc, profile] = await Promise.all([tx.get(gameRef), tx.get(profileRef)]);
+        const [gameDoc, profile, privateProfile] = await Promise.all([tx.get(gameRef), tx.get(profileRef), tx.get(privateRef)]);
+        ensureCanPlay(privateProfile.data());
         if (!gameDoc.exists) throw Object.assign(new Error('Invite not found'), { statusCode: 404 });
         if (!profile.exists) throw Object.assign(new Error('User profile not found'), { statusCode: 403 });
         const game = gameDoc.data();
@@ -818,9 +866,16 @@ Original message: "${text}"`;
       const opponentQueue = db.collection('queue').doc(opponentId);
       const ownProfile = db.collection('users').doc(userId);
       const opponentProfile = db.collection('users').doc(opponentId);
+      const ownPrivate = db.collection('userPrivate').doc(userId);
+      const opponentPrivate = db.collection('userPrivate').doc(opponentId);
       const gameRef = db.collection('games').doc();
       const created = await db.runTransaction(async (tx) => {
-        const [myQueue, theirQueue, myUser, theirUser] = await Promise.all([tx.get(ownQueue), tx.get(opponentQueue), tx.get(ownProfile), tx.get(opponentProfile)]);
+        const [myQueue, theirQueue, myUser, theirUser, myPrivate, theirPrivate] = await Promise.all([tx.get(ownQueue), tx.get(opponentQueue), tx.get(ownProfile), tx.get(opponentProfile), tx.get(ownPrivate), tx.get(opponentPrivate)]);
+        ensureCanPlay(myPrivate.data());
+        if (Number(theirPrivate.data()?.playSuspendedUntil || 0) > Date.now()) {
+          tx.delete(opponentQueue);
+          return false;
+        }
         if (!myQueue.exists || !theirQueue.exists || !myUser.exists || !theirUser.exists || Number(theirQueue.data().timeControl) !== timeControl || Number(myQueue.data().timeControl) !== timeControl) {
           return false;
         }
@@ -835,6 +890,8 @@ Original message: "${text}"`;
       if (!created) return res.status(409).json({ error: 'Opponent already matched' });
       res.json({ success: true, gameId: gameRef.id });
     } catch (error) {
+      const status = Number(error?.statusCode);
+      if (status) return res.status(status).json({ error: error.message, playSuspendedUntil: error.playSuspendedUntil });
       console.error('Match create error:', error);
       res.status(500).json({ error: 'Could not create match' });
     }
@@ -850,10 +907,12 @@ Original message: "${text}"`;
         return res.status(400).json({ error: 'Invalid challenge target' });
       }
       const db = getFirestore(getAdmin(), FIRESTORE_DATABASE_ID);
-      const [challengerProfile, challengedProfile] = await Promise.all([
+      const [challengerProfile, challengedProfile, privateProfile] = await Promise.all([
         db.collection('users').doc(userId).get(),
-        db.collection('users').doc(challengedId).get()
+        db.collection('users').doc(challengedId).get(),
+        db.collection('userPrivate').doc(userId).get()
       ]);
+      ensureCanPlay(privateProfile.data());
       if (!challengerProfile.exists || !challengedProfile.exists || challengedProfile.data()?.profileSchemaVersion !== 2) {
         return res.status(404).json({ error: 'Player profile not found' });
       }
@@ -869,6 +928,8 @@ Original message: "${text}"`;
       });
       res.json({ success: true, challengeId: challengeRef.id });
     } catch (error) {
+      const status = Number(error?.statusCode);
+      if (status) return res.status(status).json({ error: error.message, playSuspendedUntil: error.playSuspendedUntil });
       console.error('Challenge create error:', error);
       res.status(500).json({ error: 'Could not create challenge' });
     }
@@ -884,13 +945,17 @@ Original message: "${text}"`;
       const db = getFirestore(getAdmin(), FIRESTORE_DATABASE_ID);
       const challengeRef = db.collection('challenges').doc(challengeId);
       const ownRef = db.collection('users').doc(userId);
+      const ownPrivateRef = db.collection('userPrivate').doc(userId);
       const challenge = await challengeRef.get();
       if (!challenge.exists || challenge.data().challengedId !== userId || challenge.data().status !== 'pending') return res.status(409).json({ error: 'Challenge is no longer available' });
       const challengerId = challenge.data().challengerId;
       const challengerProfileRef = db.collection('users').doc(challengerId);
+      const challengerPrivateRef = db.collection('userPrivate').doc(challengerId);
       const gameRef = db.collection('games').doc();
       await db.runTransaction(async (tx) => {
-        const [freshChallenge, challenger, own] = await Promise.all([tx.get(challengeRef), tx.get(challengerProfileRef), tx.get(ownRef)]);
+        const [freshChallenge, challenger, own, challengerPrivate, ownPrivate] = await Promise.all([tx.get(challengeRef), tx.get(challengerProfileRef), tx.get(ownRef), tx.get(challengerPrivateRef), tx.get(ownPrivateRef)]);
+        ensureCanPlay(ownPrivate.data());
+        if (Number(challengerPrivate.data()?.playSuspendedUntil || 0) > Date.now()) throw Object.assign(new Error('O outro jogador está temporariamente impedido de jogar.'), { statusCode: 409 });
         if (!freshChallenge.exists || freshChallenge.data().challengedId !== userId || freshChallenge.data().status !== 'pending') throw Object.assign(new Error('Challenge is no longer available'), { statusCode: 409 });
         if (!challenger.exists || !own.exists) throw Object.assign(new Error('User profile not found'), { statusCode: 404 });
         const white = { uid: challengerId, ...challenger.data() };
@@ -913,7 +978,7 @@ Original message: "${text}"`;
       if (!userId) return;
       if (!allowRateLimit(userId, 'game-action', 40, 60_000)) return res.status(429).json({ error: 'Muitas ações de partida.' });
       const { gameId, action } = req.body;
-      if (typeof gameId !== 'string' || !/^[A-Za-z0-9_-]{1,128}$/.test(gameId) || !['presence', 'spectators', 'offer_draw', 'decline_draw', 'accept_draw', 'resign', 'claim_inactivity', 'claim_timeout', 'cancel_invite'].includes(action)) {
+      if (typeof gameId !== 'string' || !/^[A-Za-z0-9_-]{1,128}$/.test(gameId) || !['presence', 'spectators', 'offer_draw', 'decline_draw', 'accept_draw', 'resign', 'claim_inactivity', 'claim_timeout', 'cancel_invite', 'leave_with_penalty'].includes(action)) {
         return res.status(400).json({ error: 'Invalid game action' });
       }
       const db = getFirestore(getAdmin(), FIRESTORE_DATABASE_ID);
@@ -926,6 +991,22 @@ Original message: "${text}"`;
         const color = game.whiteId === userId ? 'w' : game.blackId === userId ? 'b' : null;
         if (!color) throw Object.assign(new Error('Not a player in this game'), { statusCode: 403 });
         const patch: Record<string, any> = {};
+        if (action === 'leave_with_penalty') {
+          if (game.status !== 'playing') throw Object.assign(new Error('Game is not active'), { statusCode: 409 });
+          const privateRef = db.collection('userPrivate').doc(userId);
+          const queueRef = db.collection('queue').doc(userId);
+          await Promise.all([tx.get(privateRef), tx.get(queueRef)]);
+          Object.assign(patch, {
+            status: color === 'w' ? 'black_won' : 'white_won',
+            endedReason: 'abandonment',
+            abandonedBy: userId,
+            lastMoveAt: now
+          });
+          if (await recordRatedResult(tx, db, game, patch.status, { [userId]: { playSuspendedUntil: now + 60 * 60 * 1000 } })) patch.resultsRecorded = true;
+          tx.update(gameRef, patch);
+          tx.delete(queueRef);
+          return { success: true, ...patch, playSuspendedUntil: now + 60 * 60 * 1000 };
+        }
         if (action === 'presence') {
           if (typeof req.body.online !== 'boolean') throw Object.assign(new Error('Invalid presence'), { statusCode: 400 });
           patch[color === 'w' ? 'whiteOnline' : 'blackOnline'] = req.body.online;

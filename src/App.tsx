@@ -19,7 +19,7 @@ const AdBanner = lazy(() => import('./components/AdBanner'));
 const About = lazy(() => import('./components/About'));
 const AuthModal = lazy(() => import('./components/AuthModal'));
 import ErrorBoundary from './components/ErrorBoundary';
-import { LogIn, Loader2, LogOut, Trophy, Swords, MessageSquare, Target, Settings, Volume2, VolumeX, Palette, User as UserIcon, Bell, BellOff, Users, BookOpen, Crown, Heart, Store as StoreIcon, Copy, CheckCircle2, Info , ShieldCheck, Check, Edit2, Sparkles } from 'lucide-react';
+import { LogIn, Loader2, LogOut, Trophy, Swords, MessageSquare, Target, Settings, Volume2, VolumeX, Palette, User as UserIcon, Bell, BellOff, Users, BookOpen, Crown, Heart, Store as StoreIcon, Copy, CheckCircle2, Info , ShieldCheck, Check, Edit2, Sparkles, Home, AlertTriangle } from 'lucide-react';
 import { sounds } from './lib/sounds';
 import { themeManager, CHESS_THEMES, useTheme } from './lib/themes';
 import { backgroundManager, useBackground } from './lib/backgrounds';
@@ -50,11 +50,21 @@ export default function App() {
   const [incomingChallenge, setIncomingChallenge] = useState<any>(null);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authModalMode, setAuthModalMode] = useState<'register' | 'login'>('register');
+  const [showHomeExitConfirm, setShowHomeExitConfirm] = useState(false);
+  const [isLeavingGameForHome, setIsLeavingGameForHome] = useState(false);
+  const [homeExitError, setHomeExitError] = useState<string | null>(null);
+  const [guestSuspendedUntil, setGuestSuspendedUntil] = useState(0);
 
   // Quick Nickname Editing in Settings
   const [editNickname, setEditNickname] = useState('');
   const [nicknameSaving, setNicknameSaving] = useState(false);
   const [nicknameFeedback, setNicknameFeedback] = useState<string | null>(null);
+
+  useEffect(() => {
+    const saved = Number(localStorage.getItem('vanguard_play_suspended_until') || 0);
+    if (Number.isFinite(saved) && saved > Date.now()) setGuestSuspendedUntil(saved);
+    else localStorage.removeItem('vanguard_play_suspended_until');
+  }, []);
 
   useEffect(() => {
     try {
@@ -375,6 +385,61 @@ export default function App() {
     }
   };
 
+  const navigateHome = () => {
+    setShowHomeExitConfirm(false);
+    setHomeExitError(null);
+    setActiveGame(null);
+    setComputerGameDifficulty(null);
+    setIsLocalGame(false);
+    setActiveTab('play');
+  };
+
+  const hasActiveGame = Boolean(
+    (activeGame && activeGame.status === 'playing') || computerGameDifficulty || isLocalGame
+  );
+
+  const handleBrandClick = () => {
+    if (hasActiveGame) {
+      setHomeExitError(null);
+      setShowHomeExitConfirm(true);
+      return;
+    }
+    navigateHome();
+  };
+
+  const confirmLeaveGameForHome = async () => {
+    setIsLeavingGameForHome(true);
+    setHomeExitError(null);
+    try {
+      const response = activeGame?.status === 'playing'
+        ? await authenticatedApiFetch('/api/game/action', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ gameId: activeGame.id, action: 'leave_with_penalty' })
+          })
+        : user?.uid
+          ? await authenticatedApiFetch('/api/play/abandon', { method: 'POST' })
+          : null;
+
+      if (response && !response.ok) {
+        const result = await response.json().catch(() => ({}));
+        throw new Error(result.error || 'Não foi possível encerrar a partida. Tente novamente.');
+      }
+
+      if (!response) {
+        const until = Date.now() + 60 * 60 * 1000;
+        localStorage.setItem('vanguard_play_suspended_until', String(until));
+        setGuestSuspendedUntil(until);
+      }
+      navigateHome();
+    } catch (error: any) {
+      setHomeExitError(error.message || 'Não foi possível encerrar a partida. Tente novamente.');
+    } finally {
+      setIsLeavingGameForHome(false);
+    }
+  };
+
+  const playSuspendedUntil = Math.max(Number(userData?.playSuspendedUntil || 0), guestSuspendedUntil);
+
   const navItems: { id: Tab; label: string; icon: any }[] = [
     { id: 'play', label: 'Jogar', icon: Swords },
     { id: 'ranking', label: 'Ranking', icon: Crown },
@@ -402,12 +467,12 @@ export default function App() {
 
       {/* Desktop Sidebar */}
       <aside className="hidden md:flex flex-col w-20 hover:w-64 transition-all duration-300 border-r border-zinc-800 bg-zinc-950/90 backdrop-blur-xl h-screen sticky top-0 z-50 group overflow-hidden">
-        <div className="p-5 group-hover:p-6 flex items-center gap-3 transition-all">
+        <button type="button" onClick={handleBrandClick} aria-label="Ir para a página inicial" title="Página inicial" className="p-5 group-hover:p-6 flex items-center gap-3 transition-all text-left">
           <div className="w-10 h-10 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-500/20">
             <Trophy className="w-5 h-5 text-zinc-950" />
           </div>
           <h1 className="text-xl font-black tracking-tight text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap">Vanguard<span className="text-emerald-400">Chess</span></h1>
-        </div>
+        </button>
 
         <nav className="flex-1 px-4 py-2 space-y-1 overflow-y-auto custom-scrollbar">
           {navItems.map(item => {
@@ -501,12 +566,12 @@ export default function App() {
       <div className="flex-1 flex flex-col min-h-screen relative w-full overflow-hidden">
         {/* Mobile Header */}
         <header className="md:hidden flex items-center justify-between p-4 bg-zinc-950/80 backdrop-blur-xl border-b border-zinc-800 sticky top-0 z-40">
-          <div className="flex items-center gap-2">
+          <button type="button" onClick={handleBrandClick} aria-label="Ir para a página inicial" title="Página inicial" className="flex items-center gap-2 text-left">
             <div className="w-8 h-8 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-lg flex items-center justify-center shadow-lg shadow-emerald-500/20">
               <Trophy className="w-4 h-4 text-zinc-950" />
             </div>
             <h1 className="text-lg font-black tracking-tight text-white">Vanguard<span className="text-emerald-400">Chess</span></h1>
-          </div>
+          </button>
 
           <div className="flex items-center gap-2">
             {userData ? (
@@ -591,7 +656,7 @@ export default function App() {
                   ) : isLocalGame ? (
                     <LocalGame onExit={() => setIsLocalGame(false)} />
                   ) : (
-                    <Lobby currentUser={userData} onPlayComputer={(diff) => setComputerGameDifficulty(diff)} onPlayLocal={() => setIsLocalGame(true)} onLoginRequest={handleLogin} />
+                    <Lobby currentUser={userData ? { ...userData, playSuspendedUntil } : null} playSuspendedUntil={playSuspendedUntil} onPlayComputer={(diff) => setComputerGameDifficulty(diff)} onPlayLocal={() => setIsLocalGame(true)} onLoginRequest={handleLogin} />
                   )
                 )}
                 {activeTab === 'rules' && <Rules />}
@@ -925,6 +990,26 @@ export default function App() {
               Fechar
             </button>
           </div>
+        </div>
+      )}
+
+      {showHomeExitConfirm && (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm" onClick={() => !isLeavingGameForHome && setShowHomeExitConfirm(false)}>
+          <section role="dialog" aria-modal="true" aria-labelledby="leave-game-title" className="w-full max-w-md rounded-2xl border border-amber-500/30 bg-zinc-900 p-6 shadow-2xl" onClick={event => event.stopPropagation()}>
+            <div className="mb-4 flex items-center gap-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-amber-500/10 text-amber-400"><AlertTriangle className="h-6 w-6" /></div>
+              <h2 id="leave-game-title" className="text-xl font-bold text-white">Sair da partida?</h2>
+            </div>
+            <p className="text-sm leading-6 text-zinc-300">Se confirmar, a partida será encerrada como abandono. Você ficará impedido de iniciar ou aceitar partidas por <strong className="text-amber-300">1 hora</strong>, a partir da confirmação.</p>
+            {homeExitError && <p role="alert" className="mt-4 rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-300">{homeExitError}</p>}
+            <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+              <button type="button" disabled={isLeavingGameForHome} onClick={() => setShowHomeExitConfirm(false)} className="rounded-xl bg-zinc-800 px-4 py-3 font-semibold text-zinc-200 hover:bg-zinc-700 disabled:opacity-50">Continuar jogando</button>
+              <button type="button" disabled={isLeavingGameForHome} onClick={confirmLeaveGameForHome} className="flex items-center justify-center gap-2 rounded-xl bg-amber-500 px-4 py-3 font-bold text-zinc-950 hover:bg-amber-400 disabled:opacity-50">
+                {isLeavingGameForHome ? <Loader2 className="h-4 w-4 animate-spin" /> : <Home className="h-4 w-4" />}
+                Sair e aplicar penalidade
+              </button>
+            </div>
+          </section>
         </div>
       )}
 

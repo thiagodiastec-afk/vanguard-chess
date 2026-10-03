@@ -8,13 +8,14 @@ import { cn } from '../lib/utils';
 
 interface LobbyProps {
   currentUser: UserData | null;
+  playSuspendedUntil?: number;
   onPlayComputer: (difficulty: string) => void;
   onPlayLocal?: () => void;
   onSpectate?: (gameId: string) => void;
   onLoginRequest?: (mode?: 'register' | 'login') => void;
 }
 
-export default function Lobby({ currentUser, onPlayComputer, onPlayLocal, onSpectate, onLoginRequest }: LobbyProps) {
+export default function Lobby({ currentUser, playSuspendedUntil = 0, onPlayComputer, onPlayLocal, onSpectate, onLoginRequest }: LobbyProps) {
   const [isSearching, setIsSearching] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showBotMenu, setShowBotMenu] = useState(false);
@@ -25,6 +26,18 @@ export default function Lobby({ currentUser, onPlayComputer, onPlayLocal, onSpec
   const [hasSavedBotGame, setHasSavedBotGame] = useState(false);
   const [timeControl, setTimeControl] = useState<number>(300); // 5 min default
   const [challengingUserId, setChallengingUserId] = useState<string | null>(null);
+  const [clockNow, setClockNow] = useState(Date.now());
+  const suspensionUntil = Math.max(Number(currentUser?.playSuspendedUntil || 0), Number(playSuspendedUntil || 0));
+
+  useEffect(() => {
+    if (suspensionUntil <= Date.now()) return;
+    const timer = window.setInterval(() => {
+      const now = Date.now();
+      setClockNow(now);
+      if (now >= suspensionUntil) window.clearInterval(timer);
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, [suspensionUntil]);
 
   const handleDirectInvite = async (user: UserData) => {
     if (!currentUser) {
@@ -237,6 +250,22 @@ export default function Lobby({ currentUser, onPlayComputer, onPlayLocal, onSpec
     { id: 'dificil', name: 'Difícil (Stockfish nível 12)', color: 'text-orange-400' },
     { id: 'profissional', name: 'Profissional (Stockfish nível 20)', color: 'text-red-400' }
   ];
+
+  if (suspensionUntil > clockNow) {
+    const secondsLeft = Math.ceil((suspensionUntil - clockNow) / 1000);
+    const countdown = `${String(Math.floor(secondsLeft / 3600)).padStart(2, '0')}:${String(Math.floor((secondsLeft % 3600) / 60)).padStart(2, '0')}:${String(secondsLeft % 60).padStart(2, '0')}`;
+    return (
+      <div className="mx-auto flex min-h-[55vh] w-full max-w-3xl items-center justify-center px-4">
+        <section role="status" className="w-full rounded-3xl border border-amber-500/30 bg-zinc-900 p-8 text-center shadow-2xl">
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-amber-500/10 text-amber-400"><Loader2 className="h-7 w-7" /></div>
+          <h2 className="text-2xl font-black text-white">Pausa de jogo ativa</h2>
+          <p className="mx-auto mt-3 max-w-lg text-zinc-300">A penalidade por abandonar uma partida termina às {new Date(suspensionUntil).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}. Você poderá iniciar ou aceitar partidas novamente em:</p>
+          <p className="mt-4 font-mono text-4xl font-bold tabular-nums text-amber-300">{countdown}</p>
+          <p className="mt-4 text-sm text-zinc-500">Treino e outras áreas do Vanguard Chess continuam disponíveis.</p>
+        </section>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full flex flex-col md:flex-row gap-6 lg:gap-8 max-w-[1400px] mx-auto">

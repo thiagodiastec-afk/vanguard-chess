@@ -13,6 +13,12 @@ service cloud.firestore {
     function isOwner(userId) { return isSignedIn() && request.auth.uid == userId; }
     function incoming() { return request.resource.data; }
     function existing() { return resource.data; }
+    function canStartGame() {
+      let privatePath = /databases/$(database)/documents/userPrivate/$(request.auth.uid);
+      return !exists(privatePath)
+        || !('playSuspendedUntil' in get(privatePath).data)
+        || get(privatePath).data.playSuspendedUntil <= request.time.toMillis();
+    }
     function changedUserFields() {
       return request.resource.data.diff(resource.data).affectedKeys();
     }
@@ -63,9 +69,11 @@ service cloud.firestore {
     match /queue/{queueId} {
       allow read: if isSignedIn();
       allow create: if isOwner(queueId)
+        && canStartGame()
         && incoming().uid == request.auth.uid
         && incoming().keys().hasOnly(['uid', 'displayName', 'elo', 'createdAt', 'timeControl', 'activeTheme']);
       allow update: if isOwner(queueId)
+        && canStartGame()
         && incoming().uid == request.auth.uid
         && incoming().keys().hasOnly(['uid', 'displayName', 'elo', 'createdAt', 'timeControl', 'activeTheme']);
       allow delete: if isOwner(queueId);
@@ -115,6 +123,7 @@ service cloud.firestore {
       // Official events and prizes are provisioned by the Admin SDK only.
       allow create: if false;
       allow update: if isSignedIn()
+        && canStartGame()
         && existing().managedByServer == true
         && existing().status == 'scheduled'
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['participants'])

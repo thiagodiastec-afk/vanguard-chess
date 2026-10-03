@@ -31,6 +31,7 @@ export interface UserData {
   vipSubscriptionPlan?: 'monthly' | 'annual';
   vipSubscriptionStatus?: string;
   vipSubscriptionCheckoutUrl?: string;
+  playSuspendedUntil?: number;
   hasPremiumBadge?: boolean;
   isGuest?: boolean;
 }
