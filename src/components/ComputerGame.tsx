@@ -16,7 +16,7 @@ import { authenticatedApiFetch } from '../lib/api';
 interface ComputerGameProps {
   difficulty: string;
   currentUser: UserData | null;
-  onExit: () => void;
+  onExit: (abandoning?: boolean) => void;
 }
 
 export default function ComputerGame({ difficulty, currentUser, onExit }: ComputerGameProps) {
@@ -468,7 +468,7 @@ export default function ComputerGame({ difficulty, currentUser, onExit }: Comput
                   hasUsedHelp
                 }));
               }
-              onExit();
+              onExit(!gameOver);
             }}
             className="flex items-center justify-center gap-1.5 px-3 py-1.5 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white rounded-xl font-bold transition-all text-xs sm:text-sm shadow-sm active:scale-95"
           >

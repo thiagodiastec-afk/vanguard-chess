@@ -642,7 +642,7 @@ export default function App() {
                           gamesPlayed: 0,
                           coins: 0
                         }}
-                        onExit={() => setActiveGame(null)}
+                        onExit={handleBrandClick}
                       />
                     </ErrorBoundary>
                   ) : computerGameDifficulty ? (
@@ -650,11 +650,11 @@ export default function App() {
                       <ComputerGame
                         difficulty={computerGameDifficulty}
                         currentUser={userData}
-                        onExit={() => setComputerGameDifficulty(null)}
+                        onExit={(abandoning = true) => abandoning ? handleBrandClick() : setComputerGameDifficulty(null)}
                       />
                     </ErrorBoundary>
                   ) : isLocalGame ? (
-                    <LocalGame onExit={() => setIsLocalGame(false)} />
+                    <LocalGame onExit={(abandoning = true) => abandoning ? handleBrandClick() : setIsLocalGame(false)} />
                   ) : (
                     <Lobby currentUser={userData ? { ...userData, playSuspendedUntil } : null} playSuspendedUntil={playSuspendedUntil} onPlayComputer={(diff) => setComputerGameDifficulty(diff)} onPlayLocal={() => setIsLocalGame(true)} onLoginRequest={handleLogin} />
                   )

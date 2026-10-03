@@ -12,7 +12,7 @@ import CapturedPieces from './CapturedPieces';
 import EvalBar from "./EvalBar";
 
 interface LocalGameProps {
-  onExit: () => void;
+  onExit: (abandoning?: boolean) => void;
 }
 
 export default function LocalGame({ onExit }: LocalGameProps) {
@@ -219,7 +219,7 @@ export default function LocalGame({ onExit }: LocalGameProps) {
       <div className="w-full bg-neutral-900/90 backdrop-blur-md border-b border-neutral-800 px-3 py-2 sm:px-6 rounded-2xl flex items-center justify-between mb-2 sm:mb-3 gap-2">
         <div className="flex items-center gap-2 sm:gap-3">
           <button
-            onClick={onExit}
+            onClick={() => onExit(!gameOver)}
             className="flex items-center justify-center gap-1 sm:gap-1.5 px-2.5 py-1.5 sm:px-3 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white rounded-xl font-bold transition-all text-xs sm:text-sm active:scale-95"
           >
             <ChevronLeft className="w-4 h-4" />
@@ -348,7 +348,7 @@ export default function LocalGame({ onExit }: LocalGameProps) {
                       <h2 className="text-2xl sm:text-3xl font-bold text-white mb-2">Fim de Jogo</h2>
                       <p className="text-lg sm:text-xl text-emerald-400 font-semibold mb-6">{winner}</p>
                       <div className="flex gap-3">
-                        <button onClick={onExit} className="flex-1 py-2.5 px-4 bg-neutral-800 hover:bg-neutral-700 text-white rounded-xl font-bold transition-colors text-xs sm:text-sm active:scale-95">Sair</button>
+                        <button onClick={() => onExit(false)} className="flex-1 py-2.5 px-4 bg-neutral-800 hover:bg-neutral-700 text-white rounded-xl font-bold transition-colors text-xs sm:text-sm active:scale-95">Sair</button>
                         <button onClick={resetGame} className="flex-1 py-2.5 px-4 bg-emerald-500 hover:bg-emerald-400 text-neutral-950 rounded-xl font-bold transition-colors text-xs sm:text-sm active:scale-95">Nova Partida</button>
                       </div>
                     </div>
