@@ -422,10 +422,26 @@ export default function Lobby({ currentUser, playSuspendedUntil = 0, onPlayCompu
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Live Games Widget */}
           <div className="lg:col-span-2 bg-zinc-900/50 rounded-[2rem] p-6 sm:p-8 border border-zinc-800/50 flex flex-col min-h-[300px]">
-            <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse shadow-[0_0_10px_rgba(239,68,68,0.6)]" />
-              TV Xadrez Ao Vivo
-            </h3>
+            <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+              <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                <span className={cn(
+                  'w-2.5 h-2.5 rounded-full',
+                  liveGames.length > 0
+                    ? 'bg-emerald-500 animate-pulse shadow-[0_0_10px_rgba(16,185,129,0.6)]'
+                    : 'bg-zinc-600'
+                )} />
+                TV Xadrez Ao Vivo
+              </h3>
+              {liveGames.length > 0 && (
+                <span
+                  role="status"
+                  aria-live="polite"
+                  className="inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-sm font-bold text-emerald-400"
+                >
+                  {liveGames.length} {liveGames.length === 1 ? 'partida em andamento' : 'partidas em andamento'}
+                </span>
+              )}
+            </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 flex-1">
               {liveGames.length === 0 ? (
