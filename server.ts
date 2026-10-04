@@ -62,6 +62,42 @@ async function startServer() {
     }
   });
 
+  app.get('/api/users/directory', async (req, res) => {
+    try {
+      const userId = await authenticatedUid(req, res);
+      if (!userId) return;
+      if (!allowRateLimit(userId, 'user-directory', 30, 60_000)) return res.status(429).json({ error: 'Aguarde antes de buscar novamente.' });
+      const search = typeof req.query.query === 'string' ? req.query.query.trim().replace(/\s+/g, ' ').slice(0, 30) : '';
+      const cursor = typeof req.query.cursor === 'string' ? req.query.cursor : '';
+      if (cursor && (cursor.length > 128 || cursor.includes('/'))) return res.status(400).json({ error: 'Cursor inválido.' });
+      const db = getFirestore(getAdmin(), FIRESTORE_DATABASE_ID);
+      let query = db.collection('users').where('profileSchemaVersion', '==', 2).orderBy('displayName');
+      if (search) query = query.startAt(search).endAt(`${search}\uf8ff`);
+      if (cursor) {
+        const cursorDoc = await db.collection('users').doc(cursor).get();
+        if (cursorDoc.exists) query = query.startAfter(cursorDoc);
+      }
+      const snapshot = await query.limit(31).get();
+      const users = snapshot.docs.slice(0, 30).map((item) => {
+        const profile = item.data();
+        // Deliberately return only public directory fields; contact details and consent never leave the server.
+        return {
+          uid: item.id,
+          displayName: String(profile.displayName || 'Jogador').slice(0, 30),
+          elo: Number(profile.elo) || 1200,
+          gamesPlayed: Number(profile.gamesPlayed) || 0,
+          isOnline: profile.isOnline === true,
+          hasPremiumBadge: profile.hasPremiumBadge === true
+        };
+      });
+      const last = snapshot.docs.length > 30 ? snapshot.docs[29]?.id : undefined;
+      return res.json({ users, nextCursor: last || null });
+    } catch (error) {
+      console.error('Player directory read failed:', error);
+      return res.status(500).json({ error: 'Não foi possível carregar os jogadores.' });
+    }
+  });
+
   // API Routes
   app.post('/api/profile/bootstrap', async (req, res) => {
     try {

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { collection, query, where, getDocs, doc, updateDoc, arrayUnion, arrayRemove, onSnapshot } from 'firebase/firestore';
+import { collection, query, where, doc, updateDoc, arrayUnion, arrayRemove, onSnapshot } from 'firebase/firestore';
 import { getDb } from '../lib/firebase';
 import { authenticatedApiFetch } from '../lib/api';
 import { UserData } from '../types';
@@ -17,6 +17,36 @@ export default function Friends({ currentUser }: FriendsProps) {
   const [friends, setFriends] = useState<UserData[]>([]);
   const [loading, setLoading] = useState(true);
   const [challenging, setChallenging] = useState<string | null>(null);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [directoryError, setDirectoryError] = useState<string | null>(null);
+  const [registeredCount, setRegisteredCount] = useState<number | null>(null);
+
+  const loadDirectory = async (term = '', cursor?: string, append = false) => {
+    setIsSearching(true);
+    setDirectoryError(null);
+    try {
+      const params = new URLSearchParams();
+      if (term.trim()) params.set('query', term.trim());
+      if (cursor) params.set('cursor', cursor);
+      const response = await authenticatedApiFetch(`/api/users/directory?${params.toString()}`);
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Não foi possível carregar jogadores.');
+      const users = (result.users || []) as UserData[];
+      setSearchResults((previous) => append ? [...previous, ...users] : users);
+      setNextCursor(result.nextCursor || null);
+    } catch (error) {
+      setDirectoryError(error instanceof Error ? error.message : 'Não foi possível carregar jogadores.');
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  useEffect(() => {
+    void loadDirectory();
+    fetch('/api/public/registered-count').then((response) => response.ok ? response.json() : null)
+      .then((result) => { if (typeof result?.count === 'number') setRegisteredCount(result.count); })
+      .catch(() => {});
+  }, [currentUser.uid]);
 
   useEffect(() => {
     const db = getDb();
@@ -47,27 +77,7 @@ export default function Friends({ currentUser }: FriendsProps) {
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!searchTerm.trim()) return;
-
-    setIsSearching(true);
-    const db = getDb();
-    const q = query(
-      collection(db, 'users'),
-      where('profileSchemaVersion', '==', 2),
-      where('displayName', '>=', searchTerm),
-      where('displayName', '<=', searchTerm + '\uf8ff')
-    );
-
-    try {
-      const snapshot = await getDocs(q);
-      const results = snapshot.docs
-        .map(doc => doc.data() as UserData)
-        .filter(u => u.uid !== currentUser.uid); // Exclude self
-      setSearchResults(results);
-    } catch (error) {
-      console.error("Erro na busca:", error);
-    }
-    setIsSearching(false);
+    await loadDirectory(searchTerm);
   };
 
   const toggleFriend = async (targetUser: UserData) => {
@@ -85,10 +95,6 @@ export default function Friends({ currentUser }: FriendsProps) {
   };
 
   const challengeFriend = async (friend: UserData) => {
-    if (!friend.isOnline) {
-      alert('Este jogador está offline.');
-      return;
-    }
     setChallenging(friend.uid);
     const db = getDb();
     try {
@@ -122,6 +128,7 @@ export default function Friends({ currentUser }: FriendsProps) {
 
     } catch (error) {
       console.error('Erro ao desafiar:', error);
+      alert(error instanceof Error ? error.message : 'Não foi possível enviar o convite.');
       setChallenging(null);
     }
   };
@@ -129,7 +136,8 @@ export default function Friends({ currentUser }: FriendsProps) {
   return (
     <div className="w-full max-w-4xl mx-auto flex flex-col gap-6">
       <div className="bg-neutral-800 rounded-2xl p-6 border border-neutral-700/50 shadow-xl">
-        <h2 className="text-2xl font-bold text-white mb-6">Adicionar Amigos</h2>
+        <h2 className="text-2xl font-bold text-white mb-2">Jogadores inscritos</h2>
+        <p className="text-sm text-neutral-400 mb-6">{registeredCount === null ? 'Carregando total de jogadores…' : `${registeredCount} jogadores cadastrados.`} Encontre um jogador e envie um convite. E-mails e telefones nunca aparecem nesta lista.</p>
         <form onSubmit={handleSearch} className="flex gap-4 mb-6">
           <div className="relative flex-1">
             <Search className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" />
@@ -150,9 +158,10 @@ export default function Friends({ currentUser }: FriendsProps) {
           </button>
         </form>
 
+        {directoryError && <p role="alert" className="text-sm text-red-400 mb-4">{directoryError}</p>}
         {searchResults.length > 0 && (
           <div className="space-y-2 mb-8">
-            <h3 className="text-sm font-semibold text-neutral-400 uppercase tracking-wider mb-3">Resultados</h3>
+            <h3 className="text-sm font-semibold text-neutral-400 uppercase tracking-wider mb-3">{searchTerm.trim() ? 'Resultados da busca' : 'Todos os jogadores'}</h3>
             {searchResults.map(user => {
               const isFriend = currentUser.friends?.includes(user.uid);
               return (
@@ -163,26 +172,43 @@ export default function Friends({ currentUser }: FriendsProps) {
                     </div>
                     <div>
                       <h4 className="font-bold text-white">{user.displayName}</h4>
-                      <p className="text-sm text-neutral-400">Elo: {user.elo}</p>
+                      <p className="text-sm text-neutral-400">Elo: {user.elo} <span className="px-1">•</span> {user.isOnline ? 'Online' : 'Offline'}</p>
                     </div>
                   </div>
-                  <button
-                    onClick={() => toggleFriend(user)}
-                    className={cn(
-                      "flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors",
-                      isFriend
-                        ? "bg-red-500/10 text-red-500 hover:bg-red-500/20"
-                        : "bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20"
-                    )}
-                  >
-                    {isFriend ? <UserMinus className="w-4 h-4" /> : <UserPlus className="w-4 h-4" />}
-                    {isFriend ? 'Remover' : 'Adicionar'}
-                  </button>
+                  {user.uid === currentUser.uid ? (
+                    <span className="text-sm text-neutral-500">Você</span>
+                  ) : (
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => challengeFriend(user)}
+                        disabled={challenging === user.uid}
+                        className="flex items-center gap-2 px-4 py-2 rounded-lg font-bold bg-emerald-500 text-neutral-950 hover:bg-emerald-400 disabled:opacity-50"
+                        title="Envie o convite pelo jogo."
+                      >
+                        {challenging === user.uid ? <Loader2 className="w-4 h-4 animate-spin" /> : <Swords className="w-4 h-4" />}
+                        Convidar
+                      </button>
+                      <button
+                        onClick={() => toggleFriend(user)}
+                        className={cn(
+                          "flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors",
+                          isFriend
+                            ? "bg-red-500/10 text-red-500 hover:bg-red-500/20"
+                            : "bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20"
+                        )}
+                      >
+                        {isFriend ? <UserMinus className="w-4 h-4" /> : <UserPlus className="w-4 h-4" />}
+                        {isFriend ? 'Remover' : 'Adicionar'}
+                      </button>
+                    </div>
+                  )}
                 </div>
               );
             })}
+            {nextCursor && <button onClick={() => void loadDirectory(searchTerm, nextCursor, true)} disabled={isSearching} className="w-full py-3 rounded-xl bg-neutral-900 text-emerald-400 disabled:opacity-50">{isSearching ? 'Carregando…' : 'Carregar mais jogadores'}</button>}
           </div>
         )}
+        {!isSearching && searchResults.length === 0 && <p className="text-neutral-400 text-center py-8">{searchTerm.trim() ? 'Nenhum jogador encontrado.' : 'Ainda não há jogadores cadastrados.'}</p>}
       </div>
 
       <div className="bg-neutral-800 rounded-2xl p-6 border border-neutral-700/50 shadow-xl flex-1">
@@ -224,7 +250,7 @@ export default function Friends({ currentUser }: FriendsProps) {
                 <div className="flex gap-2">
                   <button
                     onClick={() => challengeFriend(friend)}
-                    disabled={!friend.isOnline || challenging === friend.uid}
+                    disabled={challenging === friend.uid}
                     className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-400 disabled:bg-neutral-700 disabled:text-neutral-500 text-neutral-950 font-bold py-2 px-6 rounded-xl transition-colors"
                   >
                     {challenging === friend.uid ? (
@@ -232,7 +258,7 @@ export default function Friends({ currentUser }: FriendsProps) {
                     ) : (
                       <>
                         <Swords className="w-4 h-4" />
-                        Desafiar
+                        Convidar
                       </>
                     )}
                   </button>
