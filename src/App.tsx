@@ -657,7 +657,7 @@ export default function App() {
                   ) : isLocalGame ? (
                     <LocalGame onExit={(abandoning = true) => abandoning ? handleBrandClick() : setIsLocalGame(false)} />
                   ) : (
-                    <Lobby currentUser={userData ? { ...userData, playSuspendedUntil } : null} playSuspendedUntil={playSuspendedUntil} onPlayComputer={(diff) => setComputerGameDifficulty(diff)} onPlayLocal={() => setIsLocalGame(true)} onLoginRequest={handleLogin} />
+                    <Lobby currentUser={userData ? { ...userData, playSuspendedUntil } : null} playSuspendedUntil={playSuspendedUntil} onPlayComputer={(diff) => setComputerGameDifficulty(diff)} onPlayLocal={() => setIsLocalGame(true)} onBrowsePlayers={() => setActiveTab('friends')} onLoginRequest={handleLogin} />
                   )
                 )}
                 {activeTab === 'rules' && <Rules />}

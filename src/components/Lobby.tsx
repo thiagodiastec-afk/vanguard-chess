@@ -12,10 +12,11 @@ interface LobbyProps {
   onPlayComputer: (difficulty: string) => void;
   onPlayLocal?: () => void;
   onSpectate?: (gameId: string) => void;
+  onBrowsePlayers?: () => void;
   onLoginRequest?: (mode?: 'register' | 'login') => void;
 }
 
-export default function Lobby({ currentUser, playSuspendedUntil = 0, onPlayComputer, onPlayLocal, onSpectate, onLoginRequest }: LobbyProps) {
+export default function Lobby({ currentUser, playSuspendedUntil = 0, onPlayComputer, onPlayLocal, onSpectate, onBrowsePlayers, onLoginRequest }: LobbyProps) {
   const [isSearching, setIsSearching] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showBotMenu, setShowBotMenu] = useState(false);
@@ -481,10 +482,18 @@ export default function Lobby({ currentUser, playSuspendedUntil = 0, onPlayCompu
 
           {/* Online Users Widget */}
           <div className="lg:col-span-1 bg-zinc-900/50 rounded-[2rem] p-6 sm:p-8 border border-zinc-800/50 flex flex-col min-h-[300px] max-h-[600px]">
-            <div className="flex items-center justify-between mb-5 rounded-2xl border border-zinc-800 bg-zinc-950/50 px-4 py-3">
-              <span className="text-sm font-medium text-zinc-400">Jogadores inscritos</span>
+            <button
+              type="button"
+              onClick={onBrowsePlayers}
+              aria-label="Ver lista de jogadores inscritos"
+              className="flex items-center justify-between mb-5 rounded-2xl border border-zinc-800 bg-zinc-950/50 px-4 py-3 text-left transition-colors hover:border-emerald-500/50 hover:bg-zinc-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
+            >
+              <span className="flex flex-col gap-1">
+                <span className="text-sm font-medium text-zinc-300">Jogadores inscritos</span>
+                <span className="text-xs font-semibold text-emerald-400">Ver lista de jogadores →</span>
+              </span>
               <span className="text-lg font-black text-emerald-400">{registeredCount === null ? '—' : registeredCount.toLocaleString('pt-BR')}</span>
-            </div>
+            </button>
             <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
               <span className="flex h-2.5 w-2.5 relative">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
