@@ -85,28 +85,34 @@ export default function Lobby({ currentUser, playSuspendedUntil = 0, onPlayCompu
       limit(50) // Removed orderBy to avoid requiring composite index without manual creation
     );
 
-    const unsubscribeUsers = onSnapshot(usersQuery, (snapshot) => {
+    let candidates: UserData[] = [];
+    const refreshOnlineUsers = () => {
       const now = Date.now();
-      const users: UserData[] = [];
-      snapshot.forEach(doc => {
-        const data = doc.data() as UserData;
-        if (!data.uid) data.uid = doc.id;
-        // Only consider online if heartbeat is active within 90 seconds or is current user
-        const isFresh = !data.lastSeen || (now - data.lastSeen < 90000) || data.uid === currentUser?.uid;
-        if (isFresh) {
-          users.push(data);
-        }
-      });
-      // Sort: current user first, then by ELO descending
+      const users = candidates.filter(user => user.uid === currentUser?.uid || (
+        user.isOnline === true && typeof user.lastSeen === 'number' && now - user.lastSeen < 90000
+      ));
       users.sort((a, b) => {
         if (a.uid === currentUser?.uid) return -1;
         if (b.uid === currentUser?.uid) return 1;
         return (b.elo || 1200) - (a.elo || 1200);
       });
       setOnlineUsers(users);
-    });
+    };
 
-    return unsubscribeUsers;
+    const unsubscribeUsers = onSnapshot(usersQuery, (snapshot) => {
+      candidates = snapshot.docs.map(doc => {
+        const data = doc.data() as UserData;
+        if (!data.uid) data.uid = doc.id;
+        return data;
+      });
+      refreshOnlineUsers();
+    });
+    const freshnessInterval = window.setInterval(refreshOnlineUsers, 15000);
+
+    return () => {
+      unsubscribeUsers();
+      window.clearInterval(freshnessInterval);
+    };
   }, [currentUser]);
 
   useEffect(() => {

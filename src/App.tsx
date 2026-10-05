@@ -157,8 +157,9 @@ export default function App() {
           // Online Status Management
           const setOnlineStatus = async (online: boolean) => {
             try {
+              const isVisible = online && document.visibilityState === 'visible';
               await updateDoc(doc(db, 'users', firebaseUser.uid), {
-                isOnline: online,
+                isOnline: isVisible,
                 lastSeen: Date.now()
               });
             } catch (e) {

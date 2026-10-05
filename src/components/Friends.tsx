@@ -10,6 +10,10 @@ interface FriendsProps {
   currentUser: UserData;
 }
 
+function isPresenceFresh(user: UserData) {
+  return user.isOnline === true && typeof user.lastSeen === 'number' && Date.now() - user.lastSeen < 90000;
+}
+
 export default function Friends({ currentUser }: FriendsProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState<UserData[]>([]);
@@ -172,7 +176,7 @@ export default function Friends({ currentUser }: FriendsProps) {
                     </div>
                     <div>
                       <h4 className="font-bold text-white">{user.displayName}</h4>
-                      <p className="text-sm text-neutral-400">Elo: {user.elo} <span className="px-1">•</span> {user.isOnline ? 'Online' : 'Offline'}</p>
+                      <p className="text-sm text-neutral-400">Elo: {user.elo} <span className="px-1">•</span> {isPresenceFresh(user) ? 'Online' : 'Offline'}</p>
                     </div>
                   </div>
                   {user.uid === currentUser.uid ? (
@@ -234,7 +238,7 @@ export default function Friends({ currentUser }: FriendsProps) {
                     </div>
                     <Circle className={cn(
                       "w-4 h-4 absolute bottom-0 right-0 rounded-full border-2 border-neutral-900 fill-current",
-                      friend.isOnline ? "text-emerald-500" : "text-neutral-500"
+                      isPresenceFresh(friend) ? "text-emerald-500" : "text-neutral-500"
                     )} />
                   </div>
                   <div>
@@ -242,7 +246,7 @@ export default function Friends({ currentUser }: FriendsProps) {
                     <div className="flex gap-3 text-sm text-neutral-400">
                       <span>Elo: {friend.elo}</span>
                       <span>•</span>
-                      <span>{friend.isOnline ? 'Online' : 'Offline'}</span>
+                      <span>{isPresenceFresh(friend) ? 'Online' : 'Offline'}</span>
                     </div>
                   </div>
                 </div>

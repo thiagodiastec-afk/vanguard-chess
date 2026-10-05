@@ -81,12 +81,13 @@ async function startServer() {
       const users = snapshot.docs.slice(0, 30).map((item) => {
         const profile = item.data();
         // Deliberately return only public directory fields; contact details and consent never leave the server.
+        const isPresenceFresh = typeof profile.lastSeen === 'number' && Date.now() - profile.lastSeen < 90_000;
         return {
           uid: item.id,
           displayName: String(profile.displayName || 'Jogador').slice(0, 30),
           elo: Number(profile.elo) || 1200,
           gamesPlayed: Number(profile.gamesPlayed) || 0,
-          isOnline: profile.isOnline === true,
+          isOnline: profile.isOnline === true && isPresenceFresh,
           hasPremiumBadge: profile.hasPremiumBadge === true
         };
       });
