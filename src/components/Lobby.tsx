@@ -324,7 +324,7 @@ export default function Lobby({ currentUser, playSuspendedUntil = 0, onPlayCompu
 
           <div className="relative z-10">
             <h2 className="text-3xl sm:text-4xl font-black text-white mb-2 tracking-tight">Jogar Xadrez</h2>
-            <p className="text-zinc-400 mb-8 max-w-sm">Jogue contra milhões de jogadores do mundo inteiro ou desafie um amigo.</p>
+            <p className="text-zinc-400 mb-8 max-w-sm">Encontre uma partida, desafie um amigo ou pratique contra a inteligência artificial.</p>
 
             {isSearching ? (
               <div className="bg-zinc-950/50 border border-emerald-500/30 rounded-2xl p-6 flex flex-col items-center gap-4 animate-in fade-in zoom-in-95">
@@ -560,6 +560,16 @@ export default function Lobby({ currentUser, playSuspendedUntil = 0, onPlayCompu
           <p className="text-xs text-zinc-500 font-medium">Jogue localmente no mesmo dispositivo com um amigo lado a lado.</p>
         </button>
       </div>
+
+      <section aria-labelledby="chess-guides-title" className="mb-8 rounded-3xl border border-zinc-800 bg-zinc-900/60 p-6 sm:p-8">
+        <h2 id="chess-guides-title" className="text-xl font-bold text-white">Jogue, aprenda e evolua no xadrez</h2>
+        <p className="mt-2 max-w-3xl text-sm leading-6 text-zinc-400">Conheça as partidas online, pratique contra a inteligência artificial e estude fundamentos e táticas na Academia Vanguard.</p>
+        <nav aria-label="Guias de xadrez" className="mt-5 flex flex-wrap gap-3 text-sm font-semibold">
+          <a className="rounded-xl border border-zinc-700 px-4 py-2 text-emerald-300 transition-colors hover:border-emerald-500" href="/jogar-xadrez-online/">Jogar xadrez online</a>
+          <a className="rounded-xl border border-zinc-700 px-4 py-2 text-emerald-300 transition-colors hover:border-emerald-500" href="/aprender-xadrez/">Aprender xadrez</a>
+          <a className="rounded-xl border border-zinc-700 px-4 py-2 text-emerald-300 transition-colors hover:border-emerald-500" href="/treino-de-xadrez-com-ia/">Treinar com IA</a>
+        </nav>
+      </section>
 
       {/* Bot Menu Modal */}
       {showBotMenu && (
