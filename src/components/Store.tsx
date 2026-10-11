@@ -721,6 +721,7 @@ export default function Store({ currentUser, initialTab = 'themes' }: StoreProps
             <button
               disabled={creatingCheckout}
               onClick={async () => {
+                if (checkoutPack.isSubscription) (window as any).vanguardTrack?.('vip_checkout_opened');
                 if (creatingCheckout) return;
                 // Open synchronously in the click handler so browsers do not
                 // block the checkout popup after the API request resolves.

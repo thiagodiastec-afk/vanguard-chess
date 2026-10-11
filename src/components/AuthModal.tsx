@@ -14,7 +14,8 @@ import {
   ConfirmationResult,
   browserPopupRedirectResolver,
   setPersistence,
-  browserSessionPersistence
+  browserSessionPersistence,
+  getAdditionalUserInfo
 } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { initFirebase } from '../lib/firebase';
@@ -191,6 +192,7 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'register' }:
       const result = await signInWithPopup(auth, provider, browserPopupRedirectResolver);
       if (result.user) {
         await ensureUserInFirestore(result.user);
+        if (getAdditionalUserInfo(result)?.isNewUser) (window as any).vanguardTrack?.('sign_up', { method: 'google' });
         onClose();
       }
     } catch (err: any) {
@@ -226,6 +228,7 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'register' }:
       const result = await signInWithPopup(auth, provider, browserPopupRedirectResolver);
       if (result.user) {
         await ensureUserInFirestore(result.user);
+        if (getAdditionalUserInfo(result)?.isNewUser) (window as any).vanguardTrack?.('sign_up', { method: 'apple' });
         onClose();
       }
     } catch (err: any) {
@@ -285,6 +288,7 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'register' }:
           // ignore profile update error
         }
         await ensureUserInFirestore(userCredential.user, finalNickname);
+        (window as any).vanguardTrack?.('sign_up', { method: 'email' });
         onClose();
       } else {
         const userCredential = await signInWithEmailAndPassword(auth, email.trim(), password);
@@ -409,6 +413,7 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'register' }:
       const result = await confirmationResult.confirm(verificationCode);
       if (result.user) {
         await ensureUserInFirestore(result.user);
+        if (getAdditionalUserInfo(result)?.isNewUser) (window as any).vanguardTrack?.('sign_up', { method: 'phone' });
         onClose();
       }
     } catch (err: any) {
@@ -430,6 +435,7 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'register' }:
       if (result.user) {
         const guestName = `Convidado_${Math.floor(1000 + Math.random() * 9000)}`;
         await ensureUserInFirestore(result.user, guestName);
+        if (getAdditionalUserInfo(result)?.isNewUser) (window as any).vanguardTrack?.('sign_up', { method: 'guest' });
         onClose();
       }
     } catch (err: any) {

@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { getAuth as getFirebaseAuth, signInWithPopup, signInWithRedirect, GoogleAuthProvider, signOut, User, browserPopupRedirectResolver } from 'firebase/auth';
 import { doc, collection, onSnapshot, query, where, or, updateDoc, addDoc } from 'firebase/firestore';
 import { initFirebase, getDb, getFirebaseAuth as getFirebaseInstance } from './lib/firebase';
@@ -54,6 +54,25 @@ export default function App() {
   const [isLeavingGameForHome, setIsLeavingGameForHome] = useState(false);
   const [homeExitError, setHomeExitError] = useState<string | null>(null);
   const [guestSuspendedUntil, setGuestSuspendedUntil] = useState(0);
+  const lastAnalyticsTab = useRef<Tab | null>(null);
+  const analyticsGameMode = activeGame?.status === 'playing'
+    ? 'online'
+    : computerGameDifficulty
+      ? 'computer'
+      : isLocalGame
+        ? 'local'
+        : null;
+
+  useEffect(() => {
+    if (lastAnalyticsTab.current && lastAnalyticsTab.current !== activeTab) {
+      (window as any).vanguardTrack?.('page_view', { screen_name: activeTab });
+    }
+    lastAnalyticsTab.current = activeTab;
+  }, [activeTab]);
+
+  useEffect(() => {
+    if (analyticsGameMode) (window as any).vanguardTrack?.('game_start', { mode: analyticsGameMode });
+  }, [analyticsGameMode]);
 
   // Quick Nickname Editing in Settings
   const [editNickname, setEditNickname] = useState('');

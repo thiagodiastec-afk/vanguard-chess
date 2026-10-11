@@ -1,5 +1,5 @@
 import jsPDF from 'jspdf';
-import { Mail, Shield, FileText, Code, Server, HeartHandshake, Download } from 'lucide-react';
+import { Mail, Phone, Shield, FileText, Code, Server, HeartHandshake, Download } from 'lucide-react';
 import { cn } from '../lib/utils';
 
 export default function About() {
@@ -62,13 +62,22 @@ export default function About() {
           </p>
           
           <div className="flex flex-col gap-3 mt-4">
-            <a href="mailto:suporte@vanguardchess.com.br" className="flex items-center gap-3 bg-zinc-950 border border-zinc-800 p-4 rounded-lg hover:border-amber-500/50 transition-colors group">
+            <a href="mailto:thiagodiastec@gmail.com" className="flex items-center gap-3 bg-zinc-950 border border-zinc-800 p-4 rounded-lg hover:border-amber-500/50 transition-colors group">
               <div className="bg-zinc-900 p-2 rounded group-hover:bg-amber-500/10 transition-colors">
                 <Mail className="w-5 h-5 text-amber-500" />
               </div>
               <div>
                 <div className="text-sm font-medium text-zinc-200">E-mail de Suporte</div>
-                <div className="text-sm text-zinc-500">suporte@vanguardchess.com.br</div>
+                <div className="text-sm text-zinc-500">thiagodiastec@gmail.com</div>
+              </div>
+            </a>
+            <a href="https://wa.me/5519988225943" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 bg-zinc-950 border border-zinc-800 p-4 rounded-lg hover:border-amber-500/50 transition-colors group">
+              <div className="bg-zinc-900 p-2 rounded group-hover:bg-amber-500/10 transition-colors">
+                <Phone className="w-5 h-5 text-amber-500" />
+              </div>
+              <div>
+                <div className="text-sm font-medium text-zinc-200">WhatsApp</div>
+                <div className="text-sm text-zinc-500">+55 19 98822-5943</div>
               </div>
             </a>
           </div>
@@ -134,7 +143,7 @@ comunidade enxadrística.
           </div>
           <div className="flex flex-col gap-2 text-sm text-zinc-400">
             <a href="#" className="hover:text-amber-500 transition-colors">» Termos de Serviço</a>
-            <a href="#" className="hover:text-amber-500 transition-colors">» Política de Privacidade</a>
+            <a href="/politica-de-privacidade/" className="hover:text-amber-500 transition-colors">» Política de Privacidade</a>
             <a href="#" className="hover:text-amber-500 transition-colors">» Regras de Fair Play (Jogo Justo)</a>
             <a href="#" className="hover:text-amber-500 transition-colors">» Política de Reembolso (VIP e Moedas)</a>
           </div>
