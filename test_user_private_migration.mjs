@@ -29,6 +29,7 @@ await profileRef.set({
   stats: { wins: 6, losses: 2, draws: 0 }, eloHistory: [{ date: 100, elo: 1300 }, { date: 200, elo: 1420 }],
   coins: 1725, unlockedThemes: ['luxury', 'classic', 'gold'],
   unlockedBackgrounds: ['default', 'deep-space'], isPremium: true,
+  activeTheme: 'galaxy', activeBackground: 'abstract-waves',
   premiumUntil, paymentHistory: [{ id: 'old-payment' }]
 });
 
@@ -47,8 +48,15 @@ assert.equal(dryRun.status, 0, `Migration dry-run failed (status ${dryRun.status
 assert.equal((await profileRef.get()).get('coins'), 1725, 'Dry-run must leave legacy public data untouched');
 assert.equal((await profileRef.get()).get('elo'), 1420, 'Dry-run must not reset legacy competitive data');
 
+const unconfirmedApply = spawnSync(process.execPath, ['scripts/migrate_user_private.mjs', '--apply'], {
+  cwd: process.cwd(), env: childEnv, encoding: 'utf8', timeout: 20_000
+});
+assert.notEqual(unconfirmedApply.status, 0, 'Apply must require explicit confirmation of the possible Elo reset');
+assert.equal((await profileRef.get()).get('coins'), 1725, 'Rejected apply must not alter legacy public data');
+assert.equal((await profileRef.get()).get('elo'), 1420, 'Rejected apply must not reset legacy competitive data');
+
 for (let run = 1; run <= 2; run++) {
-  const result = spawnSync(process.execPath, ['scripts/migrate_user_private.mjs', '--apply'], {
+  const result = spawnSync(process.execPath, ['scripts/migrate_user_private.mjs', '--apply', '--confirm-rating-reset'], {
     cwd: process.cwd(), env: childEnv, encoding: 'utf8', timeout: 20_000
   });
   if (result.stdout) process.stdout.write(result.stdout);
@@ -70,6 +78,8 @@ for (let run = 1; run <= 2; run++) {
 const [publicProfile, privateProfile] = await Promise.all([profileRef.get(), privateRef.get()]);
 assert.equal(publicProfile.get('profileSchemaVersion'), 2);
 assert.equal(publicProfile.get('hasPremiumBadge'), true);
+assert.equal(publicProfile.get('activeTheme'), 'luxury', 'Unowned active theme must be normalized during migration');
+assert.equal(publicProfile.get('activeBackground'), 'default', 'Unowned active background must be normalized during migration');
 assert.equal(publicProfile.get('elo'), 1288, 'Repeat migration must preserve newly verified Elo');
 assert.equal(publicProfile.get('gamesPlayed'), 1);
 assert.deepEqual(publicProfile.get('stats'), { wins: 1, losses: 0, draws: 0 });

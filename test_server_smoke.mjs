@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
+import { createHmac } from 'node:crypto';
 import { createServer } from 'node:net';
 import { once } from 'node:events';
 import path from 'node:path';
@@ -7,6 +8,7 @@ import { fileURLToPath } from 'node:url';
 
 const projectRoot = path.dirname(fileURLToPath(import.meta.url));
 const port = await reservePort();
+const webhookSecret = 'local-smoke-test-webhook-secret';
 const child = spawn(process.execPath, ['dist/server.cjs'], {
   cwd: projectRoot,
   windowsHide: true,
@@ -15,7 +17,8 @@ const child = spawn(process.execPath, ['dist/server.cjs'], {
     ...(process.env.SystemRoot ? { SystemRoot: process.env.SystemRoot } : {}),
     NODE_ENV: 'production',
     PORT: String(port),
-    FIRESTORE_DATABASE_ID: 'demo-vanguard-chess'
+    FIRESTORE_DATABASE_ID: 'demo-vanguard-chess',
+    MERCADO_PAGO_WEBHOOK_SECRET: webhookSecret
   },
   stdio: ['ignore', 'pipe', 'pipe']
 });
@@ -63,6 +66,35 @@ try {
   });
   assert.equal(webhook.status, 401, 'Payment webhook must reject unsigned requests');
 
+  const paymentId = '123456';
+  const requestId = 'smoke-request-123';
+  const timestamp = String(Date.now());
+  const manifest = `id:${paymentId};request-id:${requestId};ts:${timestamp};`;
+  const digest = createHmac('sha256', webhookSecret).update(manifest).digest('hex');
+  const validSignedWebhook = await fetch(`http://127.0.0.1:${port}/api/payment/webhook?type=payment&data.id=${paymentId}`, {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      'x-request-id': requestId,
+      'x-signature': `ts=${timestamp},v1=${digest}`
+    },
+    body: JSON.stringify({ type: 'payment', data: { id: paymentId } }),
+    signal: AbortSignal.timeout(5_000)
+  });
+  assert.equal(validSignedWebhook.status, 503, 'Valid signature must reach the explicit missing-integration guard without contacting providers');
+
+  const malformedSignedWebhook = await fetch(`http://127.0.0.1:${port}/api/payment/webhook?type=payment&data.id=${paymentId}`, {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      'x-request-id': requestId,
+      'x-signature': `ts=${timestamp},v1=${digest}zz`
+    },
+    body: JSON.stringify({ type: 'payment', data: { id: paymentId } }),
+    signal: AbortSignal.timeout(5_000)
+  });
+  assert.equal(malformedSignedWebhook.status, 401, 'Malformed signature must be rejected before checking payment configuration');
+
   for (const route of ['/api/game-end', '/api/reward-ad']) {
     const response = await fetch(`http://127.0.0.1:${port}${route}`, {
       method: 'POST',
@@ -72,7 +104,7 @@ try {
     });
     assert.equal(response.status, 503, `${route} must stay disabled until server-verified rewards are implemented`);
   }
-  console.log(`Production server smoke test: PASS (${protectedRoutes.length} protected routes return 401; unsigned webhook 401; game/ad rewards 503).`);
+  console.log(`Production server smoke test: PASS (${protectedRoutes.length} protected routes return 401; unsigned and malformed webhooks 401; valid HMAC reaches unconfigured-provider guard 503; game/ad rewards 503).`);
 } catch (error) {
   if (output.trim()) process.stderr.write(output);
   throw error;

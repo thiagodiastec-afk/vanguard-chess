@@ -12,6 +12,8 @@
     "test:smoke": "tsx test_project_smoke.ts",
     "test:rules": "npx --yes firebase-tools@14.23.0 emulators:exec --only firestore --project demo-vanguard-chess \"node test_firestore_rules.mjs && node test_user_private_migration.mjs\"",
     "test:server": "node test_server_smoke.mjs",
+    "test:ai-fallback": "tsx test_ai_fallback.ts",
+    "test:payment-signature": "tsx test_mercado_pago_webhook.ts",
     "migrate:private-users": "node scripts/migrate_user_private.mjs",
     "test:full": "npm test && npm run test:phase513 && npm run test:phase513:residual && tsx test_phase59_backend_equivalence.ts && tsx test_phase510_make_undo.ts && tsx test_phase511_evaluation_equivalence.ts",
     "test:phase513": "tsx test_phase513_zobrist_incremental.ts",

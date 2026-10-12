@@ -1,6 +1,7 @@
 import dotenv from 'dotenv';
 import { cert, initializeApp } from 'firebase-admin/app';
 import { FieldPath, FieldValue, getFirestore } from 'firebase-admin/firestore';
+import { readFile } from 'node:fs/promises';
 
 dotenv.config();
 
@@ -10,11 +11,24 @@ const databaseId = process.env.FIRESTORE_DATABASE_ID;
 if (!databaseId) throw new Error('FIRESTORE_DATABASE_ID must be configured before migration.');
 
 const serviceAccount = JSON.parse(serviceAccountJson);
+const firebaseWebConfig = JSON.parse(await readFile(new URL('../firebase-applet-config.json', import.meta.url), 'utf8'));
+if (!process.env.FIRESTORE_EMULATOR_HOST) {
+  if (serviceAccount.project_id !== firebaseWebConfig.projectId) {
+    throw new Error('FIREBASE_SERVICE_ACCOUNT belongs to a different Firebase project than firebase-applet-config.json.');
+  }
+  if (databaseId !== firebaseWebConfig.firestoreDatabaseId) {
+    throw new Error('FIRESTORE_DATABASE_ID does not match firebase-applet-config.json; refusing to migrate another database.');
+  }
+}
 const app = initializeApp({ credential: cert(serviceAccount), projectId: serviceAccount.project_id });
 const db = getFirestore(app, databaseId);
 const users = db.collection('users');
 const PAGE_SIZE = 100;
 const applyMigration = process.argv.includes('--apply');
+const confirmedRatingReset = process.argv.includes('--confirm-rating-reset');
+if (applyMigration && !confirmedRatingReset) {
+  throw new Error('Applying this migration can reset legacy Elo/statistics. Review the dry run and pass --confirm-rating-reset with --apply.');
+}
 const paidThemeIds = new Set([
   'blue', 'coral', 'dark', 'neon', 'marble', 'gold', 'amethyst', 'forest', 'ruby', 'obsidian', 'galaxy'
 ]);
@@ -27,7 +41,7 @@ let cursor;
 let migrated = 0;
 let failed = 0;
 
-if (!applyMigration) console.log('DRY RUN: no documents will be changed. Pass --apply to perform the migration.');
+if (!applyMigration) console.log('DRY RUN: no documents will be changed. Review the plan before applying.');
 
 while (true) {
   let pageQuery = users.orderBy(FieldPath.documentId()).limit(PAGE_SIZE);
@@ -70,6 +84,12 @@ while (true) {
           premiumUntil,
           competitiveDataVersion: 1
         };
+        const requestedTheme = typeof profile.activeTheme === 'string' ? profile.activeTheme : 'luxury';
+        const requestedBackground = typeof profile.activeBackground === 'string' ? profile.activeBackground : 'default';
+        const activeTheme = ['luxury', 'classic', 'vidro'].includes(requestedTheme) || themes.includes(requestedTheme)
+          ? requestedTheme : 'luxury';
+        const activeBackground = ['default', 'midnight-blue'].includes(requestedBackground) || backgrounds.includes(requestedBackground)
+          ? requestedBackground : 'default';
         if (needsCompetitiveBaseline) {
           privateProfile.legacyCompetitiveRecord = existing.legacyCompetitiveRecord || legacyCompetitiveSnapshot(profile);
         }
@@ -85,6 +105,8 @@ while (true) {
           isPremium: FieldValue.delete(),
           premiumUntil: FieldValue.delete(),
           paymentHistory: FieldValue.delete(),
+          activeTheme,
+          activeBackground,
           hasPremiumBadge: isPremium && premiumUntil > Date.now(),
           ...(needsCompetitiveBaseline ? {
             elo: 1200,

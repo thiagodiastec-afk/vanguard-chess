@@ -18,6 +18,7 @@ interface GlobalMessage {
     es?: string;
     [key: string]: string | undefined;
   };
+  translationAvailable?: boolean;
   timestamp: number;
 }
 
@@ -118,7 +119,7 @@ export default function GlobalChatBox({ currentUser, className }: GlobalChatBoxP
           <div className="h-full flex flex-col items-center justify-center text-neutral-500 text-sm gap-2">
             <Globe2 className="w-8 h-8 opacity-20" />
             <p>Nenhuma mensagem ainda.</p>
-            <p className="text-xs opacity-60">Mensagens serão traduzidas via IA.</p>
+            <p className="text-xs opacity-60">Mensagens são traduzidas pela IA quando disponível.</p>
           </div>
         ) : (
           messages.map(msg => {
@@ -135,6 +136,11 @@ export default function GlobalChatBox({ currentUser, className }: GlobalChatBoxP
                 )}>
                   {displayText}
                 </div>
+                {msg.translationAvailable === false && (
+                  <span className="mt-1 px-1 text-[11px] text-neutral-500">
+                    Tradução indisponível · exibindo mensagem original
+                  </span>
+                )}
               </div>
             );
           })

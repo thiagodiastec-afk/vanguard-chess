@@ -8,10 +8,13 @@ import { GoogleGenAI } from "@google/genai";
 import { initializeApp, cert } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
-import { createHash, createHmac, randomBytes, timingSafeEqual } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import { Chess } from "chess.js";
 import { ACADEMY_LESSONS } from './src/lib/academyCourse';
+import { getGeminiFailureResponse, getGeminiStatus, parseChatTranslations } from './src/lib/aiFallback';
+import { isValidMercadoPagoSignature as validateMercadoPagoSignature } from './src/lib/mercadoPagoWebhook';
 import { validateUsername } from './src/lib/username';
+import firebaseWebConfig from './firebase-applet-config.json';
 
 const FIRESTORE_DATABASE_ID = process.env.FIRESTORE_DATABASE_ID?.trim();
 if (!FIRESTORE_DATABASE_ID) {
@@ -121,7 +124,7 @@ async function startServer() {
         const needsCompetitiveBaseline = privateData.competitiveDataVersion !== 1;
         const legacyThemes = Array.isArray(profile.unlockedThemes) ? profile.unlockedThemes : [];
         const legacyBackgrounds = Array.isArray(profile.unlockedBackgrounds) ? profile.unlockedBackgrounds : [];
-        const validThemes = new Set(['luxury', 'classic', 'wood', ...Object.keys(STORE_COSMETICS.theme)]);
+        const validThemes = new Set(['luxury', 'classic', 'vidro', 'wood', ...Object.keys(STORE_COSMETICS.theme)]);
         const validBackgrounds = new Set(['default', ...Object.keys(STORE_COSMETICS.background)]);
         const themes = Array.isArray(privateData.unlockedThemes) ? privateData.unlockedThemes : legacyThemes;
         const backgrounds = Array.isArray(privateData.unlockedBackgrounds) ? privateData.unlockedBackgrounds : legacyBackgrounds;
@@ -140,6 +143,12 @@ async function startServer() {
         }
         if (!privateProfile.unlockedThemes.length) privateProfile.unlockedThemes = ['luxury', 'classic'];
         if (!privateProfile.unlockedBackgrounds.length) privateProfile.unlockedBackgrounds = ['default'];
+        const requestedTheme = typeof profile.activeTheme === 'string' ? profile.activeTheme : 'luxury';
+        const requestedBackground = typeof profile.activeBackground === 'string' ? profile.activeBackground : 'default';
+        const activeTheme = ['luxury', 'classic', 'vidro'].includes(requestedTheme) || privateProfile.unlockedThemes.includes(requestedTheme)
+          ? requestedTheme : 'luxury';
+        const activeBackground = ['default', 'midnight-blue'].includes(requestedBackground) || privateProfile.unlockedBackgrounds.includes(requestedBackground)
+          ? requestedBackground : 'default';
         const paymentHistory = privateData.paymentHistory ?? profile.paymentHistory;
         if (Array.isArray(paymentHistory)) privateProfile['paymentHistory'] = paymentHistory;
 
@@ -149,6 +158,8 @@ async function startServer() {
           transaction.update(profileRef, {
             ...removedPrivateFields,
             profileSchemaVersion: 2,
+            activeTheme,
+            activeBackground,
             ...(invalidExistingName ? { displayName: 'Jogador', hasSetNickname: false } : {}),
             hasPremiumBadge: privateProfile.isPremium && privateProfile.premiumUntil > now,
             ...(needsCompetitiveBaseline ? {
@@ -168,6 +179,7 @@ async function startServer() {
             hasSetNickname: Boolean(authProfile.displayName) && !invalidAuthName,
             elo: 1200,
             gamesPlayed: 0,
+            activeTheme,
             activeBackground: 'default',
             hasPremiumBadge: privateProfile.isPremium && privateProfile.premiumUntil > now
           });
@@ -253,14 +265,10 @@ Partida: ${pgn}`;
 
       res.json({ analysis: response.text });
     } catch (error: any) {
-      console.error("Erro na análise da IA:", error);
-      let errorMessage = "Falha ao gerar análise da partida. Tente novamente mais tarde.";
-
-      if (error?.status === 503) {
-        errorMessage = "O treinador IA está muito requisitado no momento. Por favor, tente novamente em alguns instantes.";
-      }
-
-      res.status(500).json({ error: errorMessage });
+      const failure = getGeminiFailureResponse(error, 'analysis');
+      // Keep raw provider errors out of logs and responses; they can contain request metadata.
+      console.error("Gemini analysis request failed", { status: failure.upstreamStatus ?? "unknown" });
+      return res.status(failure.statusCode).json({ error: failure.message });
     }
   });
 
@@ -273,7 +281,11 @@ function getAdmin() {
     if (!serviceAccountStr) {
       throw new Error("FIREBASE_SERVICE_ACCOUNT_MISSING");
     }
-    adminApp = initializeApp({ credential: cert(JSON.parse(serviceAccountStr)) });
+    const serviceAccount = JSON.parse(serviceAccountStr);
+    if (serviceAccount.project_id !== firebaseWebConfig.projectId) {
+      throw new Error('FIREBASE_SERVICE_ACCOUNT belongs to a different Firebase project than firebase-applet-config.json.');
+    }
+    adminApp = initializeApp({ credential: cert(serviceAccount), projectId: firebaseWebConfig.projectId });
   }
   return adminApp;
 }
@@ -449,8 +461,9 @@ Oriente o aluno a verificar xeques, capturas e ameaças. Baseie-se somente na po
     const response = await ai.models.generateContent({ model: 'gemini-3.8-flash', contents: prompt });
     res.json({ answer: String(response.text || '').slice(0, 3000) });
   } catch (error: any) {
-    console.error('Academy AI coach error:', error?.message || error);
-    res.status(503).json({ error: 'O treinador IA está ocupado ou indisponível. Tente novamente em instantes.' });
+    const failure = getGeminiFailureResponse(error, 'academy');
+    console.error('Academy AI coach request failed', { status: failure.upstreamStatus ?? 'unknown' });
+    return res.status(failure.statusCode).json({ error: failure.message });
   }
 });
 
@@ -570,23 +583,6 @@ function legacyCompetitiveSnapshot(profile) {
   };
 }
 
-function isValidMercadoPagoSignature(req, dataId) {
-  const secret = process.env.MERCADO_PAGO_WEBHOOK_SECRET;
-  const signature = req.get('x-signature');
-  const requestId = req.get('x-request-id');
-  if (!secret || !signature || !requestId || !dataId) return false;
-  const parts = Object.fromEntries(signature.split(',').map((part) => {
-    const separator = part.indexOf('=');
-    return separator < 0 ? ['', ''] : [part.slice(0, separator).trim(), part.slice(separator + 1).trim()];
-  }));
-  if (!parts.ts || !parts.v1) return false;
-  const manifest = `id:${dataId};request-id:${requestId};ts:${parts.ts};`;
-  const expected = createHmac('sha256', secret).update(manifest).digest();
-  let received;
-  try { received = Buffer.from(parts.v1, 'hex'); } catch { return false; }
-  return received.length === expected.length && timingSafeEqual(received, expected);
-}
-
   app.post("/api/move", async (req, res) => {
     try {
       const userId = await authenticatedUid(req, res);
@@ -687,40 +683,39 @@ function isValidMercadoPagoSignature(req, dataId) {
       }
       const apiKey = process.env.GEMINI_API_KEY;
 
-      if (!apiKey) {
-        return res.status(500).json({ error: "GEMINI_API_KEY is not configured on the server." });
-      }
-
       const adminApp = getAdmin();
       const db = getFirestore(adminApp, FIRESTORE_DATABASE_ID);
       const userSnapshot = await db.collection('users').doc(userId).get();
       if (!userSnapshot.exists) return res.status(403).json({ error: 'User profile not found' });
       const userName = String(userSnapshot.data()?.displayName || 'Jogador').slice(0, 40);
 
-      const ai = new GoogleGenAI({
-        apiKey,
-        httpOptions: { headers: { 'User-Agent': 'aistudio-build' } }
-      });
+      let translations = {};
+      let translationAvailable = false;
+      if (apiKey) {
+        try {
+          const ai = new GoogleGenAI({
+            apiKey,
+            httpOptions: { headers: { 'User-Agent': 'aistudio-build' } }
+          });
 
-      const prompt = `Translate the following chat message into English, Portuguese, and Spanish.
+          const prompt = `Translate the following chat message into English, Portuguese, and Spanish.
 Return ONLY a valid JSON object with the keys "en", "pt", and "es". Do not include any markdown formatting like \`\`\`json.
 Original message: "${text}"`;
 
-      const response = await ai.models.generateContent({
-        model: "gemini-3.8-flash",
-        contents: prompt,
-      });
+          const response = await ai.models.generateContent({
+            model: "gemini-3.8-flash",
+            contents: prompt,
+          });
 
-      let translations;
-      try {
-        let rawText = response.text.trim();
-        if (rawText.startsWith('\`\`\`json')) rawText = rawText.substring(7);
-        if (rawText.startsWith('\`\`\`')) rawText = rawText.substring(3);
-        if (rawText.endsWith('\`\`\`')) rawText = rawText.substring(0, rawText.length - 3);
-        translations = JSON.parse(rawText.trim());
-      } catch (err) {
-        // Fallback to original text if parsing fails
-        translations = { en: text, pt: text, es: text };
+          const parsed = parseChatTranslations(response.text);
+          if (parsed) {
+            translations = parsed;
+            translationAvailable = true;
+          }
+        } catch (error: any) {
+          const status = getGeminiStatus(error);
+          console.warn('Global chat translation unavailable', { status: status ?? 'unknown' });
+        }
       }
 
       const messageDoc = {
@@ -728,6 +723,7 @@ Original message: "${text}"`;
         userName,
         originalText: text,
         translations,
+        translationAvailable,
         timestamp: Date.now()
       };
 
@@ -1434,7 +1430,12 @@ Original message: "${text}"`;
       const dataId = String(req.query['data.id'] || data?.id || '');
       if (!['payment', 'subscription_preapproval', 'subscription_authorized_payment'].includes(type)) return res.sendStatus(200);
       if (!/^[A-Za-z0-9_-]{1,128}$/.test(dataId)) return res.sendStatus(200);
-      if (!isValidMercadoPagoSignature(req, dataId)) return res.status(401).send('Invalid signature');
+      if (!validateMercadoPagoSignature({
+        secret: process.env.MERCADO_PAGO_WEBHOOK_SECRET,
+        signature: req.get('x-signature'),
+        requestId: req.get('x-request-id'),
+        dataId
+      })) return res.status(401).send('Invalid signature');
       if (!process.env.MERCADO_PAGO_ACCESS_TOKEN || !process.env.FIREBASE_SERVICE_ACCOUNT) {
         return res.status(503).send('Payment processing is not configured');
       }

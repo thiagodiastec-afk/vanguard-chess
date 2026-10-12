@@ -47,7 +47,7 @@ Copie `.env.example` para `.env` em desenvolvimento. O arquivo `.env` é ignorad
 - `MERCADO_PAGO_ACCESS_TOKEN` e `MERCADO_PAGO_WEBHOOK_SECRET`: credenciais do ambiente Mercado Pago correspondente.
 - `APP_URL`: origem pública HTTPS; o webhook recebe notificações em `/api/payment/webhook`.
 - `GEMINI_API_KEY`: chave usada pela análise e tradução de mensagens.
-- `PORT`: porta HTTP fornecida pelo ambiente.
+- `PORT`: opcional; o servidor usa `3000` como padrão e respeita a porta definida pela plataforma de hospedagem.
 
 Não use prefixo `VITE_` para segredos. A configuração web Firebase em `firebase-applet-config.json` identifica o projeto cliente; não substitui as credenciais Admin do servidor.
 
@@ -57,7 +57,7 @@ O servidor exige `FIRESTORE_DATABASE_ID` explicitamente e não escolhe um banco 
 ## Antes de publicar
 
 1. Confirme o projeto e o banco Firestore de destino. Publique as regras e índices de `firebase.json` somente no destino revisado.
-2. Rode `npm run migrate:private-users` com credenciais Admin para simulação e revise contagens e erros. A migração efetiva exige `npm run migrate:private-users -- --apply`.
+2. Rode `npm run migrate:private-users` com credenciais Admin para simulação e revise contagens e erros. A aplicação exige `npm run migrate:private-users -- --apply --confirm-rating-reset`; o script recusa projeto ou banco que não correspondam à configuração Firebase do site.
 3. A migração efetiva move carteira/assinatura para `/userPrivate/{uid}` e rebaselines dados competitivos legados sem marcador privado para Elo 1200, estatísticas zeradas e histórico público vazio. Os valores anteriores são arquivados privadamente (até 100 entradas de Elo). Planeje a comunicação dessa mudança antes de aplicá-la.
 4. Migre os perfis antes de depender das consultas públicas versão 2. O bootstrap por login é uma rede de segurança, não substitui a migração em lote.
 5. Configure e valide Firebase Admin, Mercado Pago em sandbox, URL HTTPS, webhook e Gemini. Conclua testes de ponta a ponta com duas contas.

@@ -13,11 +13,32 @@ service cloud.firestore {
     function isOwner(userId) { return isSignedIn() && request.auth.uid == userId; }
     function incoming() { return request.resource.data; }
     function existing() { return resource.data; }
+    function ownsCosmetic(userId, field, cosmeticId) {
+      let privatePath = /databases/$(database)/documents/userPrivate/$(userId);
+      return exists(privatePath)
+        && field in get(privatePath).data
+        && get(privatePath).data[field] is list
+        && get(privatePath).data[field].hasAny([cosmeticId]);
+    }
+    function canEquipTheme(userId, themeId) {
+      return themeId in ['luxury', 'classic', 'vidro'] || ownsCosmetic(userId, 'unlockedThemes', themeId);
+    }
+    function canEquipBackground(userId, backgroundId) {
+      return backgroundId in ['default', 'midnight-blue']
+        || ownsCosmetic(userId, 'unlockedBackgrounds', backgroundId);
+    }
     function canStartGame() {
       let privatePath = /databases/$(database)/documents/userPrivate/$(request.auth.uid);
       return !exists(privatePath)
         || !('playSuspendedUntil' in get(privatePath).data)
         || get(privatePath).data.playSuspendedUntil <= request.time.toMillis();
+    }
+    function isGameParticipant(gameId) {
+      let gamePath = /databases/$(database)/documents/games/$(gameId);
+      return isSignedIn()
+        && exists(gamePath)
+        && (get(gamePath).data.whiteId == request.auth.uid
+          || get(gamePath).data.blackId == request.auth.uid);
     }
     function changedUserFields() {
       return request.resource.data.diff(resource.data).affectedKeys();
@@ -36,7 +57,9 @@ service cloud.firestore {
         && changedUserFields().hasOnly([
           'isOnline', 'lastSeen',
           'activeTheme', 'activeBackground', 'friends'
-        ]);
+        ])
+        && (!changedUserFields().hasAny(['activeTheme']) || canEquipTheme(userId, incoming().activeTheme))
+        && (!changedUserFields().hasAny(['activeBackground']) || canEquipBackground(userId, incoming().activeBackground));
       allow delete: if false;
     }
 
@@ -130,13 +153,20 @@ service cloud.firestore {
     }
     // Reports (Anti-Cheat)
     match /reports/{reportId} {
-      allow create: if isSignedIn() && incoming().reporterId == request.auth.uid;
-      allow read: if false; // Only admins/backend can read
+      // No client reporting flow exists yet. Prevent arbitrary documents and
+      // storage abuse until reports have a validated server-owned workflow.
+      allow read, write: if false;
     }
 
     // Room Chats (Game Chat)
     match /messages/{messageId} {
-      allow read: if true;
+      // Private match messages contain user IDs and chat text. Derive the game
+      // from the existing roomId format so old messages remain available only
+      // to the two players in that game.
+      allow read: if isSignedIn()
+        && resource.data.roomId is string
+        && resource.data.roomId.matches('game_[A-Za-z0-9_-]{1,128}')
+        && isGameParticipant(resource.data.roomId.split('game_')[1]);
       allow create: if false; // Server validates membership, rate limits, and message size.
       allow update, delete: if false;
     }

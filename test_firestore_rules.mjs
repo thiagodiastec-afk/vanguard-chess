@@ -60,6 +60,41 @@ try {
   await assertFails(deleteDoc(doc(bob, 'queue/alice')));
   await assertSucceeds(deleteDoc(doc(alice, 'queue/alice')));
 
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    await setDoc(doc(context.firestore(), 'userPrivate/alice'), {
+      ...privateStarter, playSuspendedUntil: Date.now() - 60_000
+    });
+  });
+  await assertSucceeds(setDoc(doc(alice, 'queue/alice'), {
+    uid: 'alice', elo: 1200, timeControl: 300, createdAt: Date.now()
+  }), 'An expired play suspension must allow matchmaking.');
+  await assertSucceeds(deleteDoc(doc(alice, 'queue/alice')));
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    await setDoc(doc(context.firestore(), 'userPrivate/alice'), {
+      ...privateStarter, playSuspendedUntil: Date.now() + 60_000
+    });
+  });
+  await assertFails(setDoc(doc(alice, 'queue/alice'), {
+    uid: 'alice', elo: 1200, timeControl: 300, createdAt: Date.now()
+  }), 'An active play suspension must block matchmaking.');
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    await setDoc(doc(context.firestore(), 'userPrivate/alice'), {
+      ...privateStarter, playSuspendedUntil: Date.now() - 60_000
+    });
+  });
+  await assertFails(updateDoc(doc(alice, 'users/alice'), { activeTheme: 'blue' }));
+  await assertFails(updateDoc(doc(alice, 'users/alice'), { activeBackground: 'deep-space' }));
+  await assertSucceeds(updateDoc(doc(alice, 'users/alice'), { activeTheme: 'vidro' }));
+  await assertSucceeds(updateDoc(doc(alice, 'users/alice'), { activeBackground: 'midnight-blue' }));
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    await setDoc(doc(context.firestore(), 'userPrivate/alice'), {
+      ...privateStarter, unlockedThemes: ['luxury', 'classic', 'blue'],
+      unlockedBackgrounds: ['default', 'deep-space']
+    });
+  });
+  await assertSucceeds(updateDoc(doc(alice, 'users/alice'), { activeTheme: 'blue' }));
+  await assertSucceeds(updateDoc(doc(alice, 'users/alice'), { activeBackground: 'deep-space' }));
+
   const tournament = {
     id: 'blitz-arena', name: 'Blitz Arena 3|0', format: 'round-robin',
     minElo: 1000, maxElo: 2000, prize: '500 Coins', startsAt: Date.now() + 7200000,
@@ -140,10 +175,38 @@ try {
   await assertSucceeds(getDoc(doc(alice, 'games/private-invite')));
 
   await assertFails(getDoc(doc(anonymous, 'processedPayments/123')));
+  await assertFails(setDoc(doc(alice, 'reports/arbitrary'), {
+    reporterId: 'alice', targetId: 'bob', reason: 'spam', payload: 'unvalidated'
+  }));
   await assertFails(setDoc(doc(alice, 'messages/client-created'), {
     roomId: 'game_sample', uid: 'alice', displayName: 'Alice', text: 'hello', createdAt: Date.now()
   }));
-  console.log('Firestore rules: 53 security assertions passed.');
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    await setDoc(doc(context.firestore(), 'messages/alice-message'), {
+      roomId: 'game_server-created', uid: 'alice', displayName: 'Alice', text: 'private move', createdAt: Date.now()
+    });
+    await setDoc(doc(context.firestore(), 'messages/bob-message'), {
+      roomId: 'game_server-created', uid: 'bob', displayName: 'Bob', text: 'your turn', createdAt: Date.now()
+    });
+    await setDoc(doc(context.firestore(), 'messages/invalid-room'), {
+      roomId: 'global', uid: 'alice', displayName: 'Alice', text: 'wrong room', createdAt: Date.now()
+    });
+    await setDoc(doc(context.firestore(), 'globalChat/public-message'), {
+      uid: 'alice', displayName: 'Alice', text: 'public chat', createdAt: Date.now()
+    });
+  });
+  await assertSucceeds(getDoc(doc(alice, 'messages/alice-message')));
+  await assertSucceeds(getDoc(doc(bob, 'messages/alice-message')));
+  await assertFails(getDoc(doc(testEnv.authenticatedContext('mallory').firestore(), 'messages/alice-message')));
+  await assertFails(getDoc(doc(anonymous, 'messages/alice-message')));
+  await assertFails(getDoc(doc(alice, 'messages/invalid-room')));
+  await assertSucceeds(getDocs(query(collection(alice, 'messages'), where('roomId', '==', 'game_server-created'))));
+  await assertFails(getDocs(query(
+    collection(testEnv.authenticatedContext('mallory').firestore(), 'messages'),
+    where('roomId', '==', 'game_server-created')
+  )));
+  await assertSucceeds(getDoc(doc(anonymous, 'globalChat/public-message')));
+  console.log('Firestore rules: private game chat read isolation verified.');
 } finally {
   await testEnv.cleanup();
 }
