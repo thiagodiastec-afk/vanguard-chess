@@ -15,6 +15,8 @@ import { Chess } from 'chess.js';
 import { calculateBestMove, evaluateBoard, minimax, orderMoves } from './src/lib/engine.ts';
 import { SANITIZED_BENCHMARK_POSITIONS } from './src/lib/analysis/engineBenchmark/benchmarkPositions.ts';
 import * as fs from 'fs';
+import * as path from 'path';
+import { randomBytes } from 'crypto';
 
 // ============================================================
 // TYPES
@@ -403,9 +405,12 @@ function runBenchmark(label: string): BenchmarkOutput {
 // ============================================================
 
 const label = process.argv[2] || 'BASELINE';
-const outputFile = process.argv[3] || `benchmark_${label.toLowerCase()}.json`;
+const outputDirectory = path.join(process.cwd(), 'benchmark-results');
+const outputId = randomBytes(8).toString('hex');
+const outputFile = path.join(outputDirectory, `benchmark_${outputId}.json`);
 
 const result = runBenchmark(label);
 
-fs.writeFileSync(outputFile, JSON.stringify(result, null, 2));
-console.log(`\nResults saved to: ${outputFile}`);
+fs.mkdirSync(outputDirectory, { recursive: true });
+fs.writeFileSync(outputFile, JSON.stringify(result, null, 2), { flag: 'wx' });
+console.log(`\nResults saved to: ${path.relative(process.cwd(), outputFile)}`);

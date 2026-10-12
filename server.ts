@@ -2,6 +2,7 @@ import { MercadoPagoConfig, Preference, Payment } from 'mercadopago';
 import dotenv from "dotenv";
 dotenv.config();
 import express from "express";
+import { rateLimit } from 'express-rate-limit';
 import path from "path";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI } from "@google/genai";
@@ -46,6 +47,28 @@ async function startServer() {
   const app = express();
   const PORT = Number.parseInt(process.env.PORT || '3000', 10);
   if (!Number.isInteger(PORT) || PORT < 1 || PORT > 65535) throw new Error('PORT must be a valid TCP port');
+
+  // Render terminates inbound connections at one trusted reverse-proxy hop.
+  // This lets Express rate limits use the visitor IP instead of Render's proxy IP.
+  app.set('trust proxy', 1);
+  const apiIpRateLimit = rateLimit({
+    windowMs: 15 * 60_000,
+    limit: 6000,
+    standardHeaders: 'draft-8',
+    legacyHeaders: false,
+    message: { error: 'Muitas solicitações. Aguarde alguns minutos e tente novamente.' }
+  });
+  // Per-user Firestore limits below remain authoritative across instances/restarts;
+  // this in-memory IP cap is an additional burst guard for the public API.
+  app.use('/api', apiIpRateLimit);
+
+  const aiIpRateLimit = rateLimit({
+    windowMs: 10 * 60_000,
+    limit: 40,
+    standardHeaders: 'draft-8',
+    legacyHeaders: false,
+    message: { error: 'O limite de uso da IA para esta rede foi atingido. Tente novamente mais tarde.' }
+  });
 
   app.use(express.json({ limit: '64kb' }));
 
@@ -227,7 +250,7 @@ async function startServer() {
     }
   });
 
-  app.post("/api/analyze", async (req, res) => {
+  app.post("/api/analyze", aiIpRateLimit, async (req, res) => {
     try {
       const uid = await authenticatedUid(req, res);
       if (!uid) return;
@@ -429,7 +452,7 @@ app.post('/api/academy/progress', async (req, res) => {
   }
 });
 
-app.post('/api/academy/coach', async (req, res) => {
+app.post('/api/academy/coach', aiIpRateLimit, async (req, res) => {
   try {
     const userId = await authenticatedUid(req, res);
     if (!userId) return;
