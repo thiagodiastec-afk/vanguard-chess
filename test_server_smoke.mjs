@@ -31,6 +31,17 @@ try {
   await waitForServer(child, port);
   const page = await fetch(`http://127.0.0.1:${port}/`, { signal: AbortSignal.timeout(5_000) });
   assert.equal(page.status, 200, 'Production server should serve the built application');
+  assert.equal(page.headers.get('x-content-type-options'), 'nosniff', 'Responses must prevent MIME sniffing');
+  assert.equal(page.headers.get('x-frame-options'), 'DENY', 'Responses must prevent framing/clickjacking');
+  assert.equal(page.headers.get('referrer-policy'), 'strict-origin-when-cross-origin', 'Responses must limit cross-origin referrer data');
+  assert.equal(page.headers.get('permissions-policy'), 'camera=(), microphone=(), geolocation=()', 'Unused browser capabilities must remain disabled');
+  assert.equal(page.headers.get('x-powered-by'), null, 'Responses must not expose the Express framework header');
+
+  const proxiedHttpsPage = await fetch(`http://127.0.0.1:${port}/`, {
+    headers: { 'x-forwarded-proto': 'https' },
+    signal: AbortSignal.timeout(5_000)
+  });
+  assert.equal(proxiedHttpsPage.headers.get('strict-transport-security'), 'max-age=15552000', 'HTTPS requests behind the trusted Render proxy must receive HSTS');
 
   const protectedRoutes = [
     '/api/profile/bootstrap',
