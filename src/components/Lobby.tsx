@@ -569,6 +569,7 @@ export default function Lobby({ currentUser, playSuspendedUntil = 0, onPlayCompu
           <a className="rounded-xl border border-zinc-700 px-4 py-2 text-emerald-300 transition-colors hover:border-emerald-500" href="/aprender-xadrez/">Aprender xadrez</a>
           <a className="rounded-xl border border-zinc-700 px-4 py-2 text-emerald-300 transition-colors hover:border-emerald-500" href="/treino-de-xadrez-com-ia/">Treinar com IA</a>
           <a className="rounded-xl border border-zinc-700 px-4 py-2 text-emerald-300 transition-colors hover:border-emerald-500" href="/regras-do-xadrez/">Regras do xadrez</a>
+          <a className="rounded-xl border border-zinc-700 px-4 py-2 text-emerald-300 transition-colors hover:border-emerald-500" href="/mate-do-pastor/">Mate do Pastor</a>
         </nav>
       </section>
 
