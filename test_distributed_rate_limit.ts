@@ -40,4 +40,10 @@ check(await allowDistributedRateLimit(store, 'player-a', 'analyze', 8, 60_000, 1
 check(await allowDistributedRateLimit(store, 'player-a', 'chat', 12, 60_000, 1_001), 'chat translation has its own persistent limit');
 check(await allowDistributedRateLimit(store, 'player-a', 'academy-coach', 10, 600_000, 601_000), 'limit resets after its window');
 
-console.log('Distributed AI rate-limit checks passed (6 checks).');
+const subscriptionStore = new MemoryRateLimitStore();
+const concurrentSubscriptionAttempts = await Promise.all(Array.from({ length: 20 }, () =>
+  allowDistributedRateLimit(subscriptionStore, 'player-c', 'vip-subscription', 1, 300_000, 2_000)
+));
+check(concurrentSubscriptionAttempts.filter(Boolean).length === 1, 'concurrent subscription creation attempts are serialized across instances');
+
+console.log('Distributed rate-limit checks passed (7 checks).');

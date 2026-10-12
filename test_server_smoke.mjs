@@ -45,7 +45,9 @@ try {
     '/api/challenge/accept',
     '/api/game/action',
     '/api/store/purchase',
-    '/api/payment/create-preference'
+    '/api/payment/create-preference',
+    '/api/payment/create-subscription',
+    '/api/payment/cancel-subscription'
   ];
 
   for (const route of protectedRoutes) {

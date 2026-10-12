@@ -231,7 +231,7 @@ async function startServer() {
     try {
       const uid = await authenticatedUid(req, res);
       if (!uid) return;
-      if (!await allowAiRateLimit(uid, 'analyze', 8, 60_000)) return res.status(429).json({ error: 'Limite de análises atingido. Tente novamente em um minuto.' });
+      if (!await allowPersistentRateLimit(uid, 'analyze', 8, 60_000)) return res.status(429).json({ error: 'Limite de análises atingido. Tente novamente em um minuto.' });
       const { pgn, color } = req.body;
       if (typeof pgn !== 'string' || pgn.length < 1 || pgn.length > 20000 || !['w', 'b'].includes(color)) {
         return res.status(400).json({ error: 'Invalid analysis request' });
@@ -291,7 +291,7 @@ function getAdmin() {
   return adminApp;
 }
 
-async function allowAiRateLimit(uid: string, route: string, maxRequests: number, windowMs: number) {
+async function allowPersistentRateLimit(uid: string, route: string, maxRequests: number, windowMs: number) {
   const db = getFirestore(getAdmin(), FIRESTORE_DATABASE_ID);
   return allowDistributedRateLimit(db, uid, route, maxRequests, windowMs);
 }
@@ -433,7 +433,7 @@ app.post('/api/academy/coach', async (req, res) => {
   try {
     const userId = await authenticatedUid(req, res);
     if (!userId) return;
-    if (!await allowAiRateLimit(userId, 'academy-coach', 10, 10 * 60_000)) {
+    if (!await allowPersistentRateLimit(userId, 'academy-coach', 10, 10 * 60_000)) {
       return res.status(429).json({ error: 'Você atingiu o limite temporário do treinador IA. Tente novamente em alguns minutos.' });
     }
 
@@ -682,7 +682,7 @@ function legacyCompetitiveSnapshot(profile) {
     try {
       const userId = await authenticatedUid(req, res);
       if (!userId) return;
-      if (!await allowAiRateLimit(userId, 'chat', 12, 60_000)) return res.status(429).json({ error: 'Limite de mensagens atingido. Tente novamente em um minuto.' });
+      if (!await allowPersistentRateLimit(userId, 'chat', 12, 60_000)) return res.status(429).json({ error: 'Limite de mensagens atingido. Tente novamente em um minuto.' });
       const { text } = req.body;
       if (typeof text !== 'string' || text.trim().length < 1 || text.length > 1000) {
         return res.status(400).json({ error: 'Message must be between 1 and 1000 characters' });
@@ -1335,7 +1335,6 @@ Original message: "${text}"`;
     try {
       const userId = await authenticatedUid(req, res);
       if (!userId) return;
-      if (!allowRateLimit(userId, 'vip-subscription', 4, 60_000)) return res.status(429).json({ error: 'Muitas tentativas. Tente novamente em um minuto.' });
       const planId = typeof req.body?.planId === 'string' ? req.body.planId : '';
       const plan = VIP_SUBSCRIPTION_PLANS[planId as keyof typeof VIP_SUBSCRIPTION_PLANS];
       if (!plan) return res.status(400).json({ error: 'Plano VIP inválido.' });
@@ -1351,6 +1350,7 @@ Original message: "${text}"`;
       if (existingProfile.vipSubscriptionId && !['cancelled', 'canceled'].includes(existingProfile.vipSubscriptionStatus || '')) {
         return res.status(409).json({ error: 'Você já tem uma assinatura VIP em andamento. Continue ou cancele essa autorização na Loja antes de criar outra.' });
       }
+      if (!await allowPersistentRateLimit(userId, 'vip-subscription', 1, 5 * 60_000)) return res.status(429).json({ error: 'Já existe uma tentativa recente de assinatura. Aguarde alguns minutos antes de tentar novamente.' });
 
       const notificationUrl = `${appUrl.replace(/\/$/, '')}/api/payment/webhook`;
       const mpResponse = await fetch('https://api.mercadopago.com/preapproval', {
