@@ -71,13 +71,13 @@ export default function About() {
                 <div className="text-sm text-zinc-500">thiagodiastec@gmail.com</div>
               </div>
             </a>
-            <a href="https://wa.me/5519988225943" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 bg-zinc-950 border border-zinc-800 p-4 rounded-lg hover:border-amber-500/50 transition-colors group">
+            <a href="https://wa.me/5519988225743" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 bg-zinc-950 border border-zinc-800 p-4 rounded-lg hover:border-amber-500/50 transition-colors group">
               <div className="bg-zinc-900 p-2 rounded group-hover:bg-amber-500/10 transition-colors">
                 <Phone className="w-5 h-5 text-amber-500" />
               </div>
               <div>
                 <div className="text-sm font-medium text-zinc-200">WhatsApp</div>
-                <div className="text-sm text-zinc-500">+55 19 98822-5943</div>
+                <div className="text-sm text-zinc-500">+55 19 98822-5743</div>
               </div>
             </a>
           </div>
