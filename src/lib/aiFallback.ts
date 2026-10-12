@@ -1,11 +1,43 @@
 export type AiEndpoint = 'analysis' | 'academy';
 
+function toHttpStatus(value: unknown): number | null {
+  if (typeof value !== 'number' && !(typeof value === 'string' && /^\d{3}$/.test(value.trim()))) return null;
+  const status = Number(value);
+  return Number.isInteger(status) && status >= 400 && status <= 599 ? status : null;
+}
+
 export function getGeminiStatus(error: unknown): number | null {
   if (!error || typeof error !== 'object') return null;
-  const candidate = (error as { status?: unknown; code?: unknown }).status
-    ?? (error as { code?: unknown }).code;
-  const status = Number(candidate);
-  return Number.isFinite(status) ? status : null;
+  const candidate = error as {
+    status?: unknown;
+    statusCode?: unknown;
+    code?: unknown;
+    response?: { status?: unknown };
+    error?: { status?: unknown; statusCode?: unknown; code?: unknown };
+    message?: unknown;
+  };
+
+  for (const value of [
+    candidate.status,
+    candidate.statusCode,
+    candidate.response?.status,
+    candidate.error?.status,
+    candidate.error?.statusCode,
+    candidate.error?.code,
+    candidate.code
+  ]) {
+    const status = toHttpStatus(value);
+    if (status) return status;
+  }
+
+  // Google GenAI may expose the HTTP code only inside an ApiError JSON message.
+  if (typeof candidate.message === 'string') {
+    const match = candidate.message.match(/(?:"(?:code|status)"\s*:\s*"?)(\d{3})(?:"?\s*[,}])/i)
+      ?? candidate.message.match(/\b(?:HTTP|status|code)\s*[:=]?\s*(\d{3})\b/i);
+    if (match) return toHttpStatus(match[1]);
+  }
+
+  return null;
 }
 
 export function getGeminiFailureResponse(error: unknown, endpoint: AiEndpoint) {

@@ -6,6 +6,12 @@ assert.equal(credits.statusCode, 503);
 assert.match(credits.message, /créditos de IA.*acabaram/);
 assert.equal(credits.upstreamStatus, 402);
 
+const sdkCreditsError = new Error('ApiError: {"error":{"code":402,"message":"Your prepayment credits are depleted.","status":"RESOURCE_EXHAUSTED"}}');
+const sdkCredits = getGeminiFailureResponse(sdkCreditsError, 'analysis');
+assert.equal(sdkCredits.statusCode, 503);
+assert.match(sdkCredits.message, /créditos de IA.*acabaram/);
+assert.equal(sdkCredits.upstreamStatus, 402, 'Google GenAI ApiError JSON message should preserve the provider HTTP code');
+
 const quota = getGeminiFailureResponse({ code: '429' }, 'academy');
 assert.equal(quota.statusCode, 503);
 assert.match(quota.message, /limite temporário/);
@@ -13,6 +19,7 @@ assert.equal(quota.upstreamStatus, 429);
 
 assert.equal(getGeminiFailureResponse({ status: 503 }, 'analysis').statusCode, 503);
 assert.match(getGeminiFailureResponse({ status: 503 }, 'analysis').message, /muito requisitado/);
+assert.equal(getGeminiStatus({ error: { code: '429' } }), 429);
 assert.equal(getGeminiFailureResponse(new Error('provider detail'), 'analysis').statusCode, 500);
 assert.equal(getGeminiFailureResponse(new Error('provider detail'), 'academy').statusCode, 503);
 assert.equal(getGeminiStatus(new Error('no status')), null);
