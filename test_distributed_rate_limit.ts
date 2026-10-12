@@ -37,6 +37,7 @@ check(parallel.filter(Boolean).length === 10, 'concurrent requests cannot exceed
 check(!await allowDistributedRateLimit(store, 'player-a', 'academy-coach', 10, 600_000, 1_001), 'limit stays active before reset');
 check(await allowDistributedRateLimit(store, 'player-b', 'academy-coach', 10, 600_000, 1_001), 'another account has an independent limit');
 check(await allowDistributedRateLimit(store, 'player-a', 'analyze', 8, 60_000, 1_001), 'another AI route has an independent limit');
+check(await allowDistributedRateLimit(store, 'player-a', 'chat', 12, 60_000, 1_001), 'chat translation has its own persistent limit');
 check(await allowDistributedRateLimit(store, 'player-a', 'academy-coach', 10, 600_000, 601_000), 'limit resets after its window');
 
-console.log('Distributed AI rate-limit checks passed (5 checks).');
+console.log('Distributed AI rate-limit checks passed (6 checks).');

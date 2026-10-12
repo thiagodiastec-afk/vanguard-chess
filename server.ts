@@ -682,7 +682,7 @@ function legacyCompetitiveSnapshot(profile) {
     try {
       const userId = await authenticatedUid(req, res);
       if (!userId) return;
-      if (!allowRateLimit(userId, 'chat', 12, 60_000)) return res.status(429).json({ error: 'Limite de mensagens atingido. Tente novamente em um minuto.' });
+      if (!await allowAiRateLimit(userId, 'chat', 12, 60_000)) return res.status(429).json({ error: 'Limite de mensagens atingido. Tente novamente em um minuto.' });
       const { text } = req.body;
       if (typeof text !== 'string' || text.trim().length < 1 || text.length > 1000) {
         return res.status(400).json({ error: 'Message must be between 1 and 1000 characters' });
