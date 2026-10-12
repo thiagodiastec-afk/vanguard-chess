@@ -40,6 +40,9 @@ jobs:
       - name: Smoke test production server security
         run: npm run test:server
 
+      - name: Test distributed AI rate limits
+        run: npm run test:rate-limit
+
       - name: Run engine and backend validation
         run: npm run test:full
 

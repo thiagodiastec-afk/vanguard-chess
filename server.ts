@@ -12,6 +12,7 @@ import { createHash, randomBytes } from "node:crypto";
 import { Chess } from "chess.js";
 import { ACADEMY_LESSONS } from './src/lib/academyCourse';
 import { getGeminiFailureResponse, getGeminiStatus, parseChatTranslations } from './src/lib/aiFallback';
+import { allowDistributedRateLimit } from './src/lib/distributedRateLimit';
 import { isValidMercadoPagoSignature as validateMercadoPagoSignature } from './src/lib/mercadoPagoWebhook';
 import { validateUsername } from './src/lib/username';
 import firebaseWebConfig from './firebase-applet-config.json';
@@ -230,7 +231,7 @@ async function startServer() {
     try {
       const uid = await authenticatedUid(req, res);
       if (!uid) return;
-      if (!allowRateLimit(uid, 'analyze', 8, 60_000)) return res.status(429).json({ error: 'Limite de análises atingido. Tente novamente em um minuto.' });
+      if (!await allowAiRateLimit(uid, 'analyze', 8, 60_000)) return res.status(429).json({ error: 'Limite de análises atingido. Tente novamente em um minuto.' });
       const { pgn, color } = req.body;
       if (typeof pgn !== 'string' || pgn.length < 1 || pgn.length > 20000 || !['w', 'b'].includes(color)) {
         return res.status(400).json({ error: 'Invalid analysis request' });
@@ -288,6 +289,11 @@ function getAdmin() {
     adminApp = initializeApp({ credential: cert(serviceAccount), projectId: firebaseWebConfig.projectId });
   }
   return adminApp;
+}
+
+async function allowAiRateLimit(uid: string, route: string, maxRequests: number, windowMs: number) {
+  const db = getFirestore(getAdmin(), FIRESTORE_DATABASE_ID);
+  return allowDistributedRateLimit(db, uid, route, maxRequests, windowMs);
 }
 
 async function authenticatedUid(req, res) {
@@ -427,7 +433,7 @@ app.post('/api/academy/coach', async (req, res) => {
   try {
     const userId = await authenticatedUid(req, res);
     if (!userId) return;
-    if (!allowRateLimit(userId, 'academy-coach', 10, 10 * 60_000)) {
+    if (!await allowAiRateLimit(userId, 'academy-coach', 10, 10 * 60_000)) {
       return res.status(429).json({ error: 'Você atingiu o limite temporário do treinador IA. Tente novamente em alguns minutos.' });
     }
 

@@ -21,6 +21,8 @@ try {
   };
 
   await assertFails(setDoc(doc(anonymous, 'users/visitor'), { ...starterProfile, uid: 'visitor' }));
+  await assertFails(setDoc(doc(alice, 'serverRateLimits/alice'), { count: 1, resetAt: Date.now() + 60_000 }));
+  await assertFails(getDoc(doc(alice, 'serverRateLimits/alice')));
   await assertFails(setDoc(doc(alice, 'users/alice'), { ...starterProfile, coins: 500 }));
   await assertFails(setDoc(doc(alice, 'users/alice'), starterProfile));
   await testEnv.withSecurityRulesDisabled(async (context) => {
