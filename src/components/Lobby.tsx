@@ -3,7 +3,7 @@ import { collection, doc, getDocs, setDoc, deleteDoc, onSnapshot, query, orderBy
 import { getDb } from '../lib/firebase';
 import { authenticatedApiFetch } from '../lib/api';
 import { UserData, QueueEntry, GameData } from '../types';
-import { Loader2, Swords, UserCircle, Bot, ChevronDown, ChevronUp, Link as LinkIcon, Copy, Target, CheckCircle2, X, Users, MessageCircle, Sparkles, LogIn, Mail } from 'lucide-react';
+import { Loader2, Swords, UserCircle, Bot, ChevronDown, ChevronUp, Link as LinkIcon, Copy, Target, CheckCircle2, X, Users, Sparkles, LogIn, Mail } from 'lucide-react';
 import { cn } from '../lib/utils';
 
 interface LobbyProps {
@@ -22,6 +22,7 @@ export default function Lobby({ currentUser, playSuspendedUntil = 0, onPlayCompu
   const [showBotMenu, setShowBotMenu] = useState(false);
   const [inviteLink, setInviteLink] = useState<string | null>(null);
   const [inviteGameId, setInviteGameId] = useState<string | null>(null);
+  const [inviteLinkCopied, setInviteLinkCopied] = useState(false);
   const [liveGames, setLiveGames] = useState<GameData[]>([]);
   const [onlineUsers, setOnlineUsers] = useState<UserData[]>([]);
   const [registeredCount, setRegisteredCount] = useState<number | null>(null);
@@ -164,8 +165,10 @@ export default function Lobby({ currentUser, playSuspendedUntil = 0, onPlayCompu
       setInviteLink(link);
       try {
         await navigator.clipboard.writeText(link);
+        setInviteLinkCopied(true);
       } catch (err) {
         // Clipboard write might be restricted in some iframes
+        setInviteLinkCopied(false);
       }
     } catch (e: any) {
       setError(e.message || 'Erro ao criar convite');
@@ -182,6 +185,7 @@ export default function Lobby({ currentUser, playSuspendedUntil = 0, onPlayCompu
       if (!response.ok) throw new Error('Não foi possível cancelar o convite.');
       setInviteLink(null);
       setInviteGameId(null);
+      setInviteLinkCopied(false);
     } catch (e: any) {
       console.error(e);
     }
@@ -346,26 +350,30 @@ export default function Lobby({ currentUser, playSuspendedUntil = 0, onPlayCompu
                   <LinkIcon className="w-6 h-6 text-indigo-400" />
                 </div>
                 <div className="text-center w-full">
-                  <p className="text-sm font-bold text-indigo-300 mb-2">Envie este link para seu amigo</p>
+                  <p className="text-sm font-bold text-indigo-300 mb-2">Copie o link e envie pelo seu próprio WhatsApp</p>
                   <div className="flex w-full items-center gap-2 bg-zinc-950 rounded-xl p-2 border border-indigo-500/20">
                     <code className="text-xs text-zinc-400 truncate flex-1 pl-2">{inviteLink}</code>
                     <button
-                      onClick={() => navigator.clipboard.writeText(inviteLink)}
-                      className="p-3 bg-indigo-600 hover:bg-indigo-500 rounded-lg transition-colors text-white"
-                      title="Copiar link"
+                      onClick={async () => {
+                        try {
+                          await navigator.clipboard.writeText(inviteLink);
+                          setInviteLinkCopied(true);
+                        } catch {
+                          setInviteLinkCopied(false);
+                          setError('Não foi possível copiar automaticamente. Selecione e copie o link exibido.');
+                        }
+                      }}
+                      className="px-3 py-2 bg-indigo-600 hover:bg-indigo-500 rounded-lg transition-colors text-white flex items-center gap-2"
+                      title="Copiar link para compartilhar manualmente"
+                      aria-label="Copiar link do convite"
                     >
                       <Copy className="w-4 h-4" />
+                      <span className="text-sm font-semibold">Copiar link</span>
                     </button>
-                    <a
-                      href={`https://api.whatsapp.com/send?text=${encodeURIComponent(`Vem jogar xadrez comigo no Vanguard Chess! Clique no link para entrar na partida: ${inviteLink}`)}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="p-3 bg-[#25D366] hover:bg-[#20bd5a] rounded-lg transition-colors text-white flex items-center justify-center"
-                      title="Enviar pelo WhatsApp"
-                    >
-                      <MessageCircle className="w-4 h-4" />
-                    </a>
                   </div>
+                  <p role="status" className="text-xs text-zinc-400 mt-2">
+                    {inviteLinkCopied ? 'Link copiado. Abra seu WhatsApp e envie você mesmo para quem quiser.' : 'O Vanguard não envia convites pelo WhatsApp.'}
+                  </p>
                 </div>
                 <button
                   onClick={cancelInvite}
