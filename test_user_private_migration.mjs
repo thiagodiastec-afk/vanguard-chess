@@ -45,6 +45,7 @@ const dryRun = spawnSync(process.execPath, ['scripts/migrate_user_private.mjs'],
 if (dryRun.stdout) process.stdout.write(dryRun.stdout);
 if (dryRun.stderr) process.stderr.write(dryRun.stderr);
 assert.equal(dryRun.status, 0, `Migration dry-run failed (status ${dryRun.status})`);
+assert.match(dryRun.stdout, /1 profiles to migrate, 0 skipped, 0 failed/);
 assert.equal((await profileRef.get()).get('coins'), 1725, 'Dry-run must leave legacy public data untouched');
 assert.equal((await profileRef.get()).get('elo'), 1420, 'Dry-run must not reset legacy competitive data');
 
@@ -62,6 +63,8 @@ for (let run = 1; run <= 2; run++) {
   if (result.stdout) process.stdout.write(result.stdout);
   if (result.stderr) process.stderr.write(result.stderr);
   assert.equal(result.status, 0, `Migration run ${run} failed (status ${result.status})`);
+  if (run === 1) assert.match(result.stdout, /1 migrated, 0 skipped, 0 failed/);
+  else assert.match(result.stdout, /0 migrated, 1 skipped, 0 failed/);
   if (run === 1) {
     const resetProfile = await profileRef.get();
     assert.equal(resetProfile.get('elo'), 1200);

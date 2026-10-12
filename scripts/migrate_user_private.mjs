@@ -39,6 +39,7 @@ const paidBackgroundIds = new Set([
 
 let cursor;
 let migrated = 0;
+let skipped = 0;
 let failed = 0;
 
 if (!applyMigration) console.log('DRY RUN: no documents will be changed. Review the plan before applying.');
@@ -54,18 +55,18 @@ while (true) {
     try {
       if (!applyMigration) {
         const privateSnapshot = await privateRef.get();
-        const hasLegacyFields = ['coins', 'unlockedThemes', 'unlockedBackgrounds', 'isPremium', 'premiumUntil', 'paymentHistory']
-          .some((field) => Object.prototype.hasOwnProperty.call(userDoc.data(), field));
-        if (hasLegacyFields || !privateSnapshot.exists || privateSnapshot.get('competitiveDataVersion') !== 1) migrated++;
+        if (needsMigration(userDoc.data(), privateSnapshot.data(), privateSnapshot.exists)) migrated++;
+        else skipped++;
         continue;
       }
-      await db.runTransaction(async (transaction) => {
+      const didMigrate = await db.runTransaction(async (transaction) => {
         const [publicSnapshot, privateSnapshot] = await Promise.all([
           transaction.get(userDoc.ref), transaction.get(privateRef)
         ]);
-        if (!publicSnapshot.exists) return;
+        if (!publicSnapshot.exists) return false;
         const profile = publicSnapshot.data() || {};
         const existing = privateSnapshot.data() || {};
+        if (!needsMigration(profile, existing, privateSnapshot.exists)) return false;
         const needsCompetitiveBaseline = existing.competitiveDataVersion !== 1;
         const oldThemes = Array.isArray(profile.unlockedThemes) ? profile.unlockedThemes : [];
         const oldBackgrounds = Array.isArray(profile.unlockedBackgrounds) ? profile.unlockedBackgrounds : [];
@@ -115,8 +116,10 @@ while (true) {
             eloHistory: []
           } : {})
         });
+        return true;
       });
-      migrated++;
+      if (didMigrate) migrated++;
+      else skipped++;
     } catch (error) {
       failed++;
       console.error(`Migration failed for user ${userDoc.id}:`, error.message);
@@ -125,11 +128,26 @@ while (true) {
 
   cursor = page.docs[page.docs.length - 1];
   const outcomeLabel = applyMigration ? 'migrated' : 'planned';
-  console.log(`Processed ${migrated + failed} profiles; ${outcomeLabel} ${migrated}; failed ${failed}.`);
+  console.log(`Processed ${migrated + skipped + failed} profiles; ${outcomeLabel} ${migrated}; skipped ${skipped}; failed ${failed}.`);
 }
 
-console.log(`User-private migration ${applyMigration ? 'complete' : 'dry-run complete'}: ${migrated} ${applyMigration ? 'migrated' : 'profiles to migrate'}, ${failed} failed.`);
+console.log(`User-private migration ${applyMigration ? 'complete' : 'dry-run complete'}: ${migrated} ${applyMigration ? 'migrated' : 'profiles to migrate'}, ${skipped} skipped, ${failed} failed.`);
 if (failed > 0) process.exitCode = 1;
+
+function needsMigration(profile, privateProfile, privateExists) {
+  const legacyFields = ['coins', 'unlockedThemes', 'unlockedBackgrounds', 'isPremium', 'premiumUntil', 'paymentHistory'];
+  if (legacyFields.some((field) => Object.prototype.hasOwnProperty.call(profile, field))) return true;
+  if (!privateExists || privateProfile.competitiveDataVersion !== 1 || profile.profileSchemaVersion !== 2) return true;
+  if (!Number.isFinite(Number(privateProfile.coins)) || Number(privateProfile.coins) < 0) return true;
+  if (!Array.isArray(privateProfile.unlockedThemes) || !Array.isArray(privateProfile.unlockedBackgrounds)) return true;
+  if (typeof privateProfile.isPremium !== 'boolean' || !Number.isFinite(Number(privateProfile.premiumUntil))) return true;
+  const activeTheme = typeof profile.activeTheme === 'string' ? profile.activeTheme : 'luxury';
+  const activeBackground = typeof profile.activeBackground === 'string' ? profile.activeBackground : 'default';
+  if (!['luxury', 'classic', 'vidro'].includes(activeTheme) && !privateProfile.unlockedThemes.includes(activeTheme)) return true;
+  if (!['default', 'midnight-blue'].includes(activeBackground) && !privateProfile.unlockedBackgrounds.includes(activeBackground)) return true;
+  const shouldHavePremiumBadge = privateProfile.isPremium && Number(privateProfile.premiumUntil) > Date.now();
+  return profile.hasPremiumBadge !== shouldHavePremiumBadge;
+}
 
 function legacyCompetitiveSnapshot(profile) {
   const numberOr = (value, fallback) => {

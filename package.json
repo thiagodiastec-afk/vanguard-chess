@@ -10,7 +10,7 @@
     "preview": "vite preview",
     "test": "tsx test_all_suites.ts",
     "test:smoke": "tsx test_project_smoke.ts",
-    "test:rules": "npx --yes firebase-tools@14.23.0 emulators:exec --only firestore --project demo-vanguard-chess \"node test_firestore_rules.mjs && node test_user_private_migration.mjs\"",
+    "test:rules": "npx --yes firebase-tools@14.23.0 emulators:exec --only firestore --project demo-vanguard-chess \"node test_user_private_migration.mjs && node test_firestore_rules.mjs\"",
     "test:server": "node test_server_smoke.mjs",
     "test:ai-fallback": "tsx test_ai_fallback.ts",
     "test:payment-signature": "tsx test_mercado_pago_webhook.ts",
