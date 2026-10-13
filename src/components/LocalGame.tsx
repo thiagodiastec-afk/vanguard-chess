@@ -261,6 +261,12 @@ export default function LocalGame({ onExit }: LocalGameProps) {
         </div>
       </div>
 
+      {gameOver && (
+        <div role="status" aria-live="polite" className="w-full px-3 py-2 text-center bg-neutral-900 border-y border-emerald-500/40 text-emerald-300 font-bold text-sm">
+          {winner || 'Partida encerrada.'}{' '}{game.isCheckmate() ? 'Xeque-mate! A posição final permanece visível no tabuleiro.' : ''}
+        </div>
+      )}
+
       <div className="w-full flex flex-col lg:flex-row gap-3 lg:gap-5 items-center lg:items-start justify-center flex-1">
         {/* Left Side: Controls & History */}
         <div className="w-full lg:w-[300px] xl:w-[340px] flex flex-col gap-2.5 flex-shrink-0 order-2 lg:order-1 lg:h-[min(calc(100dvh-115px),780px)]">
@@ -342,19 +348,6 @@ export default function LocalGame({ onExit }: LocalGameProps) {
           <div className="flex-1 w-full relative">
             <div className="w-full rounded-xl sm:rounded-2xl bg-gradient-to-br from-[#2a170e] via-[#1a0c06] to-[#0f0703] p-1.5 sm:p-2.5 border-2 sm:border-4 border-[#613318] shadow-[0_20px_50px_rgba(0,0,0,0.8)]">
               <div className="w-full aspect-square relative rounded-xl overflow-hidden shadow-inner bg-black">
-                {gameOver && (
-                  <div className="absolute inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-6 text-center animate-in fade-in">
-                    <div className="bg-neutral-900 border border-neutral-800 p-6 sm:p-8 rounded-2xl text-center max-w-sm w-full mx-4 shadow-2xl">
-                      <h2 className="text-2xl sm:text-3xl font-bold text-white mb-2">Fim de Jogo</h2>
-                      <p className="text-lg sm:text-xl text-emerald-400 font-semibold mb-6">{winner}</p>
-                      <div className="flex gap-3">
-                        <button onClick={() => onExit(false)} className="flex-1 py-2.5 px-4 bg-neutral-800 hover:bg-neutral-700 text-white rounded-xl font-bold transition-colors text-xs sm:text-sm active:scale-95">Sair</button>
-                        <button onClick={resetGame} className="flex-1 py-2.5 px-4 bg-emerald-500 hover:bg-emerald-400 text-neutral-950 rounded-xl font-bold transition-colors text-xs sm:text-sm active:scale-95">Nova Partida</button>
-                      </div>
-                    </div>
-                  </div>
-                )}
-                
                 {/* @ts-ignore react-chessboard types are broken in v5 */}
                 <Chessboard 
                   options={{

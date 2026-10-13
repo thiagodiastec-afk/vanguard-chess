@@ -524,6 +524,13 @@ export default function ComputerGame({ difficulty, currentUser, onExit }: Comput
         </div>
       </div>
 
+      {gameOver && (
+        <div role="status" aria-live="polite" className="w-full max-w-[1700px] px-3 py-2 text-center bg-neutral-900 border-y border-emerald-500/40 text-emerald-300 font-bold text-sm">
+          {winner === 'draw' ? 'Empate.' : game.isCheckmate() ? (game.turn() === playerColor ? 'Computador venceu.' : 'Você venceu!') : winner === (playerColor === 'w' ? 'white' : 'black') ? 'Você venceu!' : 'Computador venceu.'}
+          {' '}{game.isCheckmate() ? 'Xeque-mate! A posição final permanece visível no tabuleiro.' : game.isStalemate() ? 'Empate por afogamento.' : game.isDraw() ? 'Empate por repetição ou material insuficiente.' : 'Partida encerrada.'}
+        </div>
+      )}
+
       {/* Main Game Layout Container */}
       <div className="w-full max-w-[1700px] mx-auto p-1 sm:p-2 lg:p-3 flex flex-col lg:flex-row gap-3 lg:gap-5 items-center lg:items-start justify-center flex-1">
 
@@ -630,59 +637,6 @@ export default function ComputerGame({ difficulty, currentUser, onExit }: Comput
             <div className="w-full rounded-xl sm:rounded-2xl bg-gradient-to-br from-[#2a170e] via-[#1a0c06] to-[#0f0703] p-1.5 sm:p-2.5 border-2 sm:border-4 border-[#613318] shadow-[0_20px_50px_rgba(0,0,0,0.8)]">
 
               <div className="w-full aspect-square relative rounded-xl overflow-hidden shadow-inner bg-black">
-                {gameOver && (
-                  <div className="absolute inset-0 z-20 bg-black/80 flex flex-col items-center justify-center p-6 text-center backdrop-blur-md overflow-y-auto animate-in fade-in duration-300">
-                    {!analysis ? (
-                      <div className="my-auto max-w-sm">
-                        <h2 className="text-2xl sm:text-3xl font-black text-white mb-2">
-                          {winner === 'draw' ? 'Empate' : winner === (playerColor === 'w' ? 'white' : 'black') ? 'Você Venceu! 🎉' : 'Computador Venceu'}
-                        </h2>
-                        <p className="text-neutral-300 mb-6 text-sm">
-                          {game.isCheckmate() ? 'Vitória por Xeque-mate!' :
-                           game.isDraw() ? 'Empate por repetição ou material insuficiente' :
-                           game.isStalemate() ? 'Empate por afogamento' : 'Partida encerrada por desistência.'}
-                        </p>
-                        <div className="flex flex-col sm:flex-row gap-2.5 justify-center">
-                          <button
-                            onClick={handleAnalyze}
-                            disabled={isAnalyzing}
-                            className="bg-indigo-500 hover:bg-indigo-400 text-white font-bold py-2.5 px-5 rounded-xl transition-all shadow-lg flex items-center justify-center gap-2 disabled:opacity-50 text-xs sm:text-sm active:scale-95"
-                          >
-                            <Sparkles className="w-4 h-4" />
-                            {isAnalyzing ? 'Analisando...' : 'Treinador IA'}
-                          </button>
-                          <button
-                            onClick={resetGame}
-                            className="bg-emerald-500 hover:bg-emerald-400 text-neutral-950 font-bold py-2.5 px-5 rounded-xl transition-all shadow-lg flex items-center justify-center gap-2 text-xs sm:text-sm active:scale-95"
-                          >
-                            <RefreshCcw className="w-4 h-4" />
-                            Nova Partida
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="w-full max-w-md bg-neutral-900 border border-indigo-500/30 rounded-2xl p-5 text-left my-auto shadow-2xl">
-                        <div className="flex items-center gap-2 mb-3 text-indigo-400 border-b border-indigo-500/20 pb-2.5">
-                          <Sparkles className="w-4 h-4" />
-                          <h3 className="font-bold text-base">Análise do Treinador</h3>
-                        </div>
-                        <div className="prose prose-invert prose-sm max-w-none text-neutral-300 mb-4 max-h-[220px] overflow-y-auto custom-scrollbar">
-                          {(analysis || '').split('\n').map((paragraph, idx) => (
-                            <p key={idx} className="mb-2 text-xs leading-relaxed">{paragraph.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')}</p>
-                          ))}
-                        </div>
-                        <button
-                          onClick={resetGame}
-                          className="w-full bg-emerald-500 hover:bg-emerald-400 text-neutral-950 font-bold py-2.5 px-6 rounded-xl transition-all flex items-center justify-center gap-2 text-xs sm:text-sm active:scale-95"
-                        >
-                          <RefreshCcw className="w-4 h-4" />
-                          Nova Partida
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                )}
-
                 {/* @ts-ignore react-chessboard types are broken in v5 */}
                 <Chessboard
                   options={{

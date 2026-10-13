@@ -767,8 +767,8 @@ export default function Game({ game: initialGame, currentUser, onExit }: GamePro
 
             {/* Game Over Overlay */}
             {(liveGame.status === 'white_won' || liveGame.status === 'black_won' || liveGame.status === 'draw' || liveGame.status === 'abandoned') && (
-              <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-md rounded-2xl p-4">
-                <div className="bg-zinc-900 border-2 border-emerald-500/60 p-6 sm:p-8 rounded-3xl shadow-2xl text-center max-w-md w-full transform animate-in zoom-in duration-300">
+              <div role="status" aria-live="polite" className="mt-3 w-full flex justify-center">
+                <div className="bg-zinc-900 border border-emerald-500/60 p-4 sm:p-5 rounded-2xl shadow-2xl text-center max-w-md w-full animate-in fade-in duration-300">
                   <div className="w-16 h-16 bg-emerald-500/10 border-2 border-emerald-500/40 rounded-full flex items-center justify-center mx-auto mb-4">
                     {liveGame.status === 'draw' ? (
                       <Handshake className="w-8 h-8 text-emerald-400" />
