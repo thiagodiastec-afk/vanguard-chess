@@ -415,12 +415,11 @@ export default function App() {
     setActiveTab('play');
   };
 
-  const hasActiveGame = Boolean(
-    (activeGame && activeGame.status === 'playing') || computerGameDifficulty || isLocalGame
-  );
+  // A suspensão por abandono se aplica somente a partidas online entre usuários.
+  const hasActiveOnlineGame = Boolean(activeGame && activeGame.status === 'playing');
 
   const handleBrandClick = () => {
-    if (hasActiveGame) {
+    if (hasActiveOnlineGame) {
       setHomeExitError(null);
       setShowHomeExitConfirm(true);
       return;
@@ -671,11 +670,11 @@ export default function App() {
                       <ComputerGame
                         difficulty={computerGameDifficulty}
                         currentUser={userData}
-                        onExit={(abandoning = true) => abandoning ? handleBrandClick() : setComputerGameDifficulty(null)}
+                        onExit={(abandoning = true) => abandoning ? navigateHome() : setComputerGameDifficulty(null)}
                       />
                     </ErrorBoundary>
                   ) : isLocalGame ? (
-                    <LocalGame onExit={(abandoning = true) => abandoning ? handleBrandClick() : setIsLocalGame(false)} />
+                    <LocalGame onExit={(abandoning = true) => abandoning ? navigateHome() : setIsLocalGame(false)} />
                   ) : (
                     <Lobby currentUser={userData ? { ...userData, playSuspendedUntil } : null} playSuspendedUntil={playSuspendedUntil} onPlayComputer={(diff) => setComputerGameDifficulty(diff)} onPlayLocal={() => setIsLocalGame(true)} onBrowsePlayers={() => setActiveTab('friends')} onLoginRequest={handleLogin} />
                   )
