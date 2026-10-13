@@ -81,9 +81,7 @@
     section.setAttribute('aria-label', 'Preferências de privacidade');
     section.innerHTML = '<style>' +
       '#vanguard-privacy-controls{position:fixed;z-index:99999;right:calc(16px + env(safe-area-inset-right, 0px));bottom:calc(16px + env(safe-area-inset-bottom, 0px));font:14px/1.45 system-ui,-apple-system,Segoe UI,sans-serif;color:#f4f4f5}' +
-      '#vanguard-privacy-controls .vc-shortcuts{display:flex;align-items:center;gap:8px}' +
       '#vanguard-privacy-controls .vc-manage{border:1px solid #52525b;background:#18181b;color:#e4e4e7;border-radius:999px;padding:8px 13px;cursor:pointer;box-shadow:0 4px 18px #0008}' +
-      '#vanguard-privacy-controls .vc-guide{border:1px solid #047857;background:#064e3b;color:#a7f3d0;border-radius:999px;padding:8px 13px;text-decoration:none;white-space:nowrap;box-shadow:0 4px 18px #0008}' +
       '#vanguard-privacy-controls .vc-panel{width:min(440px,calc(100vw - 32px));margin-bottom:10px;padding:18px;border:1px solid #3f3f46;border-radius:16px;background:#18181b;box-shadow:0 12px 40px #000b}' +
       '#vanguard-privacy-controls h2{margin:0 0 8px;font-size:17px;color:#fff}' +
       '#vanguard-privacy-controls p{margin:0 0 14px;color:#d4d4d8}' +
@@ -92,9 +90,9 @@
       '#vanguard-privacy-controls .vc-actions button{border:1px solid #52525b;border-radius:9px;padding:9px 12px;background:#27272a;color:#fff;font-weight:650;cursor:pointer}' +
       '#vanguard-privacy-controls .vc-actions .vc-accept{background:#059669;border-color:#059669;color:#04130e}' +
       '@media(prefers-reduced-motion:reduce){#vanguard-privacy-controls *{scroll-behavior:auto!important}}' +
-      '@media(max-width:767px){#vanguard-privacy-controls{bottom:calc(84px + env(safe-area-inset-bottom, 0px))}#vanguard-privacy-controls .vc-shortcuts{gap:6px}#vanguard-privacy-controls .vc-guide,#vanguard-privacy-controls .vc-manage{padding:7px 10px;font-size:12px}}' +
+      '@media(max-width:767px){#vanguard-privacy-controls{bottom:calc(84px + env(safe-area-inset-bottom, 0px))}#vanguard-privacy-controls .vc-manage{padding:7px 10px;font-size:12px}}' +
       '</style>';
-    section.innerHTML += '<div class="vc-shortcuts"><a class="vc-guide" href="/mate-do-pastor/">Mate do Pastor</a><button class="vc-manage" type="button">Privacidade</button></div>';
+    section.innerHTML += '<button class="vc-manage" type="button">Privacidade</button>';
     var manageButton = section.querySelector('.vc-manage');
     manageButton.addEventListener('click', function () {
       var panel = section.querySelector('.vc-panel');
