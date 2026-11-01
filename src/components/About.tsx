@@ -9,7 +9,9 @@ export default function About() {
         
         {/* Header */}
         <div className="text-center space-y-2">
-          <h1 className="text-3xl font-bold text-amber-500">Vanguard Chess</h1>
+          <h1 className="text-3xl font-bold text-amber-500">Vanguard Chess Brasil</h1>
+          <p className="text-zinc-400">Plataforma brasileira de xadrez para jogar, treinar e evoluir.</p>
+          <a href="/sobre/" className="text-emerald-400 hover:underline">Conheça o Vanguard Chess Brasil</a>
           <p className="text-zinc-400">Versão 1.0.0 (Beta)</p>
         </div>
 

@@ -491,7 +491,7 @@ export default function App() {
           <div className="w-10 h-10 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-500/20">
             <Trophy className="w-5 h-5 text-zinc-950" />
           </div>
-          <h1 className="text-xl font-black tracking-tight text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap">Vanguard<span className="text-emerald-400">Chess</span></h1>
+          <h1 className="text-xl font-black tracking-tight text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap">Vanguard<span className="text-emerald-400">Chess</span><span className="sr-only"> Brasil</span></h1>
         </button>
 
         <nav className="flex-1 px-4 py-2 space-y-1 overflow-y-auto custom-scrollbar">
@@ -590,7 +590,7 @@ export default function App() {
             <div className="w-8 h-8 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-lg flex items-center justify-center shadow-lg shadow-emerald-500/20">
               <Trophy className="w-4 h-4 text-zinc-950" />
             </div>
-            <h1 className="text-lg font-black tracking-tight text-white">Vanguard<span className="text-emerald-400">Chess</span></h1>
+            <h1 className="text-lg font-black tracking-tight text-white">Vanguard<span className="text-emerald-400">Chess</span><span className="sr-only"> Brasil</span></h1>
           </button>
 
           <div className="flex items-center gap-2">
