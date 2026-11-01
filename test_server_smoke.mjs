@@ -52,6 +52,8 @@ try {
     '/api/game/invite/create',
     '/api/game/invite/join',
     '/api/game/match',
+    '/api/game/queue',
+    '/api/game/computer',
     '/api/challenge/create',
     '/api/challenge/accept',
     '/api/game/action',

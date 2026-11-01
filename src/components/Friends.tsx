@@ -4,6 +4,7 @@ import { getDb } from '../lib/firebase';
 import { authenticatedApiFetch } from '../lib/api';
 import { UserData } from '../types';
 import { Search, UserPlus, UserMinus, Swords, Circle, Loader2, MessageCircle } from 'lucide-react';
+import GameVisibility from './GameVisibility';
 import { cn } from '../lib/utils';
 
 interface FriendsProps {
@@ -15,6 +16,7 @@ function isPresenceFresh(user: UserData) {
 }
 
 export default function Friends({ currentUser }: FriendsProps) {
+  const [spectatorsAllowed, setSpectatorsAllowed] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState<UserData[]>([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -104,7 +106,7 @@ export default function Friends({ currentUser }: FriendsProps) {
     try {
       const response = await authenticatedApiFetch('/api/challenge/create', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ challengedId: friend.uid })
+        body: JSON.stringify({ challengedId: friend.uid, spectatorsAllowed })
       });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || 'Não foi possível enviar o convite.');
@@ -142,6 +144,7 @@ export default function Friends({ currentUser }: FriendsProps) {
       <div className="bg-neutral-800 rounded-2xl p-6 border border-neutral-700/50 shadow-xl">
         <h2 className="text-2xl font-bold text-white mb-2">Jogadores inscritos</h2>
         <p className="text-sm text-neutral-400 mb-6">{registeredCount === null ? 'Carregando total de jogadores…' : `${registeredCount} jogadores cadastrados.`} Encontre um jogador e envie um convite. E-mails e telefones nunca aparecem nesta lista.</p>
+        <GameVisibility value={spectatorsAllowed} onChange={setSpectatorsAllowed} />
         <form onSubmit={handleSearch} className="flex gap-4 mb-6">
           <div className="relative flex-1">
             <Search className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" />

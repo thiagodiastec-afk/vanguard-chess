@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { initializeTestEnvironment, assertFails, assertSucceeds } from '@firebase/rules-unit-testing';
-import { collection, deleteDoc, doc, getDoc, getDocs, query, setDoc, updateDoc, where } from 'firebase/firestore';
+import { collection, deleteDoc, doc, getDoc, getDocs, onSnapshot, query, setDoc, updateDoc, where } from 'firebase/firestore';
 
 const projectId = 'demo-vanguard-chess';
 const rules = await readFile(new URL('./firestore.rules', import.meta.url), 'utf8');
@@ -208,7 +208,32 @@ try {
     where('roomId', '==', 'game_server-created')
   )));
   await assertSucceeds(getDoc(doc(anonymous, 'globalChat/public-message')));
-  console.log('Firestore rules: private game chat read isolation verified.');
+  await testEnv.withSecurityRulesDisabled(async context => {
+    for (const [id, w, b, mode] of [['bot-public',true,true,'computer'],['bot-private',false,false,'computer'],['online-one-veto',true,false,'online'],['online-public',true,true,'online']]) {
+      await setDoc(doc(context.firestore(), 'games/' + id), { whiteId:'alice', blackId: mode === 'computer' ? 'computer' : 'bob', status:'playing', mode, spectatorsAllowedWhite:w, spectatorsAllowedBlack:b });
+    }
+  });
+  await assertSucceeds(getDoc(doc(anonymous,'games/bot-public')));
+  // Verify the actual real-time path used by a second, unauthenticated viewer.
+  let stopViewer;
+  const receivedMove = new Promise((resolve, reject) => {
+    const timer = setTimeout(() => { stopViewer?.(); reject(new Error('Viewer did not receive the move within 10 seconds')); }, 10000);
+    stopViewer = onSnapshot(doc(anonymous, 'games/bot-public'), snapshot => {
+      if (snapshot.data()?.pgn === '1. e4') { clearTimeout(timer); stopViewer(); resolve(true); }
+    }, error => { clearTimeout(timer); reject(error); });
+  });
+  await testEnv.withSecurityRulesDisabled(async context => { await updateDoc(doc(context.firestore(),'games/bot-public'),{pgn:'1. e4'}); });
+  await receivedMove;
+  await assertSucceeds(getDoc(doc(anonymous,'games/online-public')));
+  await assertFails(getDoc(doc(anonymous,'games/bot-private')));
+  await assertFails(getDoc(doc(bob,'games/bot-private')));
+  await assertSucceeds(getDoc(doc(alice,'games/bot-private')));
+  await assertFails(getDoc(doc(anonymous,'games/online-one-veto')));
+  await assertSucceeds(getDoc(doc(bob,'games/online-one-veto')));
+  await assertFails(updateDoc(doc(bob,'games/bot-public'),{pgn:'e4'}));
+  await testEnv.withSecurityRulesDisabled(async context => { await updateDoc(doc(context.firestore(),'games/bot-public'),{spectatorsAllowedWhite:false}); });
+  await assertFails(getDoc(doc(anonymous,'games/bot-public')));
+  console.log('Firestore rules: PASS (private chat, public computer/online spectators, live moves, private-game denial, owner-only writes and privacy revocation).');
 } finally {
   await testEnv.cleanup();
 }

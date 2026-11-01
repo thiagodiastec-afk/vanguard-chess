@@ -16,6 +16,7 @@ import { getGeminiFailureResponse, getGeminiStatus, parseChatTranslations } from
 import { allowDistributedRateLimit } from './src/lib/distributedRateLimit';
 import { isValidMercadoPagoSignature as validateMercadoPagoSignature } from './src/lib/mercadoPagoWebhook';
 import { validateUsername } from './src/lib/username';
+import { spectatorPreference, computerBroadcastPatch } from './src/lib/gameVisibility';
 import firebaseWebConfig from './firebase-applet-config.json';
 
 const FIRESTORE_DATABASE_ID = process.env.FIRESTORE_DATABASE_ID?.trim();
@@ -539,11 +540,12 @@ function makeGameData(white, black, timeControl, status = 'playing') {
     blackId: black?.uid || '', blackName: black ? String(black.displayName || 'Jogador').slice(0, 40) : '', blackElo: Number(black?.elo) || 1200,
     status, fen: START_FEN, pgn: '', turn: 'w', whiteThemeId: white.activeTheme || 'luxury',
     lastMoveAt: now, timeControl, whiteTime: timeControl, blackTime: timeControl,
-    spectatorsAllowedWhite: true, spectatorsAllowedBlack: true
+    spectatorsAllowedWhite: white.spectatorsAllowed === true, spectatorsAllowedBlack: black?.spectatorsAllowed === true
   };
 }
 
 async function recordRatedResult(transaction, db, game, status, privateUpdates: Record<string, Record<string, any>> = {}) {
+  if (game.mode === 'computer') return false;
   if (game.resultsRecorded || !['white_won', 'black_won', 'draw'].includes(status)) {
     for (const [userId, fields] of Object.entries(privateUpdates)) {
       transaction.set(db.collection('userPrivate').doc(userId), fields, { merge: true });
@@ -659,6 +661,7 @@ function legacyCompetitiveSnapshot(profile) {
         const gameDoc = await transaction.get(gameRef);
         if (!gameDoc.exists) throw Object.assign(new Error('Game not found'), { statusCode: 404 });
         const game = gameDoc.data()!;
+        if (game.mode === 'computer') throw Object.assign(new Error('Use the computer broadcast endpoint'), { statusCode: 409 });
         if (game.status !== 'playing') throw Object.assign(new Error('Game is not active'), { statusCode: 409 });
         const isWhiteTurn = game.turn === 'w';
         if ((isWhiteTurn && game.whiteId !== userId) || (!isWhiteTurn && game.blackId !== userId)) {
@@ -942,6 +945,43 @@ Original message: "${text}"`;
     }
   });
 
+  // Server owns queue preferences so legacy clients cannot overwrite a player's privacy choice.
+  app.post('/api/game/queue', async (req, res) => {
+    try {
+      const uid = await authenticatedUid(req, res); if (!uid) return;
+      if (!allowRateLimit(uid, 'queue-create', 15, 60000)) return res.status(429).json({ error: 'Aguarde antes de buscar novamente.' });
+      const timeControl = Number(req.body.timeControl);
+      const spectatorsAllowed = spectatorPreference(req.body.spectatorsAllowed);
+      if (!VALID_TIME_CONTROLS.has(timeControl)) return res.status(400).json({ error: 'Invalid time control' });
+      const db = getFirestore(getAdmin(), FIRESTORE_DATABASE_ID);
+      await db.runTransaction(async tx => {
+        const [profile, privateProfile] = await Promise.all([tx.get(db.collection('users').doc(uid)), tx.get(db.collection('userPrivate').doc(uid))]);
+        ensureCanPlay(privateProfile.data());
+        if (!profile.exists) throw Object.assign(new Error('Perfil não encontrado.'), { statusCode: 403 });
+        tx.set(db.collection('queue').doc(uid), { uid, displayName: String(profile.data().displayName || 'Jogador').slice(0,40), elo: Number(profile.data().elo) || 1200, createdAt: Date.now(), timeControl, spectatorsAllowed });
+      });
+      res.json({ success: true });
+    } catch (error) { res.status(Number(error?.statusCode) || 500).json({ error: error?.statusCode ? error.message : 'Não foi possível entrar na fila.' }); }
+  });
+
+  app.post('/api/game/computer', async (req, res) => {
+    try {
+      const uid = await authenticatedUid(req, res); if (!uid) return;
+      if (!allowRateLimit(uid, 'computer-broadcast', 180, 60000)) return res.status(429).json({ error: 'Muitas atualizações. Aguarde um instante.' });
+      const { gameId } = req.body;
+      if (typeof gameId !== 'string' || !/^bot_[A-Za-z0-9_-]{20,80}$/.test(gameId)) return res.status(400).json({ error: 'Transmissão inválida.' });
+      const db = getFirestore(getAdmin(), FIRESTORE_DATABASE_ID);
+      const ref = db.collection('games').doc(gameId);
+      await db.runTransaction(async tx => {
+        const [existing, profile] = await Promise.all([tx.get(ref), tx.get(db.collection('users').doc(uid))]);
+        if (!profile.exists) throw Object.assign(new Error('Perfil não encontrado.'), { statusCode: 403 });
+        const patch = computerBroadcastPatch(existing.exists ? existing.data() : null, uid, req.body, profile.data());
+        if (patch) tx.set(ref, { ...patch, id: gameId });
+      });
+      res.json({ success: true });
+    } catch (error) { res.status(Number(error?.statusCode) || 500).json({ error: error?.statusCode ? error.message : 'Não foi possível transmitir a partida.' }); }
+  });
+
   app.post('/api/game/invite/create', async (req, res) => {
     try {
       const userId = await authenticatedUid(req, res);
@@ -956,7 +996,7 @@ Original message: "${text}"`;
         const [profile, privateProfile] = await Promise.all([tx.get(profileRef), tx.get(privateRef)]);
         ensureCanPlay(privateProfile.data());
         if (!profile.exists) throw Object.assign(new Error('User profile not found'), { statusCode: 403 });
-        tx.create(ref, { ...makeGameData({ uid: userId, ...(profile.data() || {}) }, null, timeControl, 'waiting_friend'), id: ref.id });
+        tx.create(ref, { ...makeGameData({ uid: userId, ...(profile.data() || {}), spectatorsAllowed: spectatorPreference(req.body.spectatorsAllowed) }, null, timeControl, 'waiting_friend'), id: ref.id });
       });
       res.json({ success: true, gameId: ref.id });
     } catch (error) {
@@ -987,6 +1027,7 @@ Original message: "${text}"`;
         const player: any = { uid: userId, ...(profile.data() || {}) };
         tx.update(gameRef, {
           blackId: player.uid, blackName: String(player.displayName || 'Jogador').slice(0, 40), blackElo: Number(player.elo) || 1200,
+          spectatorsAllowedBlack: spectatorPreference(req.body.spectatorsAllowed),
           status: 'playing', lastMoveAt: Date.now(), whiteTime: Number(game.timeControl) || 300, blackTime: Number(game.timeControl) || 300
         });
       });
@@ -1027,8 +1068,8 @@ Original message: "${text}"`;
           return false;
         }
         const whiteFirst = Math.random() < 0.5;
-        const me = { uid: userId, ...myUser.data() };
-        const opponent = { uid: opponentId, ...theirUser.data() };
+        const me = { uid: userId, ...myUser.data(), spectatorsAllowed: myQueue.data().spectatorsAllowed === true };
+        const opponent = { uid: opponentId, ...theirUser.data(), spectatorsAllowed: theirQueue.data().spectatorsAllowed === true };
         tx.create(gameRef, { ...makeGameData(whiteFirst ? me : opponent, whiteFirst ? opponent : me, timeControl), id: gameRef.id });
         tx.delete(ownQueue);
         tx.delete(opponentQueue);
@@ -1067,6 +1108,7 @@ Original message: "${text}"`;
       const challengeRef = db.collection('challenges').doc();
       await challengeRef.create({
         challengerId: userId,
+        spectatorsAllowed: spectatorPreference(req.body.spectatorsAllowed),
         challengedId,
         challengerName: String(challenger.displayName || 'Jogador').slice(0, 40),
         challengerElo: Number(challenger.elo) || 1200,
@@ -1105,8 +1147,8 @@ Original message: "${text}"`;
         if (Number(challengerPrivate.data()?.playSuspendedUntil || 0) > Date.now()) throw Object.assign(new Error('O outro jogador está temporariamente impedido de jogar.'), { statusCode: 409 });
         if (!freshChallenge.exists || freshChallenge.data().challengedId !== userId || freshChallenge.data().status !== 'pending') throw Object.assign(new Error('Challenge is no longer available'), { statusCode: 409 });
         if (!challenger.exists || !own.exists) throw Object.assign(new Error('User profile not found'), { statusCode: 404 });
-        const white = { uid: challengerId, ...challenger.data() };
-        const black = { uid: userId, ...own.data() };
+        const white = { uid: challengerId, ...challenger.data(), spectatorsAllowed: freshChallenge.data().spectatorsAllowed === true };
+        const black = { uid: userId, ...own.data(), spectatorsAllowed: spectatorPreference(req.body.spectatorsAllowed) };
         tx.create(gameRef, { ...makeGameData(white, black, 300), id: gameRef.id });
         tx.update(challengeRef, { status: 'accepted', gameId: gameRef.id });
       });
@@ -1135,6 +1177,7 @@ Original message: "${text}"`;
         const snap = await tx.get(gameRef);
         if (!snap.exists) throw Object.assign(new Error('Game not found'), { statusCode: 404 });
         const game: any = snap.data();
+        if (game.mode === 'computer') throw Object.assign(new Error('Use the computer broadcast endpoint'), { statusCode: 409 });
         const color = game.whiteId === userId ? 'w' : game.blackId === userId ? 'b' : null;
         if (!color) throw Object.assign(new Error('Not a player in this game'), { statusCode: 403 });
         const patch: Record<string, any> = {};
@@ -1670,6 +1713,32 @@ Original message: "${text}"`;
       res.setHeader("Expires", "0");
       res.sendFile(path.join(distPath, "index.html"));
     });
+  }
+
+  // Close broadcasts after a browser crash or lost connection; never leave stale TV entries forever.
+  if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+    let cleaning = false;
+    const cleanupBroadcasts = async () => {
+      if (cleaning) return;
+      cleaning = true;
+      try {
+        const db = getFirestore(getAdmin(), FIRESTORE_DATABASE_ID);
+        const broadcasts = await db.collection('games').where('mode', '==', 'computer').where('status', '==', 'playing').get();
+        for (const doc of broadcasts.docs) {
+          if (Date.now() - Number(doc.data().broadcastUpdatedAt || 0) < 90000) continue;
+          await db.runTransaction(async tx => {
+            const fresh = await tx.get(doc.ref);
+            if (fresh.exists && fresh.data().status === 'playing' && Date.now() - Number(fresh.data().broadcastUpdatedAt || 0) >= 90000) {
+              tx.update(doc.ref, { status: 'abandoned', spectatorsAllowedWhite: false, spectatorsAllowedBlack: false });
+            }
+          });
+        }
+      } catch { console.warn('Não foi possível encerrar transmissões inativas.'); }
+      finally { cleaning = false; }
+    };
+    const cleanupTimer = setInterval(() => void cleanupBroadcasts(), 30000);
+    cleanupTimer.unref();
+    void cleanupBroadcasts();
   }
 
   app.listen(PORT, "0.0.0.0", () => {

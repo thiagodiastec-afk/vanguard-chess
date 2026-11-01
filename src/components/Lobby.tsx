@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
-import { collection, doc, getDocs, setDoc, deleteDoc, onSnapshot, query, orderBy, limit, where } from 'firebase/firestore';
+import { collection, doc, getDocs, deleteDoc, onSnapshot, query, orderBy, limit, where } from 'firebase/firestore';
 import { getDb } from '../lib/firebase';
 import { authenticatedApiFetch } from '../lib/api';
 import { UserData, QueueEntry, GameData } from '../types';
 import { Loader2, Swords, UserCircle, Bot, ChevronDown, ChevronUp, Link as LinkIcon, Copy, Target, CheckCircle2, X, Users, Sparkles, LogIn, Mail } from 'lucide-react';
+import GameVisibility from './GameVisibility';
 import { cn } from '../lib/utils';
 
 interface LobbyProps {
@@ -17,6 +18,8 @@ interface LobbyProps {
 }
 
 export default function Lobby({ currentUser, playSuspendedUntil = 0, onPlayComputer, onPlayLocal, onSpectate, onBrowsePlayers, onLoginRequest }: LobbyProps) {
+  const [spectatorsAllowed, setSpectatorsAllowed] = useState(false);
+  const [liveError, setLiveError] = useState<string | null>(null);
   const [isSearching, setIsSearching] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showBotMenu, setShowBotMenu] = useState(false);
@@ -51,7 +54,7 @@ export default function Lobby({ currentUser, playSuspendedUntil = 0, onPlayCompu
       setChallengingUserId(user.uid);
       const response = await authenticatedApiFetch('/api/challenge/create', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ challengedId: user.uid })
+        body: JSON.stringify({ challengedId: user.uid, spectatorsAllowed })
       });
       if (!response.ok) throw new Error('Não foi possível enviar o convite.');
       setTimeout(() => setChallengingUserId(null), 2000);
@@ -123,15 +126,19 @@ export default function Lobby({ currentUser, playSuspendedUntil = 0, onPlayCompu
       where('status', '==', 'playing'),
       where('spectatorsAllowedWhite', '==', true),
       where('spectatorsAllowedBlack', '==', true),
-      limit(10)
+      limit(100)
     );
 
+    let candidates: GameData[] = [];
+    const refresh = () => setLiveGames(candidates.filter(g => g.mode !== 'computer' || Date.now() - (g.broadcastUpdatedAt || 0) < 90000));
+    const timer = window.setInterval(refresh, 10000);
     const unsubscribe = onSnapshot(gamesQuery, (snapshot) => {
-      const games = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as GameData));
-      setLiveGames(games);
-    });
+      candidates = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as GameData));
+      refresh();
+      setLiveError(null);
+    }, () => { setLiveGames([]); setLiveError('Não foi possível carregar as partidas públicas. Tente novamente em instantes.'); });
 
-    return unsubscribe;
+    return () => { unsubscribe(); window.clearInterval(timer); };
   }, []);
 
 
@@ -155,7 +162,7 @@ export default function Lobby({ currentUser, playSuspendedUntil = 0, onPlayCompu
     try {
       const response = await authenticatedApiFetch('/api/game/invite/create', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ timeControl })
+        body: JSON.stringify({ timeControl, spectatorsAllowed })
       });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || 'Erro ao criar convite');
@@ -191,7 +198,8 @@ export default function Lobby({ currentUser, playSuspendedUntil = 0, onPlayCompu
     }
   };
 
-  const findMatch = async () => {
+  const findMatch = async (selectedTime = timeControl) => {
+    setTimeControl(selectedTime);
     if (!currentUser) {
       onLoginRequest?.();
       return;
@@ -201,16 +209,9 @@ export default function Lobby({ currentUser, playSuspendedUntil = 0, onPlayCompu
     const db = getDb();
 
     try {
-      const myQueueRef = doc(db, 'queue', currentUser.uid);
-      await setDoc(myQueueRef, {
-        uid: currentUser.uid,
-        displayName: currentUser.displayName,
-        elo: currentUser.elo,
-        createdAt: Date.now(),
-        timeControl,
-        activeTheme: currentUser.activeTheme || 'luxury'
-      });
-      const queueQuery = query(collection(db, 'queue'), where('timeControl', '==', timeControl), orderBy('createdAt', 'asc'), limit(5));
+      const queued = await authenticatedApiFetch('/api/game/queue', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ timeControl: selectedTime, spectatorsAllowed }) });
+      if (!queued.ok) throw new Error('Não foi possível entrar na fila.');
+      const queueQuery = query(collection(db, 'queue'), where('timeControl', '==', selectedTime), orderBy('createdAt', 'asc'), limit(5));
       const queueSnapshot = await getDocs(queueQuery);
 
       let matchedOpponent: QueueEntry | null = null;
@@ -225,7 +226,7 @@ export default function Lobby({ currentUser, playSuspendedUntil = 0, onPlayCompu
         try {
           const response = await authenticatedApiFetch('/api/game/match', {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ opponentId: matchedOpponent.uid, timeControl })
+            body: JSON.stringify({ opponentId: matchedOpponent.uid, timeControl: selectedTime })
           });
           if (response.ok) return;
           if (response.status !== 409) throw new Error('Não foi possível criar a partida.');
@@ -234,14 +235,7 @@ export default function Lobby({ currentUser, playSuspendedUntil = 0, onPlayCompu
         }
       }
 
-      await setDoc(myQueueRef, {
-        uid: currentUser.uid,
-        displayName: currentUser.displayName,
-        elo: currentUser.elo,
-        createdAt: Date.now(),
-        timeControl,
-        activeTheme: currentUser.activeTheme || 'luxury'
-      });
+      // Keep the original queue entry and its privacy preference while waiting.
     } catch (err: any) {
       console.error("Matchmaking error:", err);
       setError("Erro ao buscar partida. Tente novamente.");
@@ -330,6 +324,7 @@ export default function Lobby({ currentUser, playSuspendedUntil = 0, onPlayCompu
             <h2 className="text-3xl sm:text-4xl font-black text-white mb-2 tracking-tight">Jogar Xadrez</h2>
             <p className="text-zinc-400 mb-8 max-w-sm">Encontre uma partida, desafie um amigo ou pratique contra a inteligência artificial.</p>
 
+            <GameVisibility value={spectatorsAllowed} onChange={setSpectatorsAllowed} disabled={isSearching || Boolean(inviteLink)} />
             {isSearching ? (
               <div className="bg-zinc-950/50 border border-emerald-500/30 rounded-2xl p-6 flex flex-col items-center gap-4 animate-in fade-in zoom-in-95">
                 <Loader2 className="w-12 h-12 text-emerald-500 animate-spin" />
@@ -395,7 +390,7 @@ export default function Lobby({ currentUser, playSuspendedUntil = 0, onPlayCompu
                     ].map(tc => (
                       <button
                         key={tc.val}
-                        onClick={() => { if(currentUser) { setTimeControl(tc.val); findMatch(); } else { onLoginRequest?.(); } }}
+                        onClick={() => { if(currentUser) { findMatch(tc.val); } else { onLoginRequest?.(); } }}
                         className="bg-zinc-950/50 hover:bg-zinc-800 border border-zinc-800/80 hover:border-emerald-500/50 rounded-2xl p-4 flex flex-col items-center justify-center transition-all hover:scale-105 active:scale-95 group"
                       >
                         <span className="text-2xl mb-1 group-hover:scale-110 transition-transform">{tc.icon}</span>
@@ -461,7 +456,7 @@ export default function Lobby({ currentUser, playSuspendedUntil = 0, onPlayCompu
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 flex-1">
               {liveGames.length === 0 ? (
                 <div className="col-span-1 sm:col-span-2 text-center py-12 border border-zinc-800/50 border-dashed rounded-2xl bg-zinc-900/50 flex items-center justify-center">
-                  <p className="text-zinc-500 text-sm font-medium">Nenhuma partida ao vivo no momento</p>
+                  <p className="text-zinc-500 text-sm font-medium">{liveError || 'Nenhuma partida pública ao vivo no momento'}</p>
                 </div>
               ) : (
                 liveGames.map(game => (
@@ -469,7 +464,7 @@ export default function Lobby({ currentUser, playSuspendedUntil = 0, onPlayCompu
                     <div className="flex justify-between items-center text-sm font-medium">
                       <div className="flex items-center gap-2 truncate">
                         <div className="w-3 h-3 bg-zinc-200 border border-zinc-400 rounded-sm shadow-sm flex-shrink-0" />
-                        <span className="text-zinc-100 truncate">{game.whiteName}</span>
+                        <span className="text-zinc-100 truncate">{game.whiteName}{game.mode === 'computer' ? ' • vs IA' : ''}</span>
                         <span className="text-emerald-500/80 text-xs">({game.whiteElo})</span>
                       </div>
                     </div>

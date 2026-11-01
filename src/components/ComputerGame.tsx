@@ -11,6 +11,8 @@ import { getCustomPieces } from '../lib/chessPieces';
 import MoveHistory from './MoveHistory';
 import CapturedPieces from './CapturedPieces';
 import EvalBar from "./EvalBar";
+import GameVisibility from './GameVisibility';
+import { useComputerBroadcast } from '../lib/useComputerBroadcast';
 import { authenticatedApiFetch } from '../lib/api';
 
 interface ComputerGameProps {
@@ -20,6 +22,9 @@ interface ComputerGameProps {
 }
 
 export default function ComputerGame({ difficulty, currentUser, onExit }: ComputerGameProps) {
+  const [visibilityChosen, setVisibilityChosen] = useState(false);
+  const [spectatorsAllowed, setSpectatorsAllowed] = useState(false);
+  const [broadcastEpoch, setBroadcastEpoch] = useState(0);
   const theme = useTheme();
   const [activeDifficulty, setActiveDifficulty] = useState(difficulty === 'resume' ? 'facil' : difficulty);
   const [game, setGame] = useState(new Chess());
@@ -35,6 +40,7 @@ export default function ComputerGame({ difficulty, currentUser, onExit }: Comput
 
   const [moveFrom, setMoveFrom] = useState<string | null>(null);
   const [optionSquares, setOptionSquares] = useState<Record<string, React.CSSProperties>>({});
+  const broadcast = useComputerBroadcast(visibilityChosen && spectatorsAllowed, broadcastEpoch, currentUser, game.pgn(), playerColor, activeDifficulty, gameOver);
 
   const getDifficultyName = () => {
     switch (activeDifficulty) {
@@ -78,7 +84,7 @@ export default function ComputerGame({ difficulty, currentUser, onExit }: Comput
   }, [game, playerColor, activeDifficulty, hasUsedHelp, gameOver]);
 
   const makeComputerMove = useCallback(() => {
-    if (game.isGameOver() || game.turn() === playerColor || isThinking) return;
+    if (!visibilityChosen || game.isGameOver() || game.turn() === playerColor || isThinking) return;
 
     setIsThinking(true);
     setHintArrow(null);
@@ -108,7 +114,7 @@ export default function ComputerGame({ difficulty, currentUser, onExit }: Comput
       const maxTimeMs = activeDifficulty === 'profissional' ? 10000 : activeDifficulty === 'dificil' ? 4000 : 3000;
       worker.postMessage({ type: 'search', fen: game.fen(), difficulty: activeDifficulty, maxTimeMs });
     });
-  }, [game, activeDifficulty, playerColor, isThinking]);
+  }, [game, activeDifficulty, playerColor, isThinking, visibilityChosen]);
 
   const handleHint = () => {
     if (game.isGameOver() || isGettingHint || isThinking) return;
@@ -372,6 +378,9 @@ export default function ComputerGame({ difficulty, currentUser, onExit }: Comput
   };
 
   const resetGame = () => {
+    setVisibilityChosen(false);
+    setSpectatorsAllowed(false);
+    setBroadcastEpoch(value => value + 1);
     setGame(new Chess());
     setGameOver(false);
     setWinner(null);
@@ -453,8 +462,17 @@ export default function ComputerGame({ difficulty, currentUser, onExit }: Comput
     setWinner(playerColor === 'w' ? 'black' : 'white');
   };
 
+  if (!visibilityChosen) return <section className="mx-auto w-full max-w-md rounded-2xl border border-zinc-700 bg-zinc-900 p-6 text-white">
+    <h2 className="text-xl font-bold">{difficulty === 'resume' ? 'Retomar partida contra o computador' : 'Iniciar partida contra o computador'}</h2>
+    <GameVisibility value={spectatorsAllowed} onChange={setSpectatorsAllowed} />
+    {spectatorsAllowed && !currentUser && <p role="alert" className="mb-3 text-amber-300">Entre na sua conta para transmitir uma partida pública.</p>}
+    <div className="flex gap-3"><button className="rounded-lg bg-zinc-700 px-4 py-2" onClick={() => onExit(false)}>Voltar</button><button className="rounded-lg bg-emerald-600 px-4 py-2 disabled:opacity-40" disabled={spectatorsAllowed && !currentUser} onClick={() => setVisibilityChosen(true)}>Iniciar partida</button></div>
+  </section>;
   return (
     <div className="flex-1 w-full flex flex-col items-center">
+      <p role="status" className="w-full px-4 py-2 text-sm text-emerald-300">{spectatorsAllowed ? broadcast.connected ? 'Pública • transmissão ao vivo na TV Xadrez' : gameOver ? 'Transmissão encerrada' : 'Conectando transmissão…' : 'Partida privada • somente você pode ver'}</p>
+      {broadcast.error && <p role="alert" className="w-full px-4 py-2 text-sm text-amber-300">{broadcast.error}</p>}
+      {spectatorsAllowed && <button className="my-1 rounded-lg bg-zinc-800 px-3 py-1 text-sm text-white" onClick={() => setSpectatorsAllowed(false)}>Tornar privada e encerrar transmissão</button>}
       {/* Menu Superior do Jogo */}
       <div className="w-full bg-neutral-900/90 backdrop-blur-md border-b border-neutral-800 px-4 py-2.5 sm:px-6 flex items-center justify-between z-10 gap-3">
         <div className="flex items-center gap-3">

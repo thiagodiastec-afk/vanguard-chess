@@ -884,9 +884,11 @@ export default function Game({ game: initialGame, currentUser, onExit }: GamePro
                       ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30"
                       : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700 border-zinc-700"
                   )}
-                  title="Permitir Espectadores"
+                  title="Permitir espectadores (ambos precisam permitir)"
+                  aria-label="Permitir espectadores"
+                  aria-pressed={Boolean(isWhite ? liveGame.spectatorsAllowedWhite : liveGame.spectatorsAllowedBlack)}
                 >
-                  <Eye className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                  <Eye className="w-3.5 h-3.5 sm:w-4 sm:h-4" /><span>{liveGame.spectatorsAllowedWhite && liveGame.spectatorsAllowedBlack ? 'Pública' : 'Privada'}</span>
                 </button>
               )}
             </div>

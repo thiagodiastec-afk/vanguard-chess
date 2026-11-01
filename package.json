@@ -23,7 +23,8 @@
     "benchmark:quality": "tsx src/lib/analysis/engineBenchmark/runCli.ts",
     "benchmark:legacy": "tsx run_full_validation.ts",
     "clean": "rm -rf dist server.js",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "test:visibility": "tsx test_game_visibility.ts"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",

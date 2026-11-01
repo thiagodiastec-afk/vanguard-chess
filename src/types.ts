@@ -46,6 +46,8 @@ export interface QueueEntry {
 }
 
 export interface GameData {
+  mode?: 'online' | 'computer';
+  broadcastUpdatedAt?: number;
   id: string;
   whiteId: string;
   blackId: string;

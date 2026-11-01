@@ -40,6 +40,9 @@ jobs:
       - name: Smoke test production server security
         run: npm run test:server
 
+      - name: Test game visibility and spectator broadcasts
+        run: npm run test:visibility
+
       - name: Test distributed AI rate limits
         run: npm run test:rate-limit
 

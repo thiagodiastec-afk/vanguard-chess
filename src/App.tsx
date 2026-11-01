@@ -4,6 +4,8 @@ import { doc, collection, onSnapshot, query, where, or, updateDoc, addDoc } from
 import { initFirebase, getDb, getFirebaseAuth as getFirebaseInstance } from './lib/firebase';
 import { UserData, GameData } from './types';
 import Lobby from './components/Lobby';
+import GameVisibility from './components/GameVisibility';
+const WatchGame = lazy(() => import('./components/WatchGame'));
 const Game = lazy(() => import('./components/Game'));
 const ComputerGame = lazy(() => import('./components/ComputerGame'));
 const LocalGame = lazy(() => import('./components/LocalGame'));
@@ -35,6 +37,11 @@ export default function App() {
   const [userData, setUserData] = useState<UserData | null>(null);
   const [profileLoadError, setProfileLoadError] = useState(false);
   const [activeGame, setActiveGame] = useState<GameData | null>(null);
+  const [joinInviteId, setJoinInviteId] = useState<string | null>(null);
+  const [joiningInvite, setJoiningInvite] = useState(false);
+  const [joinError, setJoinError] = useState<string | null>(null);
+  const [spectatorsAllowed, setSpectatorsAllowed] = useState(false);
+  const [watchError, setWatchError] = useState<string | null>(null);
   const [spectatingGameId, setSpectatingGameId] = useState<string | null>(null);
   const [spectatingGame, setSpectatingGame] = useState<GameData | null>(null);
   const [computerGameDifficulty, setComputerGameDifficulty] = useState<string | null>(null);
@@ -55,6 +62,7 @@ export default function App() {
   const [homeExitError, setHomeExitError] = useState<string | null>(null);
   const [guestSuspendedUntil, setGuestSuspendedUntil] = useState(0);
   const lastAnalyticsTab = useRef<Tab | null>(null);
+  useEffect(() => { setSpectatorsAllowed(false); }, [incomingChallenge?.id]);
   const analyticsGameMode = activeGame?.status === 'playing'
     ? 'online'
     : computerGameDifficulty
@@ -110,12 +118,13 @@ export default function App() {
     }
     const db = getDb();
     const unsubscribe = onSnapshot(doc(db, 'games', spectatingGameId), (doc) => {
-      if (doc.exists()) {
+      if (doc.exists() && doc.data().spectatorsAllowedWhite === true && doc.data().spectatorsAllowedBlack === true) {
         setSpectatingGame({ id: doc.id, ...doc.data() } as GameData);
       } else {
         setSpectatingGameId(null);
+        setWatchError('Esta partida não está mais disponível para espectadores.');
       }
-    });
+    }, () => { setSpectatingGame(null); setSpectatingGameId(null); setWatchError('Esta partida está privada ou não está mais disponível.'); });
     return unsubscribe;
   }, [spectatingGameId, firebaseReady]);
 
@@ -125,7 +134,7 @@ export default function App() {
     try {
       const response = await authenticatedApiFetch('/api/challenge/accept', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ challengeId: incomingChallenge.id })
+        body: JSON.stringify({ challengeId: incomingChallenge.id, spectatorsAllowed })
       });
       if (!response.ok) throw new Error('Não foi possível aceitar o desafio.');
       setIncomingChallenge(null);
@@ -273,11 +282,9 @@ export default function App() {
             const inviteId = urlParams.get('invite') || sessionStorage.getItem('pending_invite');
             if (inviteId) {
                sessionStorage.removeItem('pending_invite');
-               const response = await authenticatedApiFetch('/api/game/invite/join', {
-                 method: 'POST', headers: { 'Content-Type': 'application/json' },
-                 body: JSON.stringify({ gameId: inviteId })
-               });
-               if (response.ok) setActiveTab('play');
+               setJoinInviteId(inviteId);
+               setSpectatorsAllowed(false);
+               setJoinError(null);
                window.history.replaceState({}, document.title, window.location.pathname);
             }
           } catch (err) {
@@ -317,7 +324,7 @@ export default function App() {
           );
 
           unsubs.push(onSnapshot(q, (snapshot) => {
-            const games = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as GameData));
+            const games = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as GameData)).filter(g => g.mode !== 'computer');
 
             setActiveGame(prev => {
               // 1. If currently playing a specific match, always prioritize syncing that exact match
@@ -336,6 +343,7 @@ export default function App() {
 
               if (active) {
                 if (!prev) setActiveTab('play');
+                setSpectatingGameId(null);
                 setComputerGameDifficulty(null);
                 return active;
               }
@@ -407,6 +415,9 @@ export default function App() {
   };
 
   const navigateHome = () => {
+    setSpectatingGameId(null);
+    setSpectatingGame(null);
+    setWatchError(null);
     setShowHomeExitConfirm(false);
     setHomeExitError(null);
     setActiveGame(null);
@@ -639,7 +650,7 @@ export default function App() {
         )}
 
         {(() => {
-          const isPlayingGame = activeTab === 'play' && (Boolean(activeGame) || Boolean(computerGameDifficulty) || Boolean(isLocalGame));
+          const isPlayingGame = activeTab === 'play' && (Boolean(activeGame) || Boolean(computerGameDifficulty) || Boolean(isLocalGame) || Boolean(spectatingGameId));
           return (
             <main className={cn(
               "flex-1",
@@ -650,7 +661,9 @@ export default function App() {
               <div className={cn("mx-auto h-full", isPlayingGame ? "w-full max-w-[1700px] flex flex-col justify-center items-center" : "max-w-7xl")}>
                 <Suspense fallback={<div className="w-full py-8 text-center text-sm text-zinc-400" role="status">Carregando…</div>}>
                 {activeTab === 'play' && (
-                  activeGame ? (
+                  spectatingGameId ? (
+                    spectatingGame ? <WatchGame game={spectatingGame} onExit={() => { setSpectatingGameId(null); setSpectatingGame(null); }} /> : <p role="status" className="text-zinc-300">Carregando partida…</p>
+                  ) : activeGame ? (
                     <ErrorBoundary fallbackTitle="Erro ao carregar partida" onReset={() => setActiveGame(null)}>
                       <Game
                         key={activeGame.id}
@@ -676,9 +689,10 @@ export default function App() {
                   ) : isLocalGame ? (
                     <LocalGame onExit={(abandoning = true) => abandoning ? navigateHome() : setIsLocalGame(false)} />
                   ) : (
-                    <Lobby currentUser={userData ? { ...userData, playSuspendedUntil } : null} playSuspendedUntil={playSuspendedUntil} onPlayComputer={(diff) => setComputerGameDifficulty(diff)} onPlayLocal={() => setIsLocalGame(true)} onBrowsePlayers={() => setActiveTab('friends')} onLoginRequest={handleLogin} />
+                    <Lobby onSpectate={(id) => { setWatchError(null); setSpectatingGame(null); setSpectatingGameId(id); }} currentUser={userData ? { ...userData, playSuspendedUntil } : null} playSuspendedUntil={playSuspendedUntil} onPlayComputer={(diff) => setComputerGameDifficulty(diff)} onPlayLocal={() => setIsLocalGame(true)} onBrowsePlayers={() => setActiveTab('friends')} onLoginRequest={handleLogin} />
                   )
                 )}
+                {watchError && <p role="alert" className="my-3 text-amber-300">{watchError}</p>}
                 {activeTab === 'rules' && <Rules />}
                 {activeTab === 'ranking' && <Leaderboard />}
                 {activeTab === 'about' && <About />}
@@ -721,7 +735,7 @@ export default function App() {
                   <>
                     {activeTab === 'tournaments' && <Tournaments currentUser={userData} />}
                     {activeTab === 'chat' && <Chat currentUser={userData} />}
-                    {activeTab === 'training' && <Training currentUser={userData} onPlayComputer={(diff) => setComputerGameDifficulty(diff)} onOpenStore={() => { setStoreInitialTab('vip'); setActiveTab('store'); }} />}
+                    {activeTab === 'training' && <Training currentUser={userData} onPlayComputer={(diff) => { setComputerGameDifficulty(diff); setActiveTab('play'); }} onOpenStore={() => { setStoreInitialTab('vip'); setActiveTab('store'); }} />}
                     {activeTab === 'friends' && <Friends currentUser={userData} />}
                     {activeTab === 'store' && <Store currentUser={userData} initialTab={storeInitialTab} />}
                     {activeTab === 'profile' && <Profile currentUser={userData} />}
@@ -935,6 +949,15 @@ export default function App() {
       )}
 
 
+      {joinInviteId && <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/80 p-4"><section role="dialog" aria-modal="true" aria-label="Entrar na partida" className="w-full max-w-sm rounded-2xl border border-zinc-700 bg-zinc-900 p-6 text-white">
+        <h2 className="text-xl font-bold">Entrar na partida</h2><GameVisibility value={spectatorsAllowed} onChange={setSpectatorsAllowed} disabled={joiningInvite} />
+        {joinError && <p role="alert" className="mb-3 text-red-300">{joinError}</p>}
+        <div className="flex gap-3"><button disabled={joiningInvite} onClick={() => setJoinInviteId(null)} className="rounded-lg bg-zinc-700 px-4 py-2">Cancelar</button><button disabled={joiningInvite} onClick={async () => {
+          setJoiningInvite(true); setJoinError(null);
+          try { const response = await authenticatedApiFetch('/api/game/invite/join', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ gameId: joinInviteId, spectatorsAllowed }) }); const result = await response.json(); if (!response.ok) throw new Error(result.error || 'Não foi possível entrar.'); setJoinInviteId(null); setActiveTab('play'); }
+          catch (error) { setJoinError(error instanceof Error ? error.message : 'Não foi possível entrar.'); } finally { setJoiningInvite(false); }
+        }} className="rounded-lg bg-emerald-600 px-4 py-2">{joiningInvite ? 'Entrando…' : 'Entrar na partida'}</button></div>
+      </section></div>}
       {/* Challenge Modal */}
       {incomingChallenge && !activeGame && (
         <div className="fixed inset-0 z-[70] bg-black/80 flex flex-col items-center justify-center p-4 backdrop-blur-md">
@@ -946,6 +969,7 @@ export default function App() {
             <p className="text-zinc-400 mb-6">
               <span className="text-emerald-400 font-bold">{incomingChallenge.challengerName}</span> ({incomingChallenge.challengerElo} ELO) convidou você para uma partida.
             </p>
+            <GameVisibility value={spectatorsAllowed} onChange={setSpectatorsAllowed} />
             <div className="flex gap-4">
               <button
                 onClick={declineChallenge}
