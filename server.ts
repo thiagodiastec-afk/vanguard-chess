@@ -1,3 +1,4 @@
+import { createAuthenticator } from './src/lib/serverAuthentication';
 import { MercadoPagoConfig, Preference, Payment } from 'mercadopago';
 import dotenv from "dotenv";
 dotenv.config();
@@ -8,6 +9,7 @@ import { createServer as createViteServer } from "vite";
 import { GoogleGenAI } from "@google/genai";
 import { initializeApp, cert } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
+import { getAppCheck } from "firebase-admin/app-check";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import { createHash, randomBytes } from "node:crypto";
 import { Chess } from "chess.js";
@@ -347,28 +349,16 @@ function respondGlobalAiLimit(res) {
   return res.status(429).json({ error: 'O limite diário de uso da IA foi atingido. Tente novamente após a meia-noite UTC.' });
 }
 
-async function authenticatedUid(req, res) {
-  const authorization = req.get('authorization') || '';
-  const match = authorization.match(/^Bearer (.+)$/i);
-  if (!match) {
-    res.status(401).json({ error: 'Authentication required' });
-    return null;
-  }
-  try {
-    return (await getAuth(getAdmin()).verifyIdToken(match[1])).uid;
-  } catch (error) {
-    if (error.message === 'FIREBASE_SERVICE_ACCOUNT_MISSING') {
-      res.status(503).json({ error: 'Authentication service is not configured' });
-    } else {
-      console.error('Firebase ID token verification failed:', {
-        code: error?.code || 'unknown',
-        message: error?.message || 'Unknown verification error'
-      });
-      res.status(401).json({ error: 'Invalid authentication token' });
-    }
-    return null;
-  }
-}
+// Opt-in observation only. There is intentionally no enforcement switch.
+const authenticatedUid = createAuthenticator(() => getAuth(getAdmin()),
+  process.env.FIREBASE_APPCHECK_MONITOR === 'true' ? {
+    async verify(token) {
+      const decoded = await getAppCheck(getAdmin()).verifyToken(token);
+      if (decoded.appId !== firebaseWebConfig.appId) throw new Error('APP_CHECK_APP_MISMATCH');
+    },
+    report(outcome) { console.info('App Check observation', { outcome }); },
+  } : undefined);
+
 
 function ensureCanPlay(privateProfile) {
   const playSuspendedUntil = Number(privateProfile?.playSuspendedUntil || 0);
