@@ -127,7 +127,7 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'register' }:
         });
       }
     } catch (err) {
-      console.error("Erro ao sincronizar perfil do usuário:", err);
+      console.error("Erro ao sincronizar perfil do usuário:");
     }
   };
 
@@ -196,7 +196,7 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'register' }:
         onClose();
       }
     } catch (err: any) {
-      console.error("Google Auth error", err);
+      console.error("Google Auth error");
       if (err.code === 'auth/popup-blocked' || err.message?.toLowerCase().includes('popup')) {
         try {
           const { auth } = await initFirebase();
@@ -204,10 +204,10 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'register' }:
           const provider = new GoogleAuthProvider();
           await signInWithRedirect(auth, provider);
         } catch (redirectErr: any) {
-          setError(getTranslatedErrorMessage(redirectErr.code, redirectErr.message));
+          setError(getTranslatedErrorMessage(redirectErr.code, 'Não foi possível entrar. Tente novamente.'));
         }
       } else if (err.code !== 'auth/popup-closed-by-user') {
-        setError(getTranslatedErrorMessage(err.code, err.message));
+        setError(getTranslatedErrorMessage(err.code, 'Não foi possível concluir a autenticação. Tente novamente.'));
       }
     } finally {
       setLoading(false);
@@ -232,7 +232,7 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'register' }:
         onClose();
       }
     } catch (err: any) {
-      console.error("Apple Auth error", err);
+      console.error("Apple Auth error");
       if (err.code === 'auth/popup-blocked') {
         try {
           const { auth } = await initFirebase();
@@ -240,7 +240,7 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'register' }:
           const provider = new OAuthProvider('apple.com');
           await signInWithRedirect(auth, provider);
         } catch (redirectErr: any) {
-          setError(getTranslatedErrorMessage(redirectErr.code, redirectErr.message));
+          setError(getTranslatedErrorMessage(redirectErr.code, 'Não foi possível entrar. Tente novamente.'));
         }
       } else if (err.code !== 'auth/popup-closed-by-user') {
         setError(getTranslatedErrorMessage(err.code, "Login com Apple indisponível no momento. Utilize Google ou E-mail."));
@@ -296,8 +296,8 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'register' }:
         onClose();
       }
     } catch (err: any) {
-      console.error("Email auth error:", err);
-      setError(getTranslatedErrorMessage(err.code, err.message));
+      console.error("Email auth error:");
+      setError(getTranslatedErrorMessage(err.code, 'Não foi possível concluir a autenticação. Tente novamente.'));
     } finally {
       setLoading(false);
     }
@@ -321,8 +321,8 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'register' }:
         setMode('login');
       }, 3000);
     } catch (err: any) {
-      console.error("Password reset error:", err);
-      setError(getTranslatedErrorMessage(err.code, err.message));
+      console.error("Password reset error:");
+      setError(getTranslatedErrorMessage(err.code, 'Não foi possível concluir a autenticação. Tente novamente.'));
     } finally {
       setLoading(false);
     }
@@ -345,7 +345,7 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'register' }:
       }
       return recaptchaVerifierRef.current;
     } catch (err: any) {
-      console.error("Erro ao configurar reCAPTCHA:", err);
+      console.error("Erro ao configurar reCAPTCHA:");
       return null;
     }
   };
@@ -381,8 +381,8 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'register' }:
       setSuccessMessage('Código SMS enviado com sucesso!');
       setTimeout(() => setSuccessMessage(null), 4000);
     } catch (err: any) {
-      console.error("Erro ao enviar SMS:", err);
-      setError(getTranslatedErrorMessage(err.code, err.message));
+      console.error("Erro ao enviar SMS:");
+      setError(getTranslatedErrorMessage(err.code, 'Não foi possível concluir a autenticação. Tente novamente.'));
       if (recaptchaVerifierRef.current) {
         try {
           recaptchaVerifierRef.current.clear();
@@ -417,8 +417,8 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'register' }:
         onClose();
       }
     } catch (err: any) {
-      console.error("Erro ao verificar código SMS:", err);
-      setError(getTranslatedErrorMessage(err.code, err.message));
+      console.error("Erro ao verificar código SMS:");
+      setError(getTranslatedErrorMessage(err.code, 'Não foi possível concluir a autenticação. Tente novamente.'));
     } finally {
       setLoading(false);
     }
@@ -439,7 +439,7 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'register' }:
         onClose();
       }
     } catch (err: any) {
-      console.error("Guest login error", err);
+      console.error("Guest login error");
       setError(getTranslatedErrorMessage(err.code, "Erro ao entrar como convidado."));
     } finally {
       setLoading(false);

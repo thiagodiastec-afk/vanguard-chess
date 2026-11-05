@@ -68,3 +68,7 @@ Recompensas por anúncio e moedas automáticas por resultado de partida permanec
 ## Estado da auditoria
 
 Veja [SECURITY_READINESS_AUDIT.md](SECURITY_READINESS_AUDIT.md) para evidências dos testes, riscos abertos, estado das integrações e itens pendentes para a release.
+
+## Revisão de autenticação de 05/11/2026
+
+Veja [Segurança da autenticação](docs/AUTHENTICATION_SECURITY.md) para a política de revogação da API, limites do acesso direto ao Firestore, observação opcional do App Check (`FIREBASE_APPCHECK_MONITOR=true`), testes e pendências operacionais. Execute `npm run test:auth` para os testes de regressão. O enforcement do App Check não é ativado por essas alterações. A auditoria de dependências ainda identifica quatro achados moderados; o gate permanece ativo.

@@ -1,5 +1,7 @@
 # Vanguard Chess — auditoria de prontidão
 
+> Atualização de 05/11/2026: a revisão em [Segurança da autenticação](docs/AUTHENTICATION_SECURITY.md) implementa verificação explícita de revogação na API, protege o transporte de tokens e prepara observação do App Check sem enforcement. As confirmações de console/deploy abaixo são históricas, não foram reconfirmadas nesta sessão. A auditoria atual de dependências ainda reporta quatro achados moderados; não considerar atuais as afirmações históricas de zero vulnerabilidades.
+
 **Status: site publicado; prontidão operacional ainda incompleta.** O código de segurança está ativo no Render e as regras Firestore revisadas estão publicadas no banco correto. Compilação, motor e testes automatizados estão estáveis. A migração operacional de perfis foi concluída e não há pendências no dry-run. A chave privada Firebase que apareceu em um arquivo de commit antigo foi removida da árvore atual e a credencial foi confirmada revogada: o alerta do Secret Scanning está resolvido como `revoked` e as chaves ativas atuais têm IDs diferentes. A cópia ainda persiste nas referências públicas antigas de PRs, então falta solicitar ao GitHub a remoção dessas referências/cache. Ainda há bloqueios funcionais: créditos Gemini esgotados e fluxos reais de pagamento e uso com duas contas sem validação ponta a ponta. Não divulgar o Treinador IA como funcional até reativar o saldo e verificar chamadas reais.
 
 ### Estado de produção confirmado — 12/10/2026

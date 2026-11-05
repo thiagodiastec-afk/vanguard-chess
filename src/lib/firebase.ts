@@ -1,5 +1,5 @@
 import { initializeApp } from 'firebase/app';
-import { initializeAppCheck, ReCaptchaEnterpriseProvider } from 'firebase/app-check';
+import { initializeAppCheck, ReCaptchaEnterpriseProvider, getToken } from 'firebase/app-check';
 import { getFirestore } from 'firebase/firestore';
 import { getAuth, setPersistence, browserSessionPersistence } from 'firebase/auth';
 import firebaseConfig from '../../firebase-applet-config.json';
@@ -33,10 +33,14 @@ export const initFirebase = async () => {
     await setPersistence(auth, browserSessionPersistence);
     return { app, db, auth, appCheck };
   } catch (error) {
-    console.error('Error initializing Firebase:', error);
+    console.error('Error initializing Firebase.');
     throw error;
   }
 };
 
 export const getDb = () => db;
 export const getFirebaseAuth = () => auth;
+
+/** Optional attestation for custom API observation; never log token values. */
+export const getFirebaseAppCheckToken = async () =>
+  appCheck ? (await getToken(appCheck, false)).token : undefined;
